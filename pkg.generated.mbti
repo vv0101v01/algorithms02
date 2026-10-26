@@ -416,6 +416,8 @@ pub fn check_cubical_identities(Cube, Array[Double]) -> Bool
 
 pub fn check_dcube_open_box_filler() -> Bool
 
+pub fn check_dcube_stratified_extensionality() -> Bool
+
 pub fn check_dep_all() -> Bool
 
 pub fn check_dep_pi() -> Bool
@@ -493,6 +495,8 @@ pub fn check_hit_schema_torus_comp() -> Bool
 pub fn check_hit_schema_validation() -> Bool
 
 pub fn check_hoas() -> Bool
+
+pub fn check_hopf_exact_rational() -> Bool
 
 pub fn check_hopf_numeric() -> Bool
 
@@ -1196,11 +1200,15 @@ pub fn dpath_cong_value(DValue, DValue, DValue) -> DValue
 
 pub fn dpath_funext_value(DValue, DValue) -> DValue
 
+pub fn dpath_left_unit3_value(DValue, DValue, DValue, Int32) -> DValue
+
 pub fn dpath_prefix_value(DValue, Dim) -> DValue
 
 pub fn dpath_refl_term(DTerm) -> DTerm
 
 pub fn dpath_refl_value(DValue) -> DValue
+
+pub fn dpath_right_unit3_value(DValue, DValue, DValue, Int32) -> DValue
 
 pub fn dpath_segment_value(DValue, Dim) -> DValue
 
@@ -1692,11 +1700,15 @@ pub fn homotopy_group_type_term(DTerm, DTerm, Int32) -> DTerm
 
 pub fn hopf_linking_number_numeric(Int32) -> Double
 
+pub fn hopf_map_rat(Array[@algebra.Rat]) -> Array[@algebra.Rat]
+
 pub fn hopf_map_s3_to_s2(Array[Double]) -> Array[Double]
 
 pub fn hopf_north_fiber(Double) -> Array[Double]
 
 pub fn hopf_phase_rotate(Array[Double], Double) -> Array[Double]
+
+pub fn hopf_rotate_rat(Array[@algebra.Rat], @algebra.Rat, @algebra.Rat) -> Array[@algebra.Rat]
 
 pub fn hopf_south_fiber(Double) -> Array[Double]
 

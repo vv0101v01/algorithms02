@@ -387,3 +387,56 @@ pub fn check_cubical_algorithms() -> Bool {
   check_path_algebra_algorithms() &&
   check_cubical_term_builders()
 }
+
+///|
+/// Left unit as a 3-cell: for `alpha : Path(space, r, r)`, a
+/// path in `Path(space, r, r)` from `refl(r) ⬝ alpha` to
+/// `alpha`.  The transitivity square `S` of `(refl, alpha)`
+/// has top edge `refl ⬝ alpha`, right edge `alpha`, and left
+/// and bottom edges constant at `r`; the 3-cell rotates the
+/// top edge onto the right edge in two connection phases --
+/// first `S(i, i ∨ ¬t)` (top edge to diagonal, start point
+/// sliding down the constant left edge), then `S(i ∨ t, i)`
+/// (diagonal to right edge, start point sliding along the
+/// constant bottom edge) -- so both endpoints stay at `r`
+/// throughout.
+pub fn dpath_left_unit3_value(
+  space_ty : DValue,
+  r : DValue,
+  alpha : DValue,
+  dlevel : Int32,
+) -> DValue {
+  let square = dpath_trans_square_value(
+    space_ty,
+    dpath_refl_value(r),
+    alpha,
+    dlevel,
+  )
+  let phase1 : DValue = DVPathLam(t => {
+    DVPathLam(i => dapp_dim(dapp_dim(square, i), dim_simplify(DOr(i, DNeg(t)))))
+  })
+  let phase2 : DValue = DVPathLam(t => {
+    DVPathLam(i => dapp_dim(dapp_dim(square, dim_simplify(DOr(i, t))), i))
+  })
+  dpath_trans_value(DVPathTy(_ => space_ty, r, r), phase1, phase2, dlevel)
+}
+
+///|
+/// Right unit as a 3-cell: a path from `alpha ⬝ refl(r)` to
+/// `alpha`, by sliding vertically through the transitivity
+/// square of `(alpha, refl)`, whose bottom edge is `alpha`
+/// and whose left and right edges are constant at `r`.
+pub fn dpath_right_unit3_value(
+  space_ty : DValue,
+  r : DValue,
+  alpha : DValue,
+  dlevel : Int32,
+) -> DValue {
+  let square = dpath_trans_square_value(
+    space_ty,
+    alpha,
+    dpath_refl_value(r),
+    dlevel,
+  )
+  DVPathLam(t => DVPathLam(i => dapp_dim(dapp_dim(square, i), DNeg(t))))
+}

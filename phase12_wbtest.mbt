@@ -53,3 +53,8 @@ test "phase12: case-split conversion and path-valued circle/torus comp" {
 test "phase12: stratified extensionality for host cube functions" {
   inspect(check_dcube_stratified_extensionality(), content="true")
 }
+
+///|
+test "phase12: loop unit 3-cells on sphere reps and exact rational Hopf" {
+  inspect(check_loop_unit_3cells_and_hopf_exact(), content="true")
+}

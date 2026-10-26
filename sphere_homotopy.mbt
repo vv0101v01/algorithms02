@@ -779,3 +779,199 @@ pub fn check_sphere_homotopy_representatives() -> Bool {
     _ => false
   }
 }
+
+// ---------------------------------------------------------------------------
+// Phase 12: the Hopf map in exact rational arithmetic.
+//
+// The numerical layer above samples the Hopf map in floating
+// point.  The same formulas are polynomial, so on rational
+// points of `S^3` and rational phase rotations
+// (`u^2 + v^2 = 1` in Q) the defining identities -- landing
+// on `S^2`, invariance along fibers, and the pole fibers --
+// hold as *exact* rational equalities, checked with the
+// algebra package's `Rat`.  Rational points are dense in
+// `S^3` and rational rotations are dense in the circle
+// group, so this is the exact representative-level shadow of
+// the fibration identities; it is not a proof about the
+// internal Hopf map (which is not constructed).
+// ---------------------------------------------------------------------------
+
+///|
+pub fn hopf_map_rat(q : Array[@algebra.Rat]) -> Array[@algebra.Rat] {
+  if q.length() != 4 {
+    return [@algebra.rat_zero(), @algebra.rat_zero(), @algebra.rat_zero()]
+  }
+  let two = @algebra.rat_int(2)
+  [
+    @algebra.rat_mul(
+      two,
+      @algebra.rat_add(
+        @algebra.rat_mul(q[0], q[2]),
+        @algebra.rat_mul(q[1], q[3]),
+      ),
+    ),
+    @algebra.rat_mul(
+      two,
+      @algebra.rat_sub(
+        @algebra.rat_mul(q[1], q[2]),
+        @algebra.rat_mul(q[0], q[3]),
+      ),
+    ),
+    @algebra.rat_sub(
+      @algebra.rat_add(
+        @algebra.rat_mul(q[0], q[0]),
+        @algebra.rat_mul(q[1], q[1]),
+      ),
+      @algebra.rat_add(
+        @algebra.rat_mul(q[2], q[2]),
+        @algebra.rat_mul(q[3], q[3]),
+      ),
+    ),
+  ]
+}
+
+///|
+/// Multiply both complex coordinates by `u + i v` exactly.
+pub fn hopf_rotate_rat(
+  q : Array[@algebra.Rat],
+  u : @algebra.Rat,
+  v : @algebra.Rat,
+) -> Array[@algebra.Rat] {
+  if q.length() != 4 {
+    return [
+      @algebra.rat_zero(),
+      @algebra.rat_zero(),
+      @algebra.rat_zero(),
+      @algebra.rat_zero(),
+    ]
+  }
+  [
+    @algebra.rat_sub(@algebra.rat_mul(u, q[0]), @algebra.rat_mul(v, q[1])),
+    @algebra.rat_add(@algebra.rat_mul(v, q[0]), @algebra.rat_mul(u, q[1])),
+    @algebra.rat_sub(@algebra.rat_mul(u, q[2]), @algebra.rat_mul(v, q[3])),
+    @algebra.rat_add(@algebra.rat_mul(v, q[2]), @algebra.rat_mul(u, q[3])),
+  ]
+}
+
+///|
+fn hopf_rat_eq(a : Array[@algebra.Rat], b : Array[@algebra.Rat]) -> Bool {
+  if a.length() != b.length() {
+    return false
+  }
+  for i in 0..<a.length() {
+    if !@algebra.rat_is_zero(@algebra.rat_sub(a[i], b[i])) {
+      return false
+    }
+  }
+  true
+}
+
+///|
+fn hopf_rat_norm2(q : Array[@algebra.Rat]) -> @algebra.Rat {
+  let mut acc = @algebra.rat_zero()
+  for i in 0..<q.length() {
+    acc = @algebra.rat_add(acc, @algebra.rat_mul(q[i], q[i]))
+  }
+  acc
+}
+
+///|
+fn hopf_rat_point(
+  a : Int32,
+  b : Int32,
+  c : Int32,
+  d : Int32,
+  den : Int32,
+) -> Array[@algebra.Rat] {
+  [
+    @algebra.rat_make(a, den),
+    @algebra.rat_make(b, den),
+    @algebra.rat_make(c, den),
+    @algebra.rat_make(d, den),
+  ]
+}
+
+///|
+/// Exact rational verification of the Hopf identities: every
+/// listed rational point lies on `S^3`, its image lies on
+/// `S^2`, rational phase rotations stay inside one fiber
+/// (same image, exactly), the pole fibers map to the poles,
+/// and two distinct sampled fibers have no sampled point in
+/// common.
+pub fn check_hopf_exact_rational() -> Bool {
+  let one = @algebra.rat_one()
+  let points = [
+    hopf_rat_point(1, 0, 0, 0, 1),
+    hopf_rat_point(0, 0, 1, 0, 1),
+    hopf_rat_point(3, 0, 4, 0, 5),
+    hopf_rat_point(1, 2, 2, 0, 3),
+    hopf_rat_point(1, 1, 1, 1, 2),
+    hopf_rat_point(2, 3, 6, 0, 7),
+    hopf_rat_point(4, 4, 7, 0, 9),
+    hopf_rat_point(2, 6, 3, 0, 7),
+  ]
+  let rotations : Array[(@algebra.Rat, @algebra.Rat)] = [
+    (@algebra.rat_make(1, 1), @algebra.rat_make(0, 1)),
+    (@algebra.rat_make(0, 1), @algebra.rat_make(1, 1)),
+    (@algebra.rat_make(3, 5), @algebra.rat_make(4, 5)),
+    (@algebra.rat_make(5, 13), @algebra.rat_make(12, 13)),
+    (@algebra.rat_make(8, 17), @algebra.rat_make(-15, 17)),
+    (@algebra.rat_make(-7, 25), @algebra.rat_make(24, 25)),
+  ]
+  for r in 0..<rotations.length() {
+    let (u, v) = rotations[r]
+    if !@algebra.rat_is_zero(@algebra.rat_sub(hopf_rat_norm2([u, v]), one)) {
+      return false
+    }
+  }
+  for p in 0..<points.length() {
+    let q = points[p]
+    if !@algebra.rat_is_zero(@algebra.rat_sub(hopf_rat_norm2(q), one)) {
+      return false
+    }
+    let image = hopf_map_rat(q)
+    if !@algebra.rat_is_zero(@algebra.rat_sub(hopf_rat_norm2(image), one)) {
+      return false
+    }
+    for r in 0..<rotations.length() {
+      let (u, v) = rotations[r]
+      let rotated = hopf_rotate_rat(q, u, v)
+      if !@algebra.rat_is_zero(@algebra.rat_sub(hopf_rat_norm2(rotated), one)) ||
+        !hopf_rat_eq(hopf_map_rat(rotated), image) {
+        return false
+      }
+    }
+  }
+  // Pole fibers, exactly.
+  let zero = @algebra.rat_zero()
+  for r in 0..<rotations.length() {
+    let (u, v) = rotations[r]
+    if !hopf_rat_eq(hopf_map_rat([u, v, zero, zero]), [zero, zero, one]) ||
+      !hopf_rat_eq(hopf_map_rat([zero, zero, u, v]), [
+        zero,
+        zero,
+        @algebra.rat_int(-1),
+      ]) {
+      return false
+    }
+  }
+  // Two distinct fibers: different images, and no sampled
+  // rotation of one point equals a sampled rotation of the
+  // other.
+  let fiber_a = points[2]
+  let fiber_b = points[4]
+  if hopf_rat_eq(hopf_map_rat(fiber_a), hopf_map_rat(fiber_b)) {
+    return false
+  }
+  for r in 0..<rotations.length() {
+    let (u, v) = rotations[r]
+    let ra = hopf_rotate_rat(fiber_a, u, v)
+    for s in 0..<rotations.length() {
+      let (u2, v2) = rotations[s]
+      if hopf_rat_eq(ra, hopf_rotate_rat(fiber_b, u2, v2)) {
+        return false
+      }
+    }
+  }
+  true
+}

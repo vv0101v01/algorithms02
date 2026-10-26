@@ -1227,3 +1227,62 @@ pub fn check_dcube_stratified_extensionality() -> Bool {
     None => false
   }
 }
+
+///|
+/// Phase 12: unit laws of loop composition as explicit
+/// 3-cells on sphere representatives (the representative
+/// calculus' first higher groupoid structure), and the Hopf
+/// identities in exact rational arithmetic.  The left unit
+/// 3-cell rotates the top edge of the transitivity square
+/// onto its right edge in two connection phases; the right
+/// unit slides through its square.  On `S^2` and `S^3`
+/// generator representatives both cells have the advertised
+/// faces and stay inside the iterated loop space at a
+/// generic parameter.  This is representative-level
+/// structure: associativity/interchange 3-cells and an
+/// internal Hopf map remain outside.
+pub fn check_loop_unit_3cells_and_hopf_exact() -> Bool {
+  if !check_hopf_exact_rational() {
+    return false
+  }
+  let cases : Array[(Int32, Int32)] = [(2, 1), (2, 2), (2, -1), (3, 1)]
+  for c in 0..<cases.length() {
+    let (dim, n) = cases[c]
+    let space_ty = loop_space_type_value(
+      sphere_type_value(dim),
+      sphere_north_value(dim),
+      dim - 1,
+    )
+    let loop_ty = loop_space_type_value(
+      sphere_type_value(dim),
+      sphere_north_value(dim),
+      dim,
+    )
+    let r = iterated_refl_value(sphere_north_value(dim), dim - 1)
+    let r_dim = iterated_refl_value(sphere_north_value(dim), dim)
+    let alpha = sphere_loop_power_value(dim, n)
+    let left_cell = dpath_left_unit3_value(space_ty, r, alpha, 6)
+    let left_lhs = sphere_loop_compose_value(dim, r_dim, alpha, 6)
+    if !conv_at(0, 1, loop_ty, dapp_dim(left_cell, DZero), left_lhs) ||
+      !conv_at(0, 1, loop_ty, dapp_dim(left_cell, DOne), alpha) {
+      return false
+    }
+    let left_mid = dapp_dim(left_cell, DVar(0))
+    if !conv_at(0, 1, space_ty, dapp_dim(left_mid, DZero), r) ||
+      !conv_at(0, 1, space_ty, dapp_dim(left_mid, DOne), r) {
+      return false
+    }
+    let right_cell = dpath_right_unit3_value(space_ty, r, alpha, 6)
+    let right_lhs = sphere_loop_compose_value(dim, alpha, r_dim, 6)
+    if !conv_at(0, 1, loop_ty, dapp_dim(right_cell, DZero), right_lhs) ||
+      !conv_at(0, 1, loop_ty, dapp_dim(right_cell, DOne), alpha) {
+      return false
+    }
+    let right_mid = dapp_dim(right_cell, DVar(0))
+    if !conv_at(0, 1, space_ty, dapp_dim(right_mid, DZero), r) ||
+      !conv_at(0, 1, space_ty, dapp_dim(right_mid, DOne), r) {
+      return false
+    }
+  }
+  true
+}
