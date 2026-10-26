@@ -560,6 +560,8 @@ pub fn check_phase5_semantic_systems() -> Bool
 
 pub fn check_phase6_infrastructure() -> Bool
 
+pub fn check_positivity_declarations() -> Bool
+
 pub fn check_projector() -> Bool
 
 pub fn check_propositional_truncation() -> Bool
@@ -2311,6 +2313,8 @@ pub fn schema_value_prefix(Array[DValue], Int32) -> Array[DValue]
 pub fn segment_schema() -> DHitSpec
 
 pub fn simultaneous_ir_compile_decode(DSimultaneousIRSpec, Int32) -> DInductiveSpec?
+
+pub fn simultaneous_ir_compile_decode_block(DSimultaneousIRSpec) -> Array[DInductiveSpec?]
 
 pub fn simultaneous_ir_function_universe_level(DSimultaneousIRSpec, Int32) -> Int32
 

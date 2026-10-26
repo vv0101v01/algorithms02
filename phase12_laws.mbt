@@ -853,3 +853,123 @@ pub fn check_positivity_declarations() -> Bool {
   }
   true
 }
+
+///|
+/// Phase 12: simultaneous IR compilation to eliminators over
+/// the base family.  A universe function whose cases mention
+/// an earlier function's hypotheses compiles to a closed
+/// eliminator term (the decode route still refuses it, since a
+/// nested decode over a different renamed copy would be
+/// ill-typed); cyclic interdependence is refused;
+/// function-valued recursive arguments substitute under a
+/// lambda.  Compiled terms are typechecked against their
+/// advertised Pi types and normalised on concrete codes.
+pub fn check_simultaneous_ir_eliminator_compilation() -> Bool {
+  // The eliminator motive is predicative, so the code family
+  // lives one universe above the interpreted types.
+  let base = dinductive_spec(
+    "CodeSU",
+    1,
+    [],
+    [],
+    code_interpretation_ir(false).base.constructors,
+  )
+  // With two functions the binary case context is
+  // a, El a, El2 a, b, El b, El2 b.
+  let el = dsimultaneous_function("El", DUniv(0), [
+    DNatTy,
+    DBoolTy,
+    DSigma(DTVar(4), DTVar(2)),
+    DPi(DTVar(4), DTVar(2)),
+  ])
+  let el2 = dsimultaneous_function("El2", DUniv(0), [
+    DBoolTy,
+    DNatTy,
+    DSigma(DTVar(4), DTVar(2)),
+    DPi(DTVar(4), DTVar(2)),
+  ])
+  let spec = dsimultaneous_ir_spec(base, [el, el2])
+  if !simultaneous_ir_validate(spec) ||
+    !simultaneous_ir_uses_other_hypotheses(spec, 1) ||
+    simultaneous_ir_compile_decode(spec, 1) != None {
+    return false
+  }
+  let block = simultaneous_ir_compile_eliminator_block(spec)
+  let el_term = match block[0] {
+    Some(v) => v
+    None => return false
+  }
+  let el2_term = match block[1] {
+    Some(v) => v
+    None => return false
+  }
+  match simultaneous_ir_eliminator_type(spec, 1) {
+    Some(ty) => if !dep_check_closed(el2_term, ty) { return false }
+    None => return false
+  }
+  ignore(el_term)
+  let cnat_t = schema_intro_term(base, 0, [], [])
+  let cbool_t = schema_intro_term(base, 1, [], [])
+  let code_t = schema_intro_term(base, 3, [], [
+    cnat_t,
+    schema_intro_term(base, 2, [], [cbool_t, cnat_t]),
+  ])
+  // El2(carrow(cnat, cpair(cbool, cnat)))
+  //   = Pi(El(cnat), Sigma(El(cbool), El(cnat)))
+  //   = Nat -> Bool x Nat.
+  if dep_nf_closed(DApp(el2_term, code_t), DUniv(0)) !=
+    Some(DPi(DNatTy, DSigma(DBoolTy, DNatTy))) {
+    return false
+  }
+  // And El itself through the same route.
+  if dep_nf_closed(DApp(el_term, code_t), DUniv(0)) !=
+    Some(DPi(DNatTy, DSigma(DBoolTy, DNatTy))) {
+    return false
+  }
+  // Cyclic interdependence compiles on neither route.
+  let cyc_a = dsimultaneous_function("A", DUniv(0), [
+    DNatTy,
+    DBoolTy,
+    DSigma(DTVar(3), DTVar(1)),
+    DPi(DTVar(3), DTVar(1)),
+  ])
+  let cyc_b = dsimultaneous_function("B", DUniv(0), [
+    DBoolTy,
+    DNatTy,
+    DSigma(DTVar(4), DTVar(2)),
+    DPi(DTVar(4), DTVar(2)),
+  ])
+  let cyclic = dsimultaneous_ir_spec(base, [cyc_a, cyc_b])
+  if !simultaneous_ir_validate(cyclic) {
+    return false
+  }
+  let cyc_block = simultaneous_ir_compile_eliminator_block(cyclic)
+  if cyc_block[0] != None || cyc_block[1] != None {
+    return false
+  }
+  // Function-valued recursive arguments.
+  let fn_base = dinductive_spec("FnCodeSU", 1, [], [], [
+    dconstructor_spec("leaf", []),
+    dconstructor_spec("node", [darg_function("branch", DBoolTy)]),
+  ])
+  let fn_el = dsimultaneous_function("El", DUniv(0), [
+    DNatTy,
+    DPi(DBoolTy, DApp(DTVar(2), DTVar(0))),
+  ])
+  let fn_el2 = dsimultaneous_function("El2", DUniv(0), [
+    DBoolTy,
+    DPi(DBoolTy, DApp(DTVar(2), DTVar(0))),
+  ])
+  let fn_spec = dsimultaneous_ir_spec(fn_base, [fn_el, fn_el2])
+  if !simultaneous_ir_validate(fn_spec) {
+    return false
+  }
+  let fn_term = match simultaneous_ir_compile_eliminator(fn_spec, 1) {
+    Some(v) => v
+    None => return false
+  }
+  let leaf_t = schema_intro_term(fn_base, 0, [], [])
+  let node_t = schema_intro_term(fn_base, 1, [], [DLam(DBoolTy, leaf_t)])
+  // El2(node (lambda _. leaf)) = Bool -> El(leaf) = Bool -> Nat.
+  dep_nf_closed(DApp(fn_term, node_t), DUniv(0)) == Some(DPi(DBoolTy, DNatTy))
+}

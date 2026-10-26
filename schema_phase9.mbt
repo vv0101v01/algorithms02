@@ -2659,3 +2659,656 @@ pub fn check_simultaneous_ir_compiled_decode() -> Bool {
   dep_nf_closed(decode_term(compiled, [], [], code_t), DUniv(0)) ==
   Some(DPi(DNatTy, DSigma(DBoolTy, DNatTy)))
 }
+
+// ---------------------------------------------------------------------------
+// Phase 12: simultaneous IR compilation to eliminators over the
+// base family.
+//
+// `simultaneous_ir_compile_decode` cannot express cases that
+// mention another function's hypotheses: the compiled decode
+// lives on a renamed copy of the base family, and a nested
+// `DDecode` over a different copy would be ill-typed (family
+// identity is the whole spec).  The eliminator route compiles
+// the whole block, in declaration order, to closed terms
+// over the *original* base spec:
+//
+//   λ params. λ indices. λ code.
+//     DInductiveElim(base, λ indices code. Type_l, cases, ...)
+//
+// Another function's hypothesis slot is substituted by that
+// function's compiled eliminator term applied to the recursive
+// argument (under a lambda for function arguments) -- family
+// identity matches throughout because everything stays over
+// `base`.  Forward or cyclic interdependence, hypotheses of
+// non-universe functions, and constructors with nested or
+// decoded arguments are refused.  The eliminator motive is
+// predicative: a function landing in `Type_l` needs
+// `l < base.level` (the motive's codomain universe is the
+// base family's level), unlike the decode route, whose cases
+// are checked directly as types.  Every produced term is
+// verified before being returned: `dep_check_closed` against
+// its advertised Pi type, plus a forcing check that applies
+// the (lazily checked) motive and case lambdas to fresh
+// neutrals so their bodies are actually typechecked.
+// ---------------------------------------------------------------------------
+
+///|
+/// Rewrite a term from a source scope (positions given by
+/// `target_pos`, with -2 denoting one distinguished extra
+/// binder) into a target context of length `total_len`.
+fn sim_elim_rewrite(
+  term : DTerm,
+  scope_len : Int32,
+  target_pos : Array[Int32],
+  total_len : Int32,
+) -> DTerm {
+  dterm_map_vars_at(term, 0, (v, depth) => {
+    if v < depth {
+      DTVar(v)
+    } else {
+      let pos = scope_len - 1 - (v - depth)
+      if pos >= 0 && pos < target_pos.length() {
+        let tp = target_pos[pos]
+        if tp == -2 {
+          DTVar(depth)
+        } else if tp >= 0 {
+          DTVar(total_len - 1 - tp + depth)
+        } else {
+          DTVar(v)
+        }
+      } else {
+        DTVar(v)
+      }
+    }
+  })
+}
+
+///|
+fn sim_elim_vars_at(
+  total_len : Int32,
+  positions : Array[Int32],
+) -> Array[DTerm] {
+  let out : Array[DTerm] = []
+  for i in 0..<positions.length() {
+    out.push(DTVar(total_len - 1 - positions[i]))
+  }
+  out
+}
+
+///|
+fn sim_elim_positions(count : Int32, offset : Int32) -> Array[Int32] {
+  let out : Array[Int32] = []
+  for i in 0..<count {
+    out.push(offset + i)
+  }
+  out
+}
+
+///|
+/// The Pi type of the compiled eliminator term for one
+/// universe-valued function: parameters, indices, code, then
+/// the universe at the function's level.  `None` for
+/// non-universe-valued functions.
+pub fn simultaneous_ir_eliminator_type(
+  spec : DSimultaneousIRSpec,
+  function_index : Int32,
+) -> DTerm? {
+  let level = simultaneous_ir_function_universe_level(spec, function_index)
+  if level < 0 {
+    return None
+  }
+  let param_count = spec.base.params.length()
+  let index_count = spec.base.indices.length()
+  let outer = param_count + index_count
+  let code_ty = DInductive(
+    spec.base,
+    sim_elim_vars_at(outer, sim_elim_positions(param_count + index_count, 0)),
+  )
+  let mut ty = DPi(code_ty, DUniv(level))
+  let mut j = index_count - 1
+  while j >= 0 {
+    ty = DPi(spec.base.indices[j].ty, ty)
+    j = j - 1
+  }
+  let mut p = param_count - 1
+  while p >= 0 {
+    ty = DPi(spec.base.params[p].ty, ty)
+    p = p - 1
+  }
+  Some(ty)
+}
+
+///|
+fn sim_elim_motive(spec : DSimultaneousIRSpec, level : Int32) -> DTerm {
+  let param_count = spec.base.params.length()
+  let index_count = spec.base.indices.length()
+  let outer = param_count + index_count + 1
+  // Scrutinee binder domain, at context outer + index_count.
+  let scrut_total = outer + index_count
+  let scrut_args : Array[DTerm] = []
+  for p in 0..<param_count {
+    scrut_args.push(DTVar(scrut_total - 1 - p))
+  }
+  for t in 0..<index_count {
+    scrut_args.push(DTVar(index_count - 1 - t))
+  }
+  let mut motive = DLam(DInductive(spec.base, scrut_args), DUniv(level))
+  let mut j = index_count - 1
+  while j >= 0 {
+    // Index telescope types are in scope (params, prior
+    // indices); at motive binder j the context is the ambient
+    // outer context followed by j motive index binders.
+    let target_pos : Array[Int32] = []
+    for p in 0..<param_count {
+      target_pos.push(p)
+    }
+    for t in 0..<j {
+      target_pos.push(outer + t)
+    }
+    let dom = sim_elim_rewrite(
+      spec.base.indices[j].ty,
+      param_count + j,
+      target_pos,
+      outer + j,
+    )
+    motive = DLam(dom, motive)
+    j = j - 1
+  }
+  motive
+}
+
+///|
+fn sim_elim_foreign_term(
+  spec : DSimultaneousIRSpec,
+  compiled : Array[DTerm?],
+  ctor : DConstructorSpec,
+  arg_index : Int32,
+  g : Int32,
+  arg_bind_pos : Array[Int32],
+  outer : Int32,
+  body_total : Int32,
+  depth : Int32,
+) -> DTerm? {
+  let g_term = match compiled[g] {
+    Some(v) => v
+    None => return None
+  }
+  let arg = ctor.args[arg_index]
+  let param_count = spec.base.params.length()
+  let target_pos : Array[Int32] = []
+  for p in 0..<param_count {
+    target_pos.push(p)
+  }
+  for j in 0..<arg_index {
+    target_pos.push(outer + arg_bind_pos[j])
+  }
+  let apply_g = (total : Int32, indices : Array[DTerm], code : DTerm) => {
+    let mut app = g_term
+    for p in 0..<param_count {
+      app = DApp(app, DTVar(total - 1 - p))
+    }
+    for i in 0..<indices.length() {
+      app = DApp(app, indices[i])
+    }
+    DApp(app, code)
+  }
+  match arg.kind {
+    DArgRecursive => {
+      let total = body_total + depth
+      let indices : Array[DTerm] = []
+      for i in 0..<arg.index.length() {
+        indices.push(
+          sim_elim_rewrite(
+            arg.index[i],
+            param_count + arg_index,
+            target_pos,
+            total,
+          ),
+        )
+      }
+      Some(
+        apply_g(
+          total,
+          indices,
+          DTVar(total - 1 - (outer + arg_bind_pos[arg_index])),
+        ),
+      )
+    }
+    DArgFunction => {
+      let total = body_total + depth
+      let dom = sim_elim_rewrite(
+        arg.ty,
+        param_count + arg_index,
+        target_pos,
+        total,
+      )
+      let inner_total = total + 1
+      let inner_target : Array[Int32] = []
+      for i in 0..<target_pos.length() {
+        inner_target.push(target_pos[i])
+      }
+      inner_target.push(-2)
+      let indices : Array[DTerm] = []
+      for i in 0..<arg.index.length() {
+        indices.push(
+          sim_elim_rewrite(
+            arg.index[i],
+            param_count + arg_index + 1,
+            inner_target,
+            inner_total,
+          ),
+        )
+      }
+      Some(
+        DLam(
+          dom,
+          apply_g(
+            inner_total,
+            indices,
+            DApp(
+              DTVar(inner_total - 1 - (outer + arg_bind_pos[arg_index])),
+              DTVar(0),
+            ),
+          ),
+        ),
+      )
+    }
+    _ => None
+  }
+}
+
+///|
+fn sim_elim_compile_one(
+  spec : DSimultaneousIRSpec,
+  function_index : Int32,
+  compiled : Array[DTerm?],
+) -> DTerm? {
+  let level = simultaneous_ir_function_universe_level(spec, function_index)
+  if level < 0 {
+    return None
+  }
+  let base = spec.base
+  if level >= base.level {
+    return None
+  }
+  let param_count = base.params.length()
+  let index_count = base.indices.length()
+  let outer = param_count + index_count + 1
+  let function_count = spec.functions.length()
+  let cases : Array[DTerm] = []
+  for c in 0..<base.constructors.length() {
+    let ctor = base.constructors[c]
+    // Binder layout of the eliminator case telescope.
+    let bind_kinds : Array[Int32] = [] // 0 arg, 1 IH, 2 constraint
+    let bind_args : Array[Int32] = []
+    let arg_bind_pos : Array[Int32] = []
+    let ih_bind_pos : Array[Int32] = []
+    for i in 0..<ctor.args.length() {
+      let kind = ctor.args[i].kind
+      match kind {
+        DArgExternal | DArgRecursive | DArgFunction => ()
+        _ => return None
+      }
+      arg_bind_pos.push(bind_kinds.length())
+      bind_kinds.push(0)
+      bind_args.push(i)
+      if simultaneous_arg_has_hypothesis(kind) {
+        ih_bind_pos.push(bind_kinds.length())
+        bind_kinds.push(1)
+        bind_args.push(i)
+      } else {
+        ih_bind_pos.push(-1)
+      }
+    }
+    let constraint_bind_start = bind_kinds.length()
+    for k in 0..<ctor.constraints.length() {
+      bind_kinds.push(2)
+      bind_args.push(k)
+    }
+    let binder_count = bind_kinds.length()
+    let body_total = outer + binder_count
+    // Domains, computed in binder order.
+    let domains : Array[DTerm] = []
+    for r in 0..<binder_count {
+      let total = outer + r
+      let target_pos : Array[Int32] = []
+      for p in 0..<param_count {
+        target_pos.push(p)
+      }
+      let ai = bind_args[r]
+      if bind_kinds[r] == 2 {
+        for j in 0..<ctor.args.length() {
+          target_pos.push(outer + arg_bind_pos[j])
+        }
+        let con = ctor.constraints[ai]
+        let scope_len = param_count + ctor.args.length()
+        domains.push(
+          DPath(
+            sim_elim_rewrite(con.ty, scope_len, target_pos, total),
+            sim_elim_rewrite(con.lhs, scope_len, target_pos, total),
+            sim_elim_rewrite(con.rhs, scope_len, target_pos, total),
+          ),
+        )
+      } else {
+        for j in 0..<ai {
+          target_pos.push(outer + arg_bind_pos[j])
+        }
+        let arg = ctor.args[ai]
+        if bind_kinds[r] == 1 {
+          // Induction hypothesis binder.
+          match arg.kind {
+            DArgRecursive => domains.push(DUniv(level))
+            DArgFunction =>
+              domains.push(
+                DPi(
+                  sim_elim_rewrite(arg.ty, param_count + ai, target_pos, total),
+                  DUniv(level),
+                ),
+              )
+            _ => return None
+          }
+        } else {
+          match arg.kind {
+            DArgExternal =>
+              domains.push(
+                sim_elim_rewrite(arg.ty, param_count + ai, target_pos, total),
+              )
+            DArgRecursive => {
+              let indices : Array[DTerm] = []
+              for i in 0..<arg.index.length() {
+                indices.push(
+                  sim_elim_rewrite(
+                    arg.index[i],
+                    param_count + ai,
+                    target_pos,
+                    total,
+                  ),
+                )
+              }
+              let args = sim_elim_vars_at(
+                total,
+                sim_elim_positions(param_count, 0),
+              )
+              for i in 0..<indices.length() {
+                args.push(indices[i])
+              }
+              domains.push(DInductive(base, args))
+            }
+            DArgFunction => {
+              let dom = sim_elim_rewrite(
+                arg.ty,
+                param_count + ai,
+                target_pos,
+                total,
+              )
+              let inner_target : Array[Int32] = []
+              for i in 0..<target_pos.length() {
+                inner_target.push(target_pos[i])
+              }
+              inner_target.push(-2)
+              let indices : Array[DTerm] = []
+              for i in 0..<arg.index.length() {
+                indices.push(
+                  sim_elim_rewrite(
+                    arg.index[i],
+                    param_count + ai + 1,
+                    inner_target,
+                    total + 1,
+                  ),
+                )
+              }
+              let args = sim_elim_vars_at(
+                total + 1,
+                sim_elim_positions(param_count, 0),
+              )
+              for i in 0..<indices.length() {
+                args.push(indices[i])
+              }
+              domains.push(DPi(dom, DInductive(base, args)))
+            }
+            _ => return None
+          }
+        }
+      }
+    }
+    // Simultaneous-context layout for this constructor.
+    let sim_pos_of_arg : Array[Int32] = []
+    let sim_pos_of_ih : Array[Array[Int32]] = []
+    let mut sim_len = param_count
+    for i in 0..<ctor.args.length() {
+      sim_pos_of_arg.push(sim_len)
+      sim_len = sim_len + 1
+      let slots : Array[Int32] = []
+      if simultaneous_arg_has_hypothesis(ctor.args[i].kind) {
+        for _g in 0..<function_count {
+          slots.push(sim_len)
+          sim_len = sim_len + 1
+        }
+      }
+      sim_pos_of_ih.push(slots)
+    }
+    let sim_constraint_start = sim_len
+    sim_len = sim_len + ctor.constraints.length()
+    let mut failed = false
+    let body = dterm_map_vars_at(spec.functions[function_index].cases[c], 0, (
+      v,
+      depth,
+    ) => {
+      if v < depth {
+        DTVar(v)
+      } else {
+        let pos = sim_len - 1 - (v - depth)
+        if pos < 0 || pos >= sim_len {
+          DTVar(v)
+        } else if pos < param_count {
+          DTVar(body_total - 1 - pos + depth)
+        } else if pos >= sim_constraint_start {
+          DTVar(
+            body_total -
+            1 -
+            (outer + constraint_bind_start + (pos - sim_constraint_start)) +
+            depth,
+          )
+        } else {
+          let mut out = DTVar(v)
+          let mut placed = false
+          for i in 0..<ctor.args.length() {
+            if pos == sim_pos_of_arg[i] {
+              out = DTVar(body_total - 1 - (outer + arg_bind_pos[i]) + depth)
+              placed = true
+              break
+            }
+            for g in 0..<sim_pos_of_ih[i].length() {
+              if pos == sim_pos_of_ih[i][g] {
+                if g == function_index {
+                  out = DTVar(body_total - 1 - (outer + ih_bind_pos[i]) + depth)
+                } else {
+                  match
+                    sim_elim_foreign_term(
+                      spec, compiled, ctor, i, g, arg_bind_pos, outer, body_total,
+                      depth,
+                    ) {
+                    Some(term) => out = term
+                    None => failed = true
+                  }
+                }
+                placed = true
+                break
+              }
+            }
+            if placed {
+              break
+            }
+          }
+          out
+        }
+      }
+    })
+    if failed {
+      return None
+    }
+    let mut case_term = body
+    let mut r = binder_count - 1
+    while r >= 0 {
+      case_term = DLam(domains[r], case_term)
+      r = r - 1
+    }
+    cases.push(case_term)
+  }
+  let elim = DInductiveElim(
+    base,
+    sim_elim_motive(spec, level),
+    cases,
+    sim_elim_vars_at(outer, sim_elim_positions(param_count, 0)),
+    sim_elim_vars_at(outer, sim_elim_positions(index_count, param_count)),
+    DTVar(0),
+  )
+  let code_ty = DInductive(
+    base,
+    sim_elim_vars_at(
+      param_count + index_count,
+      sim_elim_positions(param_count + index_count, 0),
+    ),
+  )
+  let mut term = DLam(code_ty, elim)
+  let mut j = index_count - 1
+  while j >= 0 {
+    term = DLam(base.indices[j].ty, term)
+    j = j - 1
+  }
+  let mut p = param_count - 1
+  while p >= 0 {
+    term = DLam(base.params[p].ty, term)
+    p = p - 1
+  }
+  match simultaneous_ir_eliminator_type(spec, function_index) {
+    Some(ty) =>
+      if dep_check_closed(term, ty) && sim_elim_verify_cases(spec, level, cases) {
+        Some(term)
+      } else {
+        None
+      }
+    None => None
+  }
+}
+
+///|
+/// Forcing verification of compiled eliminator cases: the
+/// motive and the case lambdas (whose bodies the bidirectional
+/// checker only validates on application) are applied to fresh
+/// neutral arguments in the outer context, so every body is
+/// genuinely typechecked.  A body whose check fails surfaces
+/// as the `DVUnit` unwrap sentinel.
+fn sim_elim_verify_cases(
+  spec : DSimultaneousIRSpec,
+  level : Int32,
+  cases : Array[DTerm],
+) -> Bool {
+  let base = spec.base
+  let param_values = schema_fresh_values(base.params.length(), 12100)
+  let param_types = inductive_param_types(base, param_values)
+  let index_values = schema_fresh_values(base.indices.length(), 12200)
+  let index_types : Array[DValue] = []
+  let prior_values : Array[DValue] = []
+  for j in 0..<base.indices.length() {
+    index_types.push(
+      telescope_next_type(
+        base.indices,
+        param_types,
+        param_values,
+        index_types,
+        prior_values,
+      ),
+    )
+    prior_values.push(index_values[j])
+  }
+  let code_value : DValue = DVNeutral(DNVar(12300))
+  let mut ctx = denv_empty()
+  let mut env = denv_empty()
+  for i in 0..<param_types.length() {
+    ctx = denv_cons(param_types[i], ctx)
+    env = denv_cons(param_values[i], env)
+  }
+  for i in 0..<index_types.length() {
+    ctx = denv_cons(index_types[i], ctx)
+    env = denv_cons(index_values[i], env)
+  }
+  ctx = denv_cons(DVInductive(base, param_values, index_values), ctx)
+  env = denv_cons(code_value, env)
+  let motive_value = match
+    d_check(
+      sim_elim_motive(spec, level),
+      inductive_motive_type(base, param_values),
+      ctx,
+      env,
+      ddim_empty(),
+    ) {
+    Some(v) => v
+    None => return false
+  }
+  let motive_fn = inductive_motive_from_value(base, param_values, motive_value)
+  match force_value(motive_fn(index_values, code_value)) {
+    DVUniv(l) => if l != level { return false }
+    _ => return false
+  }
+  for c in 0..<cases.length() {
+    let case_type = inductive_case_type(base, motive_fn, param_values, c)
+    let case_value = match
+      d_check(cases[c], case_type, ctx, env, ddim_empty()) {
+      Some(v) => v
+      None => return false
+    }
+    let mut cur = case_value
+    let mut ty = case_type
+    let mut step = 0
+    while true {
+      match as_pi(ty) {
+        Some(parts) => {
+          let fresh : DValue = DVNeutral(DNVar(12400 + c * 40 + step))
+          cur = dapp_typed(cur, fresh, parts.dom)
+          ty = (parts.fam)(fresh)
+          step = step + 1
+        }
+        None => break
+      }
+    }
+    match force_value(cur) {
+      DVUnit => return false
+      _ => ()
+    }
+  }
+  true
+}
+
+///|
+/// Compile a simultaneous block to eliminator terms over the
+/// base family, in declaration order (see the section doc).
+/// The result aligns with `spec.functions`; uncompilable
+/// functions are `None`, as is every entry when the block does
+/// not validate.
+pub fn simultaneous_ir_compile_eliminator_block(
+  spec : DSimultaneousIRSpec,
+) -> Array[DTerm?] {
+  let compiled : Array[DTerm?] = []
+  for _i in 0..<spec.functions.length() {
+    compiled.push(None)
+  }
+  if !simultaneous_ir_validate(spec) {
+    return compiled
+  }
+  for fi in 0..<spec.functions.length() {
+    compiled[fi] = sim_elim_compile_one(spec, fi, compiled)
+  }
+  compiled
+}
+
+///|
+pub fn simultaneous_ir_compile_eliminator(
+  spec : DSimultaneousIRSpec,
+  function_index : Int32,
+) -> DTerm? {
+  if function_index < 0 || function_index >= spec.functions.length() {
+    return None
+  }
+  simultaneous_ir_compile_eliminator_block(spec)[function_index]
+}

@@ -38,3 +38,8 @@ test "phase12: artifact repository, DAG codec, version negotiation" {
 test "phase12: positivity declarations for opaque operators" {
   inspect(check_positivity_declarations(), content="true")
 }
+
+///|
+test "phase12: simultaneous IR eliminator compilation for interdependent blocks" {
+  inspect(check_simultaneous_ir_eliminator_compilation(), content="true")
+}
