@@ -53,3 +53,13 @@ test "polynomial cubes and connection-blend filling" {
 test "biquadratic denesting" {
   inspect(check_biquadratic_denesting(), content="true")
 }
+
+///|
+test "phase12: irreducibility certificates bypass Kronecker" {
+  inspect(check_qpoly_irreducibility_certificates(), content="true")
+}
+
+///|
+test "phase12: pure cubic and triquadratic tower fields" {
+  inspect(check_tower_fields(), content="true")
+}

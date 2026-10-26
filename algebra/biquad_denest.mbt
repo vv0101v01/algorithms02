@@ -604,21 +604,37 @@ pub fn radical_to_biquad(e : RadicalExpr) -> BiquadNum? {
 
 ///|
 /// Exact equality of two radical expressions through the
-/// quadratic and biquadratic normal forms; `None` when either
-/// side escapes both.
+/// quadratic, biquadratic, triquadratic, and pure-cubic normal
+/// forms; `None` when either side escapes all of them.
 pub fn radical_equal_exact(a : RadicalExpr, b : RadicalExpr) -> Bool? {
   match (radical_to_biquad(a), radical_to_biquad(b)) {
-    (Some(x), Some(y)) => Some(biquad_eq(x, y))
-    _ =>
-      match (radical_to_quad(a), radical_to_quad(b)) {
-        (Some(x), Some(y)) =>
-          if quad_compatible(x, y) {
-            Some(quad_is_zero(quad_sub(x, y)))
-          } else {
-            None
-          }
-        _ => None
+    (Some(x), Some(y)) => return Some(biquad_eq(x, y))
+    _ => ()
+  }
+  match (radical_to_triquad(a), radical_to_triquad(b)) {
+    (Some(x), Some(y)) =>
+      match triquad_align(x, y) {
+        Some((u, v)) => return Some(u.coeffs == v.coeffs)
+        None => ()
       }
+    _ => ()
+  }
+  match (radical_to_cubic(a), radical_to_cubic(b)) {
+    (Some(x), Some(y)) =>
+      match cubic_align(x, y) {
+        Some((u, v)) => return Some(cubic_eq(u, v))
+        None => ()
+      }
+    _ => ()
+  }
+  match (radical_to_quad(a), radical_to_quad(b)) {
+    (Some(x), Some(y)) =>
+      if quad_compatible(x, y) {
+        Some(quad_is_zero(quad_sub(x, y)))
+      } else {
+        None
+      }
+    _ => None
   }
 }
 

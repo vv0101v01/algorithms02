@@ -233,6 +233,8 @@ pub fn check_qpoly_factor_complete() -> Bool
 
 pub fn check_qpoly_fast_arithmetic() -> Bool
 
+pub fn check_qpoly_irreducibility_certificates() -> Bool
+
 pub fn check_qpoly_mod_pattern_pruning() -> Bool
 
 pub fn check_radical_denesting() -> Bool
@@ -577,7 +579,13 @@ pub fn qpoly_integer_coeffs(QPoly) -> Array[Int32]
 
 pub fn qpoly_integer_coeffs_big(QPoly) -> Array[@bigint.BigInt]
 
+pub fn qpoly_irreducibility_certificate(QPoly, prime_bound? : Int32, shift_bound? : Int32) -> QPolyIrreducibilityCertificate?
+
+pub fn qpoly_irreducibility_certificate_check(QPoly, QPolyIrreducibilityCertificate) -> Bool
+
 pub fn qpoly_irreducible_by_mod_patterns(QPoly, Int32) -> Bool
+
+pub fn qpoly_irreducible_certified(QPoly) -> Bool
 
 pub fn qpoly_irreducible_upto3(QPoly) -> Bool
 
@@ -1225,6 +1233,16 @@ pub struct QPolyFactor {
   factor : QPoly
   multiplicity : Int32
 }
+
+pub enum QPolyIrreducibilityCertificate {
+  CertLinear
+  CertLowDegreeNoRationalRoot
+  CertModPrime(Int32)
+  CertEisenstein(Int32, Int32)
+} derive(Eq, @debug.Debug)
+pub fn QPolyIrreducibilityCertificate::equal(Self, Self) -> Bool
+pub fn QPolyIrreducibilityCertificate::not_equal(Self, Self) -> Bool
+pub fn QPolyIrreducibilityCertificate::to_repr(Self) -> @debug.Repr
 
 pub struct QPolyRationalFactorization {
   roots : Array[Rat]

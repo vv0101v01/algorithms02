@@ -653,6 +653,16 @@ fn factor_squarefree(f0 : QPoly, state : Array[Int32]) -> Array[QPoly] {
       out.push(f)
       break
     }
+    // Irreducibility certificates (Eisenstein, mod-prime,
+    // low-degree) settle the polynomial with no search at all.
+    match qpoly_irreducibility_certificate(f) {
+      Some(cert) =>
+        if qpoly_irreducibility_certificate_check(f, cert) {
+          out.push(f)
+          break
+        }
+      None => ()
+    }
     // Mod-`p` degree patterns first: they can certify the
     // absence of linear factors, in which case the divisor
     // enumeration behind rational-root search (whose cost grows
@@ -790,6 +800,9 @@ pub fn qpoly_complete_factorization_expand(
 pub fn qpoly_is_irreducible(p : QPoly) -> Bool {
   if qpoly_degree(p) <= 0 {
     return false
+  }
+  if qpoly_irreducible_certified(p) {
+    return true
   }
   let f = qpoly_factor_complete(p)
   f.factors.length() == 1 &&
