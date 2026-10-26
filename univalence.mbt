@@ -528,11 +528,6 @@ pub fn path_to_equiv_map_term(src : DTerm, dst : DTerm) -> DTerm {
 // ---------------------------------------------------------------------------
 
 ///|
-fn univalence_bool_is(v : DValue, expected : Bool) -> Bool {
-  conv_at(0, 0, DVBoolTy, v, DVBool(expected))
-}
-
-///|
 fn check_univalence_semantic() -> Bool {
   let e = deval_dim(bool_not_equiv_term(), denv_empty(), ddim_empty())
   let equiv_ty = DVEquivTy(DVBoolTy, DVBoolTy, 0)
@@ -550,10 +545,10 @@ fn check_univalence_semantic() -> Bool {
     DVBool(false),
     0,
   )
-  if !univalence_bool_is(dapp_dim(beta, DZero), false) ||
-    !univalence_bool_is(dapp_dim(beta, DOne), false) ||
-    !univalence_bool_is(dapp_dim(beta_back, DZero), true) ||
-    !univalence_bool_is(dapp_dim(beta_back, DOne), true) {
+  if !cubical_bool_is(dapp_dim(beta, DZero), false) ||
+    !cubical_bool_is(dapp_dim(beta, DOne), false) ||
+    !cubical_bool_is(dapp_dim(beta_back, DZero), true) ||
+    !cubical_bool_is(dapp_dim(beta_back, DOne), true) {
     return false
   }
   let retr = univalence_retr_path_value(e, DVBoolTy, DVBoolTy, 0, 0)

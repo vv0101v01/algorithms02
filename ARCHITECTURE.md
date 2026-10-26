@@ -28,13 +28,13 @@ MoonBit 以 package 為編譯單位：同一目錄的 `.mbt` 宣告共同求解�
 1. **實體 package 圖（編譯器強制）**
 
    ```text
-   username/cubical-hermitian/cmd/main
+   vv0101v01/cubical-hermitian/cmd/main
                     │ imports
                     ▼
-   username/cubical-hermitian            （root package）
+   vv0101v01/cubical-hermitian            （root package）
                     │ imports @algebra
                     ▼
-   username/cubical-hermitian/algebra
+   vv0101v01/cubical-hermitian/algebra
    ```
 
 2. **邏輯 component DAG（`tools/arch_check.py` 守門）**：root 內部

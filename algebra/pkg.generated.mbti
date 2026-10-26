@@ -1,5 +1,5 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "username/cubical-hermitian/algebra"
+package "vv0101v01/cubical-hermitian/algebra"
 
 import {
   "moonbitlang/core/bigint",

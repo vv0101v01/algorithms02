@@ -281,6 +281,7 @@ pub fn dpath_trans_term(ty : DTerm, p : DTerm, q : DTerm) -> DTerm {
 // ---------------------------------------------------------------------------
 
 ///|
+// Shared test helper (also used by equiv_laws/univalence law checks).
 fn cubical_bool_is(v : DValue, expected : Bool) -> Bool {
   conv_at(0, 0, DVBoolTy, v, DVBool(expected))
 }

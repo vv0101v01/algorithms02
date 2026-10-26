@@ -425,7 +425,7 @@ pub fn dconstructor_spec_constrained(
   constraints : Array[DConstructorConstraint],
   result_index~ : Array[DTerm] = [],
 ) -> DConstructorSpec {
-  DConstructorSpec::{ name, args, result_index, constraints, }
+  dconstructor_spec(name, args, result_index~, constraints~)
 }
 
 ///|

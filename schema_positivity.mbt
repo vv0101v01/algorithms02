@@ -194,23 +194,6 @@ fn dterm_family_positivity_term(
 }
 
 ///|
-fn positivity_split_terms(
-  terms : Array[DTerm],
-  n : Int32,
-) -> (Array[DTerm], Array[DTerm]) {
-  let a : Array[DTerm] = []
-  let b : Array[DTerm] = []
-  for i in 0..<terms.length() {
-    if i < n {
-      a.push(terms[i])
-    } else {
-      b.push(terms[i])
-    }
-  }
-  (a, b)
-}
-
-///|
 fn positivity_through_parameter(
   report : DPositivityReport,
   arg : DTerm,
@@ -293,10 +276,7 @@ fn dterm_family_positivity_type(
         }
         out
       } else {
-        let (params, indices) = positivity_split_terms(
-          args,
-          spec.params.length(),
-        )
+        let (params, indices) = schema_split_terms(args, spec.params.length())
         let mut out = positivity_absent()
         for i in 0..<params.length() {
           out = positivity_combine(
@@ -330,10 +310,7 @@ fn dterm_family_positivity_type(
         }
         out
       } else {
-        let (params, indices) = positivity_split_terms(
-          args,
-          spec.params.length(),
-        )
+        let (params, indices) = schema_split_terms(args, spec.params.length())
         let mut out = positivity_absent()
         for i in 0..<params.length() {
           out = positivity_combine(
@@ -1163,10 +1140,7 @@ fn dterm_family_positivity_type_decl(
         }
         out
       } else {
-        let (params, indices) = positivity_split_terms(
-          args,
-          spec.params.length(),
-        )
+        let (params, indices) = schema_split_terms(args, spec.params.length())
         let mut out = positivity_absent()
         for i in 0..<params.length() {
           out = positivity_combine(
@@ -1203,10 +1177,7 @@ fn dterm_family_positivity_type_decl(
         }
         out
       } else {
-        let (params, indices) = positivity_split_terms(
-          args,
-          spec.params.length(),
-        )
+        let (params, indices) = schema_split_terms(args, spec.params.length())
         let mut out = positivity_absent()
         for i in 0..<params.length() {
           out = positivity_combine(

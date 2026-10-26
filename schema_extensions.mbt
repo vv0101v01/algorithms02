@@ -252,7 +252,7 @@ pub fn mutual_type_term(
   component : Int32,
   args : Array[DTerm],
 ) -> DTerm {
-  let (params, indices) = positivity_split_terms(
+  let (params, indices) = schema_split_terms(
     args,
     family.combined.params.length(),
   )

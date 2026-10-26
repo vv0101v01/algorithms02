@@ -1,9 +1,4 @@
 ///|
-fn equiv_bool_is(v : DValue, expected : Bool) -> Bool {
-  conv_at(0, 0, DVBoolTy, v, DVBool(expected))
-}
-
-///|
 fn check_equiv_basic() -> Bool {
   let e = bool_not_equiv_term()
   match d_infer(e, denv_empty(), denv_empty(), ddim_empty()) {
@@ -19,10 +14,10 @@ fn check_equiv_basic() -> Bool {
         None => false
       }
       conv_ty(0, 0, inferred.ty, DVEquivTy(DVBoolTy, DVBoolTy, 0)) &&
-      equiv_bool_is(dapp_typed(fwd, DVBool(true), DVBoolTy), false) &&
-      equiv_bool_is(dapp_typed(bwd, DVBool(false), DVBoolTy), true) &&
-      equiv_bool_is(dapp_dim(sect_true, DZero), true) &&
-      equiv_bool_is(dapp_dim(sect_true, DOne), true) &&
+      cubical_bool_is(dapp_typed(fwd, DVBool(true), DVBoolTy), false) &&
+      cubical_bool_is(dapp_typed(bwd, DVBool(false), DVBoolTy), true) &&
+      cubical_bool_is(dapp_dim(sect_true, DZero), true) &&
+      cubical_bool_is(dapp_dim(sect_true, DOne), true) &&
       roundtrip
     }
     None => false
@@ -44,13 +39,13 @@ fn check_equiv_ua_and_glue() -> Bool {
       let fwd_ok = match
         d_infer(fwd, denv_empty(), denv_empty(), ddim_empty()) {
         Some(r) =>
-          conv_ty(0, 0, r.ty, DVBoolTy) && equiv_bool_is(r.value, false)
+          conv_ty(0, 0, r.ty, DVBoolTy) && cubical_bool_is(r.value, false)
         None => false
       }
       let bwd_ok = match
         d_infer(bwd, denv_empty(), denv_empty(), ddim_empty()) {
         Some(r) =>
-          conv_ty(0, 0, r.ty, DVBoolTy) && equiv_bool_is(r.value, false)
+          conv_ty(0, 0, r.ty, DVBoolTy) && cubical_bool_is(r.value, false)
         None => false
       }
       let path_ok = match
@@ -59,8 +54,8 @@ fn check_equiv_ua_and_glue() -> Bool {
           match
             d_check(path, tv.value, denv_empty(), denv_empty(), ddim_empty()) {
             Some(v) =>
-              equiv_bool_is(dapp_dim(v, DZero), true) &&
-              equiv_bool_is(dapp_dim(v, DOne), false)
+              cubical_bool_is(dapp_dim(v, DZero), true) &&
+              cubical_bool_is(dapp_dim(v, DOne), false)
             None => false
           }
         None => false
@@ -106,8 +101,8 @@ fn check_equiv_glue_pair() -> Bool {
                 None => false
               }
               values.length() == 1 &&
-              equiv_bool_is(values[0], true) &&
-              equiv_bool_is(glue_equiv_base_of(g, v), false) &&
+              cubical_bool_is(values[0], true) &&
+              cubical_bool_is(glue_equiv_base_of(g, v), false) &&
               quoted_ok
             }
             None => false
@@ -136,11 +131,11 @@ fn check_equiv_neutral_and_comp() -> Bool {
   let e = deval_dim(bool_not_equiv_term(), denv_empty(), ddim_empty())
   let composed = comp_value(_ => ety, dsystem_of([]), e, 0)
   projection_ok &&
-  equiv_bool_is(
+  cubical_bool_is(
     equiv_fun_value(composed, DVBoolTy, DVBoolTy, DVBool(true)),
     false,
   ) &&
-  equiv_bool_is(
+  cubical_bool_is(
     equiv_inv_fun_value(composed, DVBoolTy, DVBoolTy, DVBool(false)),
     true,
   )

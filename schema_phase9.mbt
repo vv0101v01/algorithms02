@@ -1097,10 +1097,7 @@ fn extract_positive_functor_go(
   match body {
     DInductive(spec, args) =>
       if spec.name == self_name {
-        let (params, indices) = positivity_split_terms(
-          args,
-          spec.params.length(),
-        )
+        let (params, indices) = schema_split_terms(args, spec.params.length())
         if params.length() != expected_params.length() {
           return None
         }
@@ -1121,10 +1118,7 @@ fn extract_positive_functor_go(
       }
     DHitType(spec, args) =>
       if spec.name == self_name {
-        let (params, indices) = positivity_split_terms(
-          args,
-          spec.params.length(),
-        )
+        let (params, indices) = schema_split_terms(args, spec.params.length())
         if params.length() != expected_params.length() {
           return None
         }

@@ -9,13 +9,13 @@
 //   "moonbitlang/x@0.4.6",
 // }
 
-name = "username/cubical-hermitian"
+name = "vv0101v01/cubical-hermitian"
 
-version = "0.1.0"
+version = "0.0.1"
 
 readme = "README.mbt.md"
 
-repository = "https://github.com/vv0101v01/Algorithms02"
+repository = "https://github.com/vv0101v01/algorithms02"
 
 license = "Apache-2.0"
 

@@ -1,11 +1,11 @@
 {
   "version": 1,
-  "module": "username/cubical-hermitian",
+  "module": "vv0101v01/cubical-hermitian",
   "packages": [
     {
       "id": "algebra",
       "path": "algebra",
-      "moon": "username/cubical-hermitian/algebra",
+      "moon": "vv0101v01/cubical-hermitian/algebra",
       "layer": 1,
       "depends_on": [],
       "summary_en": "Exact rational/algebraic computation: symbolic polynomials, Q-linear algebra, algebraic numbers, Jordan theory, spectral identities, and certified Jacobi intervals.",
@@ -14,7 +14,7 @@
     {
       "id": "root",
       "path": ".",
-      "moon": "username/cubical-hermitian",
+      "moon": "vv0101v01/cubical-hermitian",
       "layer": 2,
       "depends_on": [
         "algebra"
@@ -25,7 +25,7 @@
     {
       "id": "cmd-main",
       "path": "cmd/main",
-      "moon": "username/cubical-hermitian/cmd/main",
+      "moon": "vv0101v01/cubical-hermitian/cmd/main",
       "layer": 3,
       "depends_on": [
         "root"

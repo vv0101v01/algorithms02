@@ -491,7 +491,7 @@ entries 分離，同一個 entry 可由限定名、alias 或 opened/renamed 名
 
 MoonBit 內同一 package 的檔案沒有編譯先後，專案的先後關係是可檢查的依賴 DAG。
 實體套件圖為 `cmd/main → root → algebra`。精確代數已是獨立套件
-`username/cubical-hermitian/algebra`；它不依賴 root。root 以
+`vv0101v01/cubical-hermitian/algebra`；它不依賴 root。root 以
 `algebra_imports.mbt` 的非公開 `using` 集中引入所需 `@algebra` 符號，不把
 它們重出口成 root API。`architecture.json` 再把每個 `.mbt` 指派給恰好一個
 邏輯元件（L0 `foundation` 至 L9 `app`）；`tools/arch_check.py` 驗證唯一歸位、

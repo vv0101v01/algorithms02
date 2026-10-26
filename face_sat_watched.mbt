@@ -365,14 +365,19 @@ fn face_sat_propagate(solver : FaceSatSolver) -> Int32 {
 }
 
 ///|
-fn face_sat_pick_variable(solver : FaceSatSolver) -> Int32 {
+// Highest-activity unassigned variable, shared by the DPLL and
+// CDCL engines (both keep 1-based assignment/activity arrays).
+fn solver_pick_variable(
+  variables : Int32,
+  assignment : Array[Int32],
+  activity : Array[Double],
+) -> Int32 {
   let mut best = -1
   let mut best_activity = -1.0
-  for variable in 1..<(solver.variables + 1) {
-    if solver.assignment[variable] < 0 &&
-      solver.activity[variable] > best_activity {
+  for variable in 1..<(variables + 1) {
+    if assignment[variable] < 0 && activity[variable] > best_activity {
       best = variable
-      best_activity = solver.activity[variable]
+      best_activity = activity[variable]
     }
   }
   best
@@ -387,7 +392,11 @@ fn face_sat_search(solver : FaceSatSolver) -> Int32 {
   if conflict == -2 || solver.budget_exceeded {
     return -1
   }
-  let variable = face_sat_pick_variable(solver)
+  let variable = solver_pick_variable(
+    solver.variables,
+    solver.assignment,
+    solver.activity,
+  )
   if variable < 0 {
     return 1
   }
@@ -857,20 +866,6 @@ fn cdcl_analyze(
 }
 
 ///|
-fn cdcl_pick_variable(solver : FaceCdclSolver) -> Int32 {
-  let mut best = -1
-  let mut best_activity = -1.0
-  for variable in 1..<(solver.variables + 1) {
-    if solver.assignment[variable] < 0 &&
-      solver.activity[variable] > best_activity {
-      best = variable
-      best_activity = solver.activity[variable]
-    }
-  }
-  best
-}
-
-///|
 fn cdcl_Luby(x0 : Int32) -> Int32 {
   // The Luby sequence 1,1,2,1,1,2,4,... (0-based restart index),
   // by the standard iterative characterization.
@@ -1011,7 +1006,11 @@ fn cdcl_search(solver : FaceCdclSolver) -> Int32 {
         conflicts_since_restart = 0
       }
     } else {
-      let variable = cdcl_pick_variable(solver)
+      let variable = solver_pick_variable(
+        solver.variables,
+        solver.assignment,
+        solver.activity,
+      )
       if variable < 0 {
         return 1
       }

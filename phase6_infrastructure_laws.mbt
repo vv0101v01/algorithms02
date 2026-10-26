@@ -10,7 +10,10 @@ fn check_checked_lines() -> Bool {
       checked_line_is_constant(line) &&
       conv_ty(0, 0, a, DVBoolTy) &&
       conv_ty(0, 0, b, DVBoolTy) &&
-      equiv_bool_is(checked_coe_value(line, DZero, DOne, DVBool(true), 0), true)
+      cubical_bool_is(
+        checked_coe_value(line, DZero, DOne, DVBool(true), 0),
+        true,
+      )
     }
     None => false
   }
@@ -25,11 +28,11 @@ fn check_checked_lines() -> Bool {
       let (a, b) = checked_line_endpoints(line)
       conv_ty(0, 0, a, DVBoolTy) &&
       conv_ty(0, 0, b, DVBoolTy) &&
-      equiv_bool_is(
+      cubical_bool_is(
         checked_coe_value(line, DZero, DOne, DVBool(true), 0),
         false,
       ) &&
-      equiv_bool_is(
+      cubical_bool_is(
         checked_coe_value(line, DOne, DZero, DVBool(true), 0),
         false,
       ) &&
@@ -46,7 +49,7 @@ fn check_checked_lines() -> Bool {
           ua_line_value(ev.value, DVBoolTy, DVBoolTy, 0),
         ) {
         Some(line) =>
-          equiv_bool_is(
+          cubical_bool_is(
             checked_coe_value(line, DZero, DOne, DVBool(true), 0),
             false,
           )

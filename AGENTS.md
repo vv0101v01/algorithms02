@@ -51,3 +51,20 @@ You can browse and install extra skills here:
   scientific computations), prefer assertion tests. You can use
   `moon coverage analyze > uncovered.log` to see which parts of your code are
   not covered by tests.
+
+## This project (cubical-hermitian)
+
+- Packages: `cmd/main -> root -> algebra`; every `.mbt` file is owned by
+  exactly one component in `architecture.json` (see `ARCHITECTURE.md`).
+  Root consumes `@algebra` only through the explicit list in
+  `algebra_imports.mbt`.
+- Acceptance gates (all must pass before committing):
+  `moon fmt`, `moon info`, `moon check --deny-warn`, `moon test`,
+  `moon run cmd/main`, `python3 tools/arch_check.py`,
+  `python3 tools/audit_spec.py --check`.
+- New public symbols must be classified in `tools/audit_spec.py`
+  (the bilingual `SPEC-APPENDIX*.md` files are generated, never hand-edited)
+  and, when they carry a checkable law, registered in `verify.mbt`
+  and `spec.mbt`. Counts in prose docs come from the tools, not by hand.
+- White-box test files (`*_wbtest.mbt`) call the `check_*` laws defined
+  next to the implementations; law-style checks live in `*_laws.mbt`.

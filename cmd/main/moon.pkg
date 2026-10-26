@@ -1,5 +1,5 @@
 import {
-  "username/cubical-hermitian" @lib,
+  "vv0101v01/cubical-hermitian" @lib,
 }
 
 pkgtype(kind: "executable")

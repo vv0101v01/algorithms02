@@ -68,7 +68,7 @@ pub fn check_schema_nat_neutral_quote() -> Bool {
   let stuck = eval_inductive_elim(
     spec,
     (_, _) => nat_s_value(),
-    [nat_schema_value_lit(0), DVLam(_ => DVLam(x => x))],
+    [integer_nat_value(0), DVLam(_ => DVLam(x => x))],
     [],
     [],
     DVNeutral(DNVar(0)),
@@ -86,16 +86,6 @@ pub fn check_schema_nat_neutral_quote() -> Bool {
 ///|
 fn nat_s_value() -> DValue {
   DVInductive(nat_schema(), [], [])
-}
-
-///|
-fn nat_schema_value_lit(n : Int32) -> DValue {
-  let spec = nat_schema()
-  let mut out : DValue = DVIntro(spec, 0, [], [])
-  for _i in 0..<n {
-    out = DVIntro(spec, 1, [], [out])
-  }
-  out
 }
 
 ///|
@@ -250,7 +240,7 @@ pub fn check_generated_inductive_schemas() -> Bool {
 
 ///|
 pub fn check_schema_inductive_comp() -> Bool {
-  let one = nat_schema_value_lit(1)
+  let one = integer_nat_value(1)
   let composed = hcomp_value(
     nat_s_value(),
     dsystem_singleton(FEq0(DVar(0)), _ => one),
@@ -263,7 +253,7 @@ pub fn check_schema_inductive_comp() -> Bool {
   match
     hcomp_value(
       nat_s_value(),
-      dsystem_singleton(FEq0(DVar(0)), _ => nat_schema_value_lit(0)),
+      dsystem_singleton(FEq0(DVar(0)), _ => integer_nat_value(0)),
       one,
       1,
     ) {
