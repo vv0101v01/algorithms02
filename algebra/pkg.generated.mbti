@@ -225,6 +225,8 @@ pub fn check_algebraic_extensions_and_Jordan() -> Bool
 
 pub fn check_biquadratic_denesting() -> Bool
 
+pub fn check_jacobi_cluster_aware_iteration() -> Bool
+
 pub fn check_jacobi_cluster_separation() -> Bool
 
 pub fn check_poly_cubes() -> Bool
@@ -255,6 +257,8 @@ pub fn check_symbolic_nonlinear_boundary() -> Bool
 
 pub fn check_symbolic_pruning() -> Bool
 
+pub fn check_tower_fields() -> Bool
+
 pub fn cinterval(RatInterval, RatInterval) -> CInterval
 
 pub fn cinterval_add(CInterval, CInterval) -> CInterval
@@ -284,6 +288,36 @@ pub fn cinterval_subset(CInterval, CInterval) -> Bool
 pub fn cinterval_zero() -> CInterval
 
 pub fn complex_root_isolations_are_certified(QPoly, Array[ComplexRootIsolation]) -> Bool
+
+pub fn cubic_add(CubicNum, CubicNum) -> CubicNum?
+
+pub fn cubic_cuberoot_rat(Rat) -> CubicNum?
+
+pub fn cubic_div(CubicNum, CubicNum) -> CubicNum?
+
+pub fn cubic_eq(CubicNum, CubicNum) -> Bool
+
+pub fn cubic_generator(@bigint.BigInt) -> CubicNum?
+
+pub fn cubic_inv(CubicNum) -> CubicNum?
+
+pub fn cubic_is_rat(CubicNum) -> Bool
+
+pub fn cubic_is_zero(CubicNum) -> Bool
+
+pub fn cubic_make(@bigint.BigInt, Rat, Rat, Rat) -> CubicNum?
+
+pub fn cubic_mul(CubicNum, CubicNum) -> CubicNum?
+
+pub fn cubic_neg(CubicNum) -> CubicNum
+
+pub fn cubic_norm(CubicNum) -> Rat
+
+pub fn cubic_rat(@bigint.BigInt, Rat) -> CubicNum?
+
+pub fn cubic_sign(CubicNum) -> Int32
+
+pub fn cubic_sub(CubicNum, CubicNum) -> CubicNum?
 
 pub fn eigen_interval_contains(EigenInterval, Rat) -> Bool
 
@@ -330,6 +364,8 @@ pub fn jacobi_cluster_separation_certified(QCpxMat, JacobiCertificate, JacobiClu
 pub fn jacobi_coefficients(QCpxMat, Int32, Int32, Int32) -> JacobiCoefficients?
 
 pub fn jacobi_interval_eigen(QCpxMat, max_steps? : Int32, tolerance_sq? : Rat, precision_bits? : Int32) -> JacobiCertificate?
+
+pub fn jacobi_interval_eigen_cluster_aware(QCpxMat, target_width? : Rat, max_steps? : Int32, tolerance_sq? : Rat, initial_bits? : Int32, max_bits? : Int32) -> JacobiClusterAwareReport?
 
 pub fn jacobi_separate_clusters(QCpxMat, JacobiCertificate, Int32) -> JacobiClusterSeparation?
 
@@ -737,6 +773,10 @@ pub fn radical_sqrt(RadicalExpr) -> RadicalExpr
 
 pub fn radical_to_biquad(RadicalExpr) -> BiquadNum?
 
+pub fn radical_to_cubic(RadicalExpr) -> CubicNum?
+
+pub fn radical_to_triquad(RadicalExpr) -> TriquadNum?
+
 pub fn rat_abs_exact(Rat) -> Rat
 
 pub fn rat_add(Rat, Rat) -> Rat
@@ -969,6 +1009,34 @@ pub fn sym_vec_scale_c(SymC, Array[SymC]) -> Array[SymC]
 
 pub fn sym_vec_sub(Array[SymC], Array[SymC]) -> Array[SymC]
 
+pub fn triquad_add(TriquadNum, TriquadNum) -> TriquadNum?
+
+pub fn triquad_align(TriquadNum, TriquadNum) -> (TriquadNum, TriquadNum)?
+
+pub fn triquad_div(TriquadNum, TriquadNum) -> TriquadNum?
+
+pub fn triquad_embed_biquad(Array[@bigint.BigInt], BiquadNum) -> TriquadNum?
+
+pub fn triquad_eq(TriquadNum, TriquadNum) -> Bool
+
+pub fn triquad_inv(TriquadNum) -> TriquadNum?
+
+pub fn triquad_is_zero(TriquadNum) -> Bool
+
+pub fn triquad_make(Array[@bigint.BigInt], Array[Rat]) -> TriquadNum?
+
+pub fn triquad_mul(TriquadNum, TriquadNum) -> TriquadNum?
+
+pub fn triquad_neg(TriquadNum) -> TriquadNum
+
+pub fn triquad_reembed(TriquadNum, Array[@bigint.BigInt]) -> TriquadNum?
+
+pub fn triquad_sign(TriquadNum) -> Int32
+
+pub fn triquad_sqrt_of_biquad(BiquadNum) -> TriquadNum?
+
+pub fn triquad_sub(TriquadNum, TriquadNum) -> TriquadNum?
+
 pub fn upoly_add(UPoly, UPoly) -> UPoly
 
 pub fn upoly_const(SymC) -> UPoly
@@ -1072,6 +1140,16 @@ pub struct ComplexRootIsolation {
   multiplicity : Int32
 }
 
+pub struct CubicNum {
+  m : @bigint.BigInt
+  a : Rat
+  b : Rat
+  c : Rat
+} derive(Eq, @debug.Debug)
+pub fn CubicNum::equal(Self, Self) -> Bool
+pub fn CubicNum::not_equal(Self, Self) -> Bool
+pub fn CubicNum::to_repr(Self) -> @debug.Repr
+
 pub struct EigenInterval {
   lo : Rat
   hi : Rat
@@ -1092,6 +1170,17 @@ pub struct JacobiCertificate {
 pub fn JacobiCertificate::equal(Self, Self) -> Bool
 pub fn JacobiCertificate::not_equal(Self, Self) -> Bool
 pub fn JacobiCertificate::to_repr(Self) -> @debug.Repr
+
+pub struct JacobiClusterAwareReport {
+  certificate : JacobiCertificate
+  precision_bits_used : Int32
+  restarts : Int32
+  separated : Bool
+  max_cluster_width : Rat
+} derive(Eq, @debug.Debug)
+pub fn JacobiClusterAwareReport::equal(Self, Self) -> Bool
+pub fn JacobiClusterAwareReport::not_equal(Self, Self) -> Bool
+pub fn JacobiClusterAwareReport::to_repr(Self) -> @debug.Repr
 
 pub struct JacobiClusterSeparation {
   intervals : Array[SeparatedEigenInterval]
@@ -1355,6 +1444,14 @@ pub struct SymMat {
   n : Int32
   rows : Array[Array[SymC]]
 }
+
+pub struct TriquadNum {
+  gens : Array[@bigint.BigInt]
+  coeffs : Array[Rat]
+} derive(Eq, @debug.Debug)
+pub fn TriquadNum::equal(Self, Self) -> Bool
+pub fn TriquadNum::not_equal(Self, Self) -> Bool
+pub fn TriquadNum::to_repr(Self) -> @debug.Repr
 
 pub struct UPoly {
   coeffs : Array[SymC]

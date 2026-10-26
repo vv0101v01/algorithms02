@@ -1185,3 +1185,342 @@ pub fn check_Jacobi_arbitrary_precision() -> Bool {
   rat_cmp_exact(rounded, original) <= 0 &&
   rat_cmp_exact(rat_sub(original, rounded), rat_pow2_neg(99)) <= 0
 }
+
+// ---------------------------------------------------------------------------
+// Phase 12: cluster-aware interval Jacobi iteration.
+//
+// The plain iteration stops on a global off-diagonal tolerance,
+// which can leave overlapping Gershgorin discs merged into one
+// wide cluster, and its fixed rounding precision can make disc
+// radii stagnate before a tight cluster separates.  The
+// cluster-aware variant drives the iteration itself by the
+// cluster structure of the current discs: while a
+// multi-eigenvalue cluster wider than `target_width` remains,
+// rotations are chosen among index pairs inside such a cluster
+// (even after the global tolerance is met); if a precision
+// level stagnates, the run restarts from the initial matrix at
+// doubled rounding precision, keeping the certificate with the
+// best cluster penalty (fewest multi-clusters, then narrowest
+// widest multi-cluster, then narrowest total width).  The
+// returned certificate is an ordinary `JacobiCertificate` and
+// is checked by `jacobi_certificate_sound`; exact
+// characteristic-polynomial separation (`jacobi_separate_clusters`)
+// remains available and now typically receives singleton
+// clusters from this iteration.
+// ---------------------------------------------------------------------------
+
+///|
+pub struct JacobiClusterAwareReport {
+  certificate : JacobiCertificate
+  precision_bits_used : Int32
+  restarts : Int32
+  separated : Bool
+  max_cluster_width : Rat
+} derive(Debug, Eq)
+
+///|
+pub extend JacobiClusterAwareReport with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
+pub extend JacobiClusterAwareReport with Eq::{not_equal, equal}
+
+///|
+/// Per-row Gershgorin discs, the cluster index of each row, and
+/// the merged clusters.
+fn jacobi_discs_and_clusters(
+  a : QCIntervalMat,
+  bits : Int32,
+) -> (Array[EigenInterval], Array[Int32], Array[EigenInterval]) {
+  let discs : Array[EigenInterval] = []
+  for i in 0..<a.n {
+    let mut radius = rat_interval_point(rat_zero())
+    for j in 0..<a.n {
+      if i != j {
+        let root = match
+          rat_sqrt_interval(cinterval_abs_sq_upper(a.rows[i][j]), bits) {
+          Some(x) => x
+          None => rat_interval_point(rat_zero())
+        }
+        radius = rat_interval_add(radius, root)
+      }
+    }
+    radius = rat_interval_normalize(radius, bits)
+    discs.push(EigenInterval::{
+      lo: rat_sub(a.rows[i][i].re.lo, radius.hi),
+      hi: rat_add(a.rows[i][i].re.hi, radius.hi),
+      count: 1,
+    })
+  }
+  let order : Array[Int32] = []
+  for i in 0..<a.n {
+    order.push(i)
+  }
+  for i in 1..<order.length() {
+    let mut j = i
+    while j > 0 && rat_cmp_exact(discs[order[j - 1]].lo, discs[order[j]].lo) > 0 {
+      let tmp = order[j - 1]
+      order[j - 1] = order[j]
+      order[j] = tmp
+      j = j - 1
+    }
+  }
+  let cluster_of : Array[Int32] = []
+  for _i in 0..<a.n {
+    cluster_of.push(0)
+  }
+  let clusters : Array[EigenInterval] = []
+  for oi in 0..<order.length() {
+    let idx = order[oi]
+    if clusters.length() == 0 {
+      clusters.push(discs[idx])
+      cluster_of[idx] = 0
+    } else {
+      let last = clusters[clusters.length() - 1]
+      if rat_le_exact(discs[idx].lo, last.hi) {
+        clusters[clusters.length() - 1] = EigenInterval::{
+          lo: last.lo,
+          hi: rat_max_exact(last.hi, discs[idx].hi),
+          count: last.count + 1,
+        }
+        cluster_of[idx] = clusters.length() - 1
+      } else {
+        clusters.push(discs[idx])
+        cluster_of[idx] = clusters.length() - 1
+      }
+    }
+  }
+  (discs, cluster_of, clusters)
+}
+
+///|
+fn jacobi_cluster_penalty(clusters : Array[EigenInterval]) -> (Int32, Rat, Rat) {
+  let mut multi = 0
+  let mut max_multi_width = rat_zero()
+  let mut total_width = rat_zero()
+  for i in 0..<clusters.length() {
+    let width = rat_sub(clusters[i].hi, clusters[i].lo)
+    total_width = rat_add(total_width, width)
+    if clusters[i].count > 1 {
+      multi = multi + 1
+      if rat_cmp_exact(width, max_multi_width) > 0 {
+        max_multi_width = width
+      }
+    }
+  }
+  (multi, max_multi_width, total_width)
+}
+
+///|
+fn jacobi_penalty_better(a : (Int32, Rat, Rat), b : (Int32, Rat, Rat)) -> Bool {
+  if a.0 != b.0 {
+    return a.0 < b.0
+  }
+  if rat_cmp_exact(a.1, b.1) != 0 {
+    return rat_cmp_exact(a.1, b.1) < 0
+  }
+  rat_cmp_exact(a.2, b.2) < 0
+}
+
+///|
+fn jacobi_run_cluster_aware(
+  input : QCpxMat,
+  bits : Int32,
+  max_steps : Int32,
+  tol : Rat,
+  target_width : Rat,
+) -> JacobiCertificate {
+  let initial = qci_mat_from_point(input)
+  let mut current = initial
+  let mut transform = qci_mat_identity(input.n)
+  let rotations : Array[JacobiRotationCertificate] = []
+  for _step in 0..<max_steps {
+    let (_, cluster_of, clusters) = jacobi_discs_and_clusters(current, bits)
+    let mut needs_work = false
+    for i in 0..<clusters.length() {
+      if clusters[i].count > 1 &&
+        rat_cmp_exact(rat_sub(clusters[i].hi, clusters[i].lo), target_width) > 0 {
+        needs_work = true
+      }
+    }
+    let midpoint = qci_mat_midpoint(current)
+    let (gp, gq, gscore) = jacobi_largest_pivot(midpoint)
+    if !needs_work && (gp < 0 || rat_le_exact(gscore, tol)) {
+      break
+    }
+    let mut p = gp
+    let mut q = gq
+    let mut score = gscore
+    if needs_work {
+      let mut best = rat_zero()
+      let mut best_p = -1
+      let mut best_q = -1
+      for i in 0..<input.n {
+        for j in (i + 1)..<input.n {
+          let cl = clusters[cluster_of[i]]
+          if cluster_of[i] == cluster_of[j] &&
+            cl.count > 1 &&
+            rat_cmp_exact(rat_sub(cl.hi, cl.lo), target_width) > 0 {
+            let x = midpoint.rows[i][j]
+            let s = rat_add(rat_mul(x.re, x.re), rat_mul(x.im, x.im))
+            if rat_cmp_exact(s, best) > 0 {
+              best = s
+              best_p = i
+              best_q = j
+            }
+          }
+        }
+      }
+      if best_p >= 0 {
+        p = best_p
+        q = best_q
+        score = best
+      }
+    }
+    if p < 0 || rat_is_zero(score) {
+      break
+    }
+    match jacobi_coefficients(midpoint, p, q, bits) {
+      Some(coeffs) => {
+        let cert = jacobi_apply_step(current, transform, coeffs, bits)
+        current = cert.after
+        transform = cert.transform_after
+        rotations.push(cert)
+      }
+      None => break
+    }
+  }
+  JacobiCertificate::{
+    precision_bits: bits,
+    initial,
+    final_matrix: current,
+    transform,
+    rotations,
+    eigenvalues: jacobi_eigenvalue_intervals(current, bits),
+  }
+}
+
+///|
+/// Cluster-aware certified Jacobi iteration (see the section
+/// doc).  Escalates rounding precision from `initial_bits` by
+/// doubling up to `max_bits` while the best certificate still
+/// has a multi-eigenvalue cluster wider than `target_width`.
+pub fn jacobi_interval_eigen_cluster_aware(
+  input : QCpxMat,
+  target_width~ : Rat = rat_make(1, 64),
+  max_steps~ : Int32 = 48,
+  tolerance_sq~ : Rat = rat_make(1, 1048576),
+  initial_bits~ : Int32 = 10,
+  max_bits~ : Int32 = 40,
+) -> JacobiClusterAwareReport? {
+  if !qcpx_mat_is_hermitian(input) || max_steps < 0 || initial_bits <= 0 {
+    return None
+  }
+  let mut bits = initial_bits
+  let mut restarts = 0
+  let mut best : JacobiCertificate? = None
+  let mut best_bits = bits
+  let mut best_penalty = (input.n + 1, rat_zero(), rat_zero())
+  let mut first = true
+  while first || bits <= max_bits {
+    first = false
+    let cert = jacobi_run_cluster_aware(
+      input, bits, max_steps, tolerance_sq, target_width,
+    )
+    let penalty = jacobi_cluster_penalty(cert.eigenvalues)
+    if best == None || jacobi_penalty_better(penalty, best_penalty) {
+      best = Some(cert)
+      best_bits = bits
+      best_penalty = penalty
+    }
+    if penalty.0 == 0 || rat_le_exact(penalty.1, target_width) {
+      break
+    }
+    bits = bits * 2
+    if bits <= max_bits {
+      restarts = restarts + 1
+    }
+  }
+  let cert = match best {
+    Some(v) => v
+    None => return None
+  }
+  let mut max_width = rat_zero()
+  for i in 0..<cert.eigenvalues.length() {
+    let width = rat_sub(cert.eigenvalues[i].hi, cert.eigenvalues[i].lo)
+    if rat_cmp_exact(width, max_width) > 0 {
+      max_width = width
+    }
+  }
+  Some(JacobiClusterAwareReport::{
+    certificate: cert,
+    precision_bits_used: best_bits,
+    restarts,
+    separated: best_penalty.0 == 0,
+    max_cluster_width: max_width,
+  })
+}
+
+///|
+pub fn check_jacobi_cluster_aware_iteration() -> Bool {
+  // Eigenvalues of [[2, 1/8], [1/8, 2 + 1/64]] differ by about
+  // 0.252.  With the loose stopping tolerance 1/16 the plain
+  // iteration stops before any rotation (the pivot score
+  // 1/64 meets the tolerance) and reports one merged cluster.
+  let input = qcpx_mat_from_rows([
+    [qcpx_real(rat_int(2)), qcpx_real(rat_make(1, 8))],
+    [qcpx_real(rat_make(1, 8)), qcpx_real(rat_make(129, 64))],
+  ])
+  let plain = match jacobi_interval_eigen(input, tolerance_sq=rat_make(1, 16)) {
+    Some(c) => c
+    None => return false
+  }
+  let mut plain_multi = false
+  for i in 0..<plain.eigenvalues.length() {
+    if plain.eigenvalues[i].count > 1 {
+      plain_multi = true
+    }
+  }
+  if !plain_multi || plain.rotations.length() != 0 {
+    return false
+  }
+  // The cluster-aware iteration keeps rotating inside the wide
+  // cluster and separates it into singletons.
+  let report = match
+    jacobi_interval_eigen_cluster_aware(
+      input,
+      target_width=rat_make(1, 16),
+      tolerance_sq=rat_make(1, 16),
+    ) {
+    Some(r) => r
+    None => return false
+  }
+  if !report.separated ||
+    report.certificate.eigenvalues.length() != 2 ||
+    report.certificate.rotations.length() == 0 ||
+    !jacobi_certificate_sound(input, report.certificate) {
+    return false
+  }
+  for i in 0..<2 {
+    let e = report.certificate.eigenvalues[i]
+    if e.count != 1 || rat_cmp_exact(rat_sub(e.hi, e.lo), rat_make(1, 16)) > 0 {
+      return false
+    }
+  }
+  let e0 = report.certificate.eigenvalues[0]
+  let e1 = report.certificate.eigenvalues[1]
+  if rat_cmp_exact(e0.hi, e1.lo) >= 0 {
+    return false
+  }
+  // Exact post-separation agrees: each singleton cluster
+  // receives exactly one eigenvalue of multiplicity one.
+  let separation = match
+    jacobi_separate_clusters(input, report.certificate, 24) {
+    Some(s) => s
+    None => return false
+  }
+  separation.complete &&
+  separation.intervals.length() == 2 &&
+  jacobi_cluster_separation_certified(input, report.certificate, separation)
+}
