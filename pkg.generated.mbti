@@ -1,0 +1,3728 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "username/cubical-hermitian"
+
+import {
+  "moonbitlang/core/bigint",
+  "moonbitlang/core/debug",
+  "username/cubical-hermitian/algebra",
+}
+
+// Values
+pub fn abstract_point_module() -> ModuleDef
+
+pub fn adjoint_equiv_make(DValue, DValue, DValue, DValue) -> DAdjointEquivParts
+
+pub fn adjoint_equiv_to_equiv(DAdjointEquivParts) -> DValue
+
+pub fn adjoint_equiv_type_term(DTerm, DTerm) -> DTerm
+
+pub fn adjoint_id_value(DValue) -> DAdjointEquivParts
+
+pub fn adjointify_equiv_value(DValue, DValue, DValue, Int32) -> DAdjointEquivParts
+
+pub fn alg_cert_in_image(AlgCertMat, Array[AlgC]) -> Bool
+
+pub fn alg_cert_inner(@algebra.QPoly, Array[AlgC], Array[AlgC]) -> AlgC
+
+pub fn alg_cert_is_projector(AlgCertMat) -> Bool
+
+pub fn alg_cert_mat_adjoint(AlgCertMat) -> AlgCertMat
+
+pub fn alg_cert_mat_eq(AlgCertMat, AlgCertMat) -> Bool
+
+pub fn alg_cert_mat_from_rows(Array[Array[AlgC]]) -> AlgCertMat
+
+pub fn alg_cert_mat_mul(AlgCertMat, AlgCertMat) -> AlgCertMat
+
+pub fn alg_cert_mat_vec(AlgCertMat, Array[AlgC]) -> Array[AlgC]
+
+pub fn alg_cert_outer(Array[AlgC]) -> AlgCertMat
+
+pub fn alg_cert_path_eval(@algebra.QPoly, AlgCertPath, @algebra.AlgNum) -> Array[AlgC]
+
+pub fn alg_cert_path_in_image(AlgCertMat, AlgCertPath) -> Bool
+
+pub fn alg_cert_square_eval(@algebra.QPoly, AlgCertSquare, @algebra.AlgNum, @algebra.AlgNum) -> Array[AlgC]
+
+pub fn alg_cert_square_in_image(AlgCertMat, AlgCertSquare) -> Bool
+
+pub fn alg_cert_vec_add(Array[AlgC], Array[AlgC]) -> Array[AlgC]
+
+pub fn alg_cert_vec_eq(Array[AlgC], Array[AlgC]) -> Bool
+
+pub fn alg_cert_vec_scale(AlgC, Array[AlgC]) -> Array[AlgC]
+
+pub fn algc_add(AlgC, AlgC) -> AlgC
+
+pub fn algc_conj(AlgC) -> AlgC
+
+pub fn algc_eq(AlgC, AlgC) -> Bool
+
+pub fn algc_i(@algebra.QPoly) -> AlgC
+
+pub fn algc_is_zero(AlgC) -> Bool
+
+pub fn algc_make(@algebra.AlgNum, @algebra.AlgNum) -> AlgC
+
+pub fn algc_mul(AlgC, AlgC) -> AlgC
+
+pub fn algc_neg(AlgC) -> AlgC
+
+pub fn algc_one(@algebra.QPoly) -> AlgC
+
+pub fn algc_real(@algebra.AlgNum) -> AlgC
+
+pub fn algc_scale_alg(@algebra.AlgNum, AlgC) -> AlgC
+
+pub fn algc_sub(AlgC, AlgC) -> AlgC
+
+pub fn algc_zero(@algebra.QPoly) -> AlgC
+
+pub fn all_checks_pass() -> Bool
+
+pub fn as_equiv_type(DValue) -> DEquivTypeParts?
+
+pub fn as_glue(DValue) -> DGlueParts?
+
+pub fn as_glue_equiv(DValue) -> DGlueEquivParts?
+
+pub fn as_list_elem(DValue) -> DValue?
+
+pub fn as_path(DValue) -> DPathParts?
+
+pub fn as_pi(DValue) -> DFamilyParts?
+
+pub fn as_sigma(DValue) -> DFamilyParts?
+
+pub fn as_univ_level(DValue) -> Int32?
+
+pub fn assignment_of_mask(Int32, Int32) -> Array[Bool]
+
+pub fn based_map_type_term(DTerm, DTerm, DTerm, DTerm) -> DTerm
+
+pub fn bdd_and(Bdd, Bdd) -> Bdd
+
+pub fn bdd_dag_and(BddManager, Int32, Int32) -> Int32
+
+pub fn bdd_dag_build_face(BddManager, Face) -> Int32
+
+pub fn bdd_dag_dnf_face(BddManager, Int32, Int32) -> Face?
+
+pub fn bdd_dag_eval(BddManager, Int32, Array[Bool]) -> Bool
+
+pub fn bdd_dag_exists(BddManager, Int32, Int32) -> Int32
+
+pub fn bdd_dag_face_eq(Face, Face, Int32) -> Bool
+
+pub fn bdd_dag_face_le(Face, Face, Int32) -> Bool
+
+pub fn bdd_dag_false(BddManager) -> Int32
+
+pub fn bdd_dag_forall(BddManager, Int32, Int32) -> Int32
+
+pub fn bdd_dag_not(BddManager, Int32) -> Int32
+
+pub fn bdd_dag_of_face(Face, Int32, max_nodes? : Int32) -> BddDagFace
+
+pub fn bdd_dag_of_face_best(Face, Int32, max_nodes? : Int32) -> BddBestBuild
+
+pub fn bdd_dag_of_face_optimized(Face, Int32, max_nodes? : Int32, max_attempts? : Int32) -> BddOptimizedBuild
+
+pub fn bdd_dag_or(BddManager, Int32, Int32) -> Int32
+
+pub fn bdd_dag_reachable_count(BddManager, Int32) -> Int32
+
+pub fn bdd_dag_restrict(BddManager, Int32, Int32, Bool) -> Int32
+
+pub fn bdd_dag_sat_count(BddManager, Int32) -> @bigint.BigInt
+
+pub fn bdd_dag_sat_face(Face, Int32) -> Bool
+
+pub fn bdd_dag_true(BddManager) -> Int32
+
+pub fn bdd_dag_var(BddManager, Int32) -> Int32
+
+pub fn bdd_dag_witness(BddManager, Int32) -> Array[Bool]?
+
+pub fn bdd_dag_xor(BddManager, Int32, Int32) -> Int32
+
+pub fn bdd_face_eq(Face, Face, Int32) -> Bool
+
+pub fn bdd_face_le(Face, Face, Int32) -> Bool
+
+pub fn bdd_manager_cache_stats(BddManager) -> (Int32, Int32, Int32)
+
+pub fn bdd_manager_new(Int32, max_nodes? : Int32) -> BddManager
+
+pub fn bdd_manager_node_count(BddManager) -> Int32
+
+pub fn bdd_manager_stats(BddManager) -> (Int32, Int32, Int32, Int32, Bool)
+
+pub fn bdd_manager_with_order(Array[Int32], Int32, max_nodes? : Int32) -> BddManager
+
+pub fn bdd_not(Bdd) -> Bdd
+
+pub fn bdd_of_face(Face, Int32) -> Bdd
+
+pub fn bdd_or(Bdd, Bdd) -> Bdd
+
+pub fn bdd_sat_face(Face, Int32) -> Bool
+
+pub fn bdd_satisfying_cubes(Bdd, Int32) -> Array[Array[Int32]]
+
+pub fn bdd_tree_of_dag(BddManager, Int32) -> Bdd
+
+pub fn bdd_var_order_candidates(Face, Int32) -> Array[Array[Int32]]
+
+pub fn bdd_worst_case_nodes(Int32) -> Int32
+
+pub fn bool_not_equiv_term() -> DTerm
+
+pub fn bool_not_term() -> DTerm
+
+pub fn bool_ops_module() -> ModuleDef
+
+pub fn bool_schema() -> DInductiveSpec
+
+pub fn branch(Face, Array[Complex]) -> VecBranch
+
+pub fn bumped_filler(Cube, Array[Complex]) -> Cube
+
+pub fn bush_decl() -> DNestedIterDecl
+
+pub fn bush_family() -> DNestedIterFamily?
+
+pub fn cert_complement(CertMat) -> CertMat
+
+pub fn cert_eigenspace_kan_sound(CertMat, CertPath, CertPath, CertPath) -> Bool
+
+pub fn cert_example_projector() -> CertMat
+
+pub fn cert_example_unit() -> Array[QuadC]
+
+pub fn cert_filler_respects_box(CertSquare, CertPath, CertPath, CertPath) -> Bool
+
+pub fn cert_in_image(CertMat, Array[QuadC]) -> Bool
+
+pub fn cert_in_kernel(CertMat, Array[QuadC]) -> Bool
+
+pub fn cert_inner(Array[QuadC], Array[QuadC]) -> QuadC
+
+pub fn cert_is_hermitian(CertMat) -> Bool
+
+pub fn cert_is_idempotent(CertMat) -> Bool
+
+pub fn cert_is_projector(CertMat) -> Bool
+
+pub fn cert_mat_add(CertMat, CertMat) -> CertMat
+
+pub fn cert_mat_adjoint(CertMat) -> CertMat
+
+pub fn cert_mat_eq(CertMat, CertMat) -> Bool
+
+pub fn cert_mat_from_rows(Array[Array[QuadC]]) -> CertMat
+
+pub fn cert_mat_identity(Int32) -> CertMat
+
+pub fn cert_mat_mul(CertMat, CertMat) -> CertMat
+
+pub fn cert_mat_scale_quad(@algebra.QuadNum, CertMat) -> CertMat
+
+pub fn cert_mat_sub(CertMat, CertMat) -> CertMat
+
+pub fn cert_mat_to_numeric(CertMat) -> CMat
+
+pub fn cert_mat_trace(CertMat) -> QuadC
+
+pub fn cert_mat_vec(CertMat, Array[QuadC]) -> Array[QuadC]
+
+pub fn cert_mat_zero(Int32) -> CertMat
+
+pub fn cert_open_box_wf(CertPath, CertPath, CertPath) -> Bool
+
+pub fn cert_outer(Array[QuadC]) -> CertMat
+
+pub fn cert_path_const(Array[QuadC]) -> CertPath
+
+pub fn cert_path_end(CertPath) -> Array[QuadC]
+
+pub fn cert_path_eq(CertPath, CertPath) -> Bool
+
+pub fn cert_path_in_image(CertMat, CertPath) -> Bool
+
+pub fn cert_path_is_affine(CertPath) -> Bool
+
+pub fn cert_path_line(Array[QuadC], Array[QuadC]) -> CertPath
+
+pub fn cert_path_start(CertPath) -> Array[QuadC]
+
+pub fn cert_path_sym(CertPath) -> CertPath
+
+pub fn cert_projector_of_vector(Array[QuadC]) -> CertMat?
+
+pub fn cert_pruning_repairs_filler(CertMat, CertPath, CertPath, CertPath, Array[QuadC]) -> Bool
+
+pub fn cert_square_add(CertSquare, CertSquare) -> CertSquare
+
+pub fn cert_square_apply(CertMat, CertSquare) -> CertSquare
+
+pub fn cert_square_bilinear(Array[QuadC], Array[QuadC], Array[QuadC], Array[QuadC]) -> CertSquare
+
+pub fn cert_square_bump(CertSquare, Array[QuadC]) -> CertSquare
+
+pub fn cert_square_eq(CertSquare, CertSquare) -> Bool
+
+pub fn cert_square_face(CertSquare, Int32) -> CertPath
+
+pub fn cert_square_fill(CertPath, CertPath, CertPath) -> CertSquare
+
+pub fn cert_square_in_image(CertMat, CertSquare) -> Bool
+
+pub fn cert_vec_add(Array[QuadC], Array[QuadC]) -> Array[QuadC]
+
+pub fn cert_vec_eq(Array[QuadC], Array[QuadC]) -> Bool
+
+pub fn cert_vec_scale(QuadC, Array[QuadC]) -> Array[QuadC]
+
+pub fn cert_vec_scale_quad(@algebra.QuadNum, Array[QuadC]) -> Array[QuadC]
+
+pub fn cert_vec_sub(Array[QuadC], Array[QuadC]) -> Array[QuadC]
+
+pub fn cert_vec_to_numeric(Array[QuadC]) -> Array[Complex]
+
+pub fn cert_vec_zero(Int32) -> Array[QuadC]
+
+pub fn certify_numeric_projector(CMat, CertMat, Double) -> NumericProjectorCertificate
+
+pub fn certify_projector(CertMat) -> ProjectorCertificate
+
+pub fn check_adjoint_equivalence_and_fibers() -> Bool
+
+pub fn check_ast_bool_elim() -> Bool
+
+pub fn check_ast_coe_terms() -> Bool
+
+pub fn check_ast_data() -> Bool
+
+pub fn check_ast_hcomp_data_terms() -> Bool
+
+pub fn check_ast_hcomp_hit_terms() -> Bool
+
+pub fn check_ast_hcomp_sigma_path_terms() -> Bool
+
+pub fn check_ast_hcomp_univ_term() -> Bool
+
+pub fn check_ast_hits() -> Bool
+
+pub fn check_ast_kan_all() -> Bool
+
+pub fn check_ast_kan_terms() -> Bool
+
+pub fn check_ast_kan_types() -> Bool
+
+pub fn check_ast_list_len() -> Bool
+
+pub fn check_ast_nat_dep() -> Bool
+
+pub fn check_ast_nat_pred() -> Bool
+
+pub fn check_ast_paths() -> Bool
+
+pub fn check_bdd_and_certified_numeric() -> Bool
+
+pub fn check_bdd_canonical() -> Bool
+
+pub fn check_bdd_cost_optimizations() -> Bool
+
+pub fn check_bdd_dag_native_operations() -> Bool
+
+pub fn check_categories_all() -> Bool
+
+pub fn check_certified_algebraic_numeric() -> Bool
+
+pub fn check_coe_definitional() -> Bool
+
+pub fn check_commuting() -> Bool
+
+pub fn check_constructor_constraints() -> Bool
+
+pub fn check_container_functor_tree() -> Bool
+
+pub fn check_cube3_and_moving_hit_comp() -> Bool
+
+pub fn check_cube_comp() -> Bool
+
+pub fn check_cubical_algorithms() -> Bool
+
+pub fn check_cubical_identities(Cube, Array[Double]) -> Bool
+
+pub fn check_dep_all() -> Bool
+
+pub fn check_dep_pi() -> Bool
+
+pub fn check_dep_sigma() -> Bool
+
+pub fn check_dep_universe() -> Bool
+
+pub fn check_dline_dimension_substitution() -> Bool
+
+pub fn check_dsystem_canonical_partial_nf() -> Bool
+
+pub fn check_dsystem_compatibility() -> Bool
+
+pub fn check_dsystem_first_match_nf() -> Bool
+
+pub fn check_dsystem_repair_phase9() -> Bool
+
+pub fn check_eigenspace() -> Bool
+
+pub fn check_equiv_ast() -> Bool
+
+pub fn check_eta_all() -> Bool
+
+pub fn check_eta_function() -> Bool
+
+pub fn check_eta_product() -> Bool
+
+pub fn check_eta_spine() -> Bool
+
+pub fn check_eta_swap_involution() -> Bool
+
+pub fn check_eta_unit() -> Bool
+
+pub fn check_face_poset_category() -> Bool
+
+pub fn check_finite_univalence() -> Bool
+
+pub fn check_general_adjointification_and_contractible_fibers() -> Bool
+
+pub fn check_generated_hit_schemas() -> Bool
+
+pub fn check_generated_inductive_schemas() -> Bool
+
+pub fn check_glue() -> Bool
+
+pub fn check_glue_comp_all() -> Bool
+
+pub fn check_glue_comp_finite() -> Bool
+
+pub fn check_glue_comp_vec() -> Bool
+
+pub fn check_glue_equiv_quote_preserves_syntax() -> Bool
+
+pub fn check_hit_endpoint_conversion() -> Bool
+
+pub fn check_hit_moving_dimension_lift() -> Bool
+
+pub fn check_hit_schema_arguments() -> Bool
+
+pub fn check_hit_schema_circle_segment() -> Bool
+
+pub fn check_hit_schema_torus_comp() -> Bool
+
+pub fn check_hit_schema_validation() -> Bool
+
+pub fn check_hoas() -> Bool
+
+pub fn check_hopf_numeric() -> Bool
+
+pub fn check_hou_bounded_search() -> Bool
+
+pub fn check_hou_elaborator() -> Bool
+
+pub fn check_hou_phase9_extensions() -> Bool
+
+pub fn check_interval_faces() -> Bool
+
+pub fn check_j() -> Bool
+
+pub fn check_kan_all_types() -> Bool
+
+pub fn check_kan_coe_dependent() -> Bool
+
+pub fn check_kan_coe_pi_sigma() -> Bool
+
+pub fn check_kan_comp_tube() -> Bool
+
+pub fn check_kan_dep_all() -> Bool
+
+pub fn check_kan_embeddings() -> Bool
+
+pub fn check_kan_pruning() -> Bool
+
+pub fn check_karoubi_category() -> Bool
+
+pub fn check_level_polymorphic_declarations() -> Bool
+
+pub fn check_module_binary_format() -> Bool
+
+pub fn check_module_compilation() -> Bool
+
+pub fn check_module_system() -> Bool
+
+pub fn check_multibranch_glue_partial() -> Bool
+
+pub fn check_mutual_declaration_positivity() -> Bool
+
+pub fn check_mutual_inductives() -> Bool
+
+pub fn check_nbe() -> Bool
+
+pub fn check_nested_iter_datatype() -> Bool
+
+pub fn check_nested_rose_tree() -> Bool
+
+pub fn check_orthogonal_roundtrip() -> Bool
+
+pub fn check_pathp_exchange() -> Bool
+
+pub fn check_persistent_env_lazy_cache() -> Bool
+
+pub fn check_phase5_semantic_systems() -> Bool
+
+pub fn check_phase6_infrastructure() -> Bool
+
+pub fn check_projector() -> Bool
+
+pub fn check_propositional_truncation() -> Bool
+
+pub fn check_quotient_schema() -> Bool
+
+pub fn check_schema_extensions() -> Bool
+
+pub fn check_schema_indexed() -> Bool
+
+pub fn check_schema_inductive_comp() -> Bool
+
+pub fn check_schema_list() -> Bool
+
+pub fn check_schema_nat_add() -> Bool
+
+pub fn check_schema_nat_neutral_quote() -> Bool
+
+pub fn check_schema_registry_persistence() -> Bool
+
+pub fn check_schema_tree() -> Bool
+
+pub fn check_schema_validation() -> Bool
+
+pub fn check_schema_vec_comp() -> Bool
+
+pub fn check_schema_w() -> Bool
+
+pub fn check_semantic_dimension_substitution() -> Bool
+
+pub fn check_simultaneous_induction_recursion() -> Bool
+
+pub fn check_sphere3() -> Bool
+
+pub fn check_sphere_homotopy_representatives() -> Bool
+
+pub fn check_sphere_loop_representatives_internal() -> Bool
+
+pub fn check_structural_positivity() -> Bool
+
+pub fn check_syntactic_category() -> Bool
+
+pub fn check_systems() -> Bool
+
+pub fn check_tarski_induction_recursion() -> Bool
+
+pub fn check_telescope_terms(Array[DTelescopeEntry], Array[DTerm], Array[DValue], Array[DValue], DEnv, DEnv, DDimEnv) -> Array[DValue]?
+
+pub fn check_type_operator_positivity_extraction() -> Bool
+
+pub fn check_ua_coe() -> Bool
+
+pub fn check_univalence() -> Bool
+
+pub fn check_universe_schemes() -> Bool
+
+pub fn check_wiring_category() -> Bool
+
+pub fn check_wiring_coherence() -> Bool
+
+pub fn checked_coe_value(DCheckedTypeLine, Dim, Dim, DValue, Int32) -> DValue
+
+pub fn checked_comp_value(DCheckedTypeLine, DSystem, DValue, Int32) -> DValue
+
+pub fn checked_constant_type_line(DTerm, DEnv, DEnv, DDimEnv) -> DCheckedTypeLine?
+
+pub fn checked_constant_type_line_closed(DTerm) -> DCheckedTypeLine?
+
+pub fn checked_fill_value(DCheckedTypeLine, DSystem, DValue, Int32) -> (Dim) -> DValue
+
+pub fn checked_line_at(DCheckedTypeLine, Dim) -> DValue
+
+pub fn checked_line_body(DCheckedTypeLine) -> DTerm
+
+pub fn checked_line_conv(Int32, Int32, DCheckedTypeLine, DCheckedTypeLine) -> Bool
+
+pub fn checked_line_endpoints(DCheckedTypeLine) -> (DValue, DValue)
+
+pub fn checked_line_fn(DCheckedTypeLine) -> (Dim) -> DValue
+
+pub fn checked_line_is_constant(DCheckedTypeLine) -> Bool
+
+pub fn checked_line_level(DCheckedTypeLine) -> Int32
+
+pub fn checked_line_of_pathp_term(DTerm, DEnv, DEnv, DDimEnv) -> DCheckedTypeLine?
+
+pub fn checked_line_quote_body(Int32, Int32, DCheckedTypeLine) -> DTerm
+
+pub fn checked_line_reify_closed((Dim) -> DValue) -> DCheckedTypeLine?
+
+pub fn checked_line_reparam_closed(DCheckedTypeLine, Dim) -> DCheckedTypeLine?
+
+pub fn checked_pathp_type(DCheckedTypeLine, DValue, DValue) -> DValue
+
+pub fn checked_type_line(DTerm, DEnv, DEnv, DDimEnv) -> DCheckedTypeLine?
+
+pub fn checked_type_line_closed(DTerm) -> DCheckedTypeLine?
+
+pub fn checked_ua_line(DTerm, DEnv, DEnv, DDimEnv) -> DCheckedTypeLine?
+
+pub fn circle_degree_value(Int32, DValue, Int32) -> DValue
+
+pub fn circle_dim_of(DValue) -> Dim
+
+pub fn circle_hit_base_value() -> DValue
+
+pub fn circle_hit_loop_path_value() -> DValue
+
+pub fn circle_hit_loop_power_value(Int32) -> DValue
+
+pub fn circle_level_decl() -> DLevelHitDecl
+
+pub fn circle_level_scheme() -> DHitLevelScheme
+
+pub fn circle_point(Dim) -> DValue
+
+pub fn circle_schema() -> DHitSpec
+
+pub fn coe_computes(UPath) -> Bool
+
+pub fn coe_rules_definitional() -> Bool
+
+pub fn coe_upath(UPath, Int32, Int32, PVal) -> PVal
+
+pub fn coe_value((Dim) -> DValue, Dim, Dim, DValue, Int32) -> DValue
+
+pub fn commuting_product(CMat, CMat) -> CMat
+
+pub fn commuting_projectors_compatible(CMat, CMat) -> Bool
+
+pub fn comp_bool_value((Dim) -> DValue, DSystem, DValue, Int32) -> DValue
+
+pub fn comp_circle_value((Dim) -> DValue, DSystem, DValue, Int32) -> DValue
+
+pub fn comp_equiv_value((Dim) -> DValue, DSystem, DValue, Int32) -> DValue
+
+pub fn comp_glue_equiv_value((Dim) -> DValue, DSystem, DValue, Int32) -> DValue
+
+pub fn comp_glue_value((Dim) -> DValue, DSystem, DValue, Int32) -> DValue
+
+pub fn comp_hit_value((Dim) -> DValue, DSystem, DValue, Int32) -> DValue
+
+pub fn comp_inductive_value((Dim) -> DValue, DSystem, DValue, Int32) -> DValue
+
+pub fn comp_list_value((Dim) -> DValue, DSystem, DValue, Int32) -> DValue
+
+pub fn comp_nat_value((Dim) -> DValue, DSystem, DValue, Int32) -> DValue
+
+pub fn comp_path_value((Dim) -> DValue, DSystem, DValue, Int32) -> DValue
+
+pub fn comp_pi_value((Dim) -> DValue, DSystem, DValue, Int32) -> DValue
+
+pub fn comp_schema_args(Array[DConstructorArg], (Dim) -> Array[DValue], (Array[DValue], Array[DValue]) -> DValue, DSystem, (Int32, Dim, Int32) -> DValue, Int32) -> Array[DValue]
+
+pub fn comp_schema_args_decoded(Array[DConstructorArg], (Dim) -> Array[DValue], (Array[DValue], Array[DValue]) -> DValue, (Array[DValue], Array[DValue], DValue) -> DValue, DSystem, (Int32, Dim, Int32) -> DValue, Int32) -> Array[DValue]
+
+pub fn comp_sigma_value((Dim) -> DValue, DSystem, DValue, Int32) -> DValue
+
+pub fn comp_torus_value((Dim) -> DValue, DSystem, DValue, Int32) -> DValue
+
+pub fn comp_univ_value((Dim) -> DValue, DSystem, DValue, Int32) -> DValue
+
+pub fn comp_value((Dim) -> DValue, DSystem, DValue, Int32) -> DValue
+
+pub fn compatibility_respects_quotient(VecSystem, VecSystem, Int32) -> Bool
+
+pub fn compile_mutual_inductive(String, Array[DInductiveSpec]) -> DMutualFamily?
+
+pub fn compile_nested_iter_decl(DNestedIterDecl) -> DNestedIterFamily?
+
+pub fn compiled_module_binary_format_version() -> Int32
+
+pub fn compiled_module_binary_from_hex(String) -> Array[Int32]?
+
+pub fn compiled_module_binary_to_hex(Array[Int32]) -> String
+
+pub fn compiled_module_env_add(CompiledModuleEnv, CompiledModule) -> Bool
+
+pub fn compiled_module_env_find(CompiledModuleEnv, String) -> CompiledModule?
+
+pub fn compiled_module_env_new() -> CompiledModuleEnv
+
+pub fn compiled_module_env_to_module_env(CompiledModuleEnv) -> ModuleEnv
+
+pub fn compiled_module_format_version() -> Int32
+
+pub fn compiled_module_from_binary(Array[Int32]) -> CompiledModule?
+
+pub fn compiled_module_instantiate(CompiledModule, Array[DTerm]) -> ModuleInstance?
+
+pub fn compiled_module_is_implementation(CompiledModule, CompiledModule) -> Bool
+
+pub fn compiled_module_load_binary(Array[Int32]) -> CompiledModule?
+
+pub fn compiled_module_load_binary_report(Array[Int32], validate? : Bool) -> ModuleBinaryLoad
+
+pub fn compiled_module_specialize_prefix(CompiledModule, Array[DTerm]) -> CompiledModule?
+
+pub fn compiled_module_to_binary(CompiledModule) -> Array[Int32]
+
+pub fn compiled_module_to_module_def(CompiledModule) -> ModuleDef
+
+pub fn compiled_module_validate(CompiledModule) -> Bool
+
+pub fn complement(CMat) -> CMat
+
+pub fn container_tree_schema() -> DInductiveSpec
+
+pub fn contains_int(Array[Int32], Int32) -> Bool
+
+pub fn contractible_fibers_type_term(DTerm, DTerm, DTerm) -> DTerm
+
+pub fn conv_at(Int32, Int32, DValue, DValue, DValue) -> Bool
+
+pub fn conv_at_under_face(Int32, Int32, Face, DValue, DValue, DValue) -> Bool
+
+pub fn conv_at_under_face_report(Int32, Int32, Face, DValue, DValue, DValue) -> DFaceConvReport
+
+pub fn conv_decode_neutral(Int32, Int32, DInductiveSpec, Array[DValue], Array[DValue], DNeutral, DInductiveSpec, Array[DValue], Array[DValue], DNeutral) -> Bool
+
+pub fn conv_hit_cell_at(Int32, Int32, DHitSpec, Array[DValue], DValue, DValue) -> Bool
+
+pub fn conv_hit_elim_neutral(Int32, Int32, DHitSpec, (Array[DValue], DValue) -> DValue, Array[DValue], Array[DValue], Array[DValue], DNeutral, DHitSpec, (Array[DValue], DValue) -> DValue, Array[DValue], Array[DValue], Array[DValue], DNeutral) -> Bool
+
+pub fn conv_hit_type(Int32, Int32, DHitSpec, Array[DValue], Array[DValue], DHitSpec, Array[DValue], Array[DValue]) -> Bool
+
+pub fn conv_inductive_elim_neutral(Int32, Int32, DInductiveSpec, (Array[DValue], DValue) -> DValue, Array[DValue], Array[DValue], Array[DValue], DNeutral, DInductiveSpec, (Array[DValue], DValue) -> DValue, Array[DValue], Array[DValue], Array[DValue], DNeutral) -> Bool
+
+pub fn conv_inductive_type(Int32, Int32, DInductiveSpec, Array[DValue], Array[DValue], DInductiveSpec, Array[DValue], Array[DValue]) -> Bool
+
+pub fn conv_intro_at(Int32, Int32, DInductiveSpec, Array[DValue], DValue, DValue) -> Bool
+
+pub fn conv_neutral(Int32, Int32, DNeutral, DNeutral) -> Bool
+
+pub fn conv_schema_args(Int32, Int32, Array[DConstructorArg], Array[DValue], (Array[DValue]) -> DValue, Array[DValue], Array[DValue]) -> Bool
+
+pub fn conv_schema_args_full(Int32, Int32, Array[DConstructorArg], Array[DValue], (Array[DValue]) -> DValue, (Array[DValue], DValue) -> DValue, Array[DValue], Array[DValue]) -> Bool
+
+pub fn conv_telescope_values(Int32, Int32, Array[DTelescopeEntry], Array[DValue], Array[DValue], Array[DValue], Array[DValue]) -> Bool
+
+pub fn conv_ty(Int32, Int32, DValue, DValue) -> Bool
+
+pub fn cube3_schema() -> DHitSpec
+
+pub fn cube_const(Array[Complex], Int32) -> Cube
+
+pub fn cube_eval(Cube, Array[Double]) -> Array[Complex]
+
+pub fn cube_ext_eq(Cube, Cube, Array[Double]) -> Bool
+
+pub fn cube_in_eigenspace(CMat, Cube, Array[Double]) -> Bool
+
+pub fn cube_in_subline(SubLine, Cube, Int32, Array[Double]) -> Bool
+
+pub fn cube_root_two_modulus() -> @algebra.QPoly
+
+pub fn cube_root_unit_vector(@algebra.QPoly) -> Array[AlgC]?
+
+pub fn cx(Double, Double) -> Complex
+
+pub fn cx_add(Complex, Complex) -> Complex
+
+pub fn cx_approx_eq(Complex, Complex) -> Bool
+
+pub fn cx_conj(Complex) -> Complex
+
+pub fn cx_mul(Complex, Complex) -> Complex
+
+pub fn cx_real(Double) -> Complex
+
+pub fn cx_scale(Double, Complex) -> Complex
+
+pub fn cx_sub(Complex, Complex) -> Complex
+
+pub fn cx_zero() -> Complex
+
+pub fn d_as_type(DTerm, DEnv, DEnv, DDimEnv) -> DTypeVal?
+
+pub fn d_check(DTerm, DValue, DEnv, DEnv, DDimEnv) -> DValue?
+
+pub fn d_check_glue_equiv_partial(DTerm, DGlueEquivParts, DEnv, DEnv, DDimEnv) -> Array[DValue]?
+
+pub fn d_equiv_branch(Face, DTerm, DTerm) -> DEquivBranch
+
+pub fn d_face_term(Face, DTerm) -> DFaceTerm
+
+pub fn d_infer(DTerm, DEnv, DEnv, DDimEnv) -> DInfer?
+
+pub fn d_nat_lit(Int32) -> DTerm
+
+pub fn d_tube(Face, DTerm) -> DTubeTerm
+
+pub fn dapp_dim(DValue, Dim) -> DValue
+
+pub fn dapp_typed(DValue, DValue, DValue) -> DValue
+
+pub fn darg_decoded(String, Int32) -> DConstructorArg
+
+pub fn darg_decoded_function(String, Int32, index? : Array[DTerm]) -> DConstructorArg
+
+pub fn darg_external(String, DTerm) -> DConstructorArg
+
+pub fn darg_function(String, DTerm, index? : Array[DTerm]) -> DConstructorArg
+
+pub fn darg_mutual(String, Int32, Array[DTerm]) -> DConstructorArg
+
+pub fn darg_mutual_function(String, Int32, DTerm, index? : Array[DTerm]) -> DConstructorArg
+
+pub fn darg_nested(String, DPositiveFunctor) -> DConstructorArg
+
+pub fn darg_nested_from_type(String, DTerm, String, Int32, Int32, operators? : Array[DTypeOperatorDecl]) -> DConstructorArg?
+
+pub fn darg_recursive(String, index? : Array[DTerm]) -> DConstructorArg
+
+pub fn dbool_not(DValue) -> DValue
+
+pub fn dcoe(DLine, Double, Double, DValue) -> DValue
+
+pub fn dcomp(DLine, ((Double) -> DValue)?, DValue) -> DValue
+
+pub fn dconstructor_constraint(DTerm, DTerm, DTerm) -> DConstructorConstraint
+
+pub fn dconstructor_spec(String, Array[DConstructorArg], result_index? : Array[DTerm], constraints? : Array[DConstructorConstraint]) -> DConstructorSpec
+
+pub fn dconstructor_spec_constrained(String, Array[DConstructorArg], Array[DConstructorConstraint], result_index? : Array[DTerm]) -> DConstructorSpec
+
+pub fn ddim_at(DDimEnv, Int32) -> Dim?
+
+pub fn ddim_cons(Dim, DDimEnv) -> DDimEnv
+
+pub fn ddim_empty() -> DDimEnv
+
+pub fn ddim_extend(Array[Dim], DDimEnv) -> DDimEnv
+
+pub fn ddim_from_array(Array[Dim]) -> DDimEnv
+
+pub fn ddim_len(DDimEnv) -> Int32
+
+pub fn ddim_to_array(DDimEnv) -> Array[Dim]
+
+pub fn decode_term(DInductiveSpec, Array[DTerm], Array[DTerm], DTerm) -> DTerm
+
+pub fn decompose(CMat, Array[Complex]) -> (Array[Complex], Array[Complex])
+
+pub fn def_eq(Term, Term, Int32) -> Bool
+
+pub fn def_eq_eta(Term, Term, LTy, Array[LTy]) -> Bool
+
+pub let default_schema_registry : DSchemaRegistry
+
+pub fn degenerate_cube(Cube, Int32) -> Cube
+
+pub fn denv_at(DEnv, Int32) -> DValue?
+
+pub fn denv_cons(DValue, DEnv) -> DEnv
+
+pub fn denv_empty() -> DEnv
+
+pub fn denv_extend(Array[DValue], DEnv) -> DEnv
+
+pub fn denv_from_array(Array[DValue]) -> DEnv
+
+pub fn denv_len(DEnv) -> Int32
+
+pub fn denv_tail(DEnv) -> DEnv
+
+pub fn denv_to_array(DEnv) -> Array[DValue]
+
+pub fn dep_check_closed(DTerm, DTerm) -> Bool
+
+pub fn dep_def_eq_closed(DTerm, DTerm, DTerm) -> Bool
+
+pub fn dep_id_term() -> DTerm
+
+pub fn dep_id_type() -> DTerm
+
+pub fn dep_nf_closed(DTerm, DTerm) -> DTerm?
+
+pub fn dep_type_of_closed(DTerm) -> DTerm?
+
+pub fn dep_type_val_of(DTerm) -> DTypeVal?
+
+pub fn dequiv_branch_value(Face, DValue, DValue) -> DEquivBranchValue
+
+pub fn deval(DTerm, Array[DValue]) -> DValue
+
+pub fn deval_dim(DTerm, DEnv, DDimEnv) -> DValue
+
+pub fn dface_value(Face, DValue) -> DFaceValue
+
+pub fn dfill(DLine, ((Double) -> DValue)?, DValue) -> (Double) -> DValue
+
+pub fn dfst_typed(DValue, (DValue) -> DValue) -> DValue
+
+pub fn dfunctor_const(DTerm) -> DPositiveFunctor
+
+pub fn dfunctor_container(DTerm, DTerm, index? : Array[DTerm]) -> DPositiveFunctor
+
+pub fn dfunctor_identity(Array[DTerm]) -> DPositiveFunctor
+
+pub fn dfunctor_list(DPositiveFunctor) -> DPositiveFunctor
+
+pub fn dfunctor_pi(DTerm, DPositiveFunctor) -> DPositiveFunctor
+
+pub fn dfunctor_product(DPositiveFunctor, DPositiveFunctor) -> DPositiveFunctor
+
+pub fn dfunctor_sigma(DPositiveFunctor, DPositiveFunctor) -> DPositiveFunctor
+
+pub fn dfunctor_sum(DPositiveFunctor, DPositiveFunctor) -> DPositiveFunctor
+
+pub fn dfunext_term(DTerm, DTerm) -> DTerm
+
+pub fn dhit_arg_face(DTerm) -> DHitFaceExpr
+
+pub fn dhit_cell_spec(String, Int32, Array[DConstructorArg], Array[DHitFaceExpr], result_index? : Array[DTerm], constraints? : Array[DConstructorConstraint]) -> DHitCellSpec
+
+pub fn dhit_face(Int32, Array[DTerm], Array[Dim]) -> DHitFaceExpr
+
+pub fn dhit_level_scheme(String, Int32, DLevelExpr, (Array[Int32]) -> DHitSpec) -> DHitLevelScheme
+
+pub fn dhit_spec(String, Int32, Array[DTelescopeEntry], Array[DTelescopeEntry], Array[DHitCellSpec]) -> DHitSpec
+
+pub fn dim_cache_key(Dim) -> String
+
+pub fn dim_eq_sem(Dim, Dim) -> Bool
+
+pub fn dim_nvars_sem(Dim) -> Int32
+
+pub fn dim_quote(Dim, Int32) -> Dim
+
+pub fn dim_simplify(Dim) -> Dim
+
+pub fn dim_subst(Dim, Int32, Bool) -> Dim
+
+pub fn dim_vars_of(Dim) -> Array[Int32]
+
+pub fn dinductive_level_scheme(String, Int32, DLevelExpr, (Array[Int32]) -> DInductiveSpec) -> DInductiveLevelScheme
+
+pub fn dinductive_recursive_spec(String, Int32, Array[DTelescopeEntry], Array[DTelescopeEntry], Array[DConstructorSpec], Array[DTerm], decode_level? : Int32) -> DInductiveSpec
+
+pub fn dinductive_spec(String, Int32, Array[DTelescopeEntry], Array[DTelescopeEntry], Array[DConstructorSpec]) -> DInductiveSpec
+
+pub fn disc_path_sym(DiscPath) -> DiscPath
+
+pub fn disc_path_wf(DiscPath) -> Bool
+
+pub fn disc_samples() -> Array[Double]
+
+pub fn dlevel_const(Int32) -> DLevelExpr
+
+pub fn dlevel_eval(DLevelExpr, Array[Int32]) -> Int32?
+
+pub fn dlevel_expr_in_scope(DLevelExpr, Int32) -> Bool
+
+pub fn dlevel_hit_decl(Array[String], DLevelExpr, DHitSpec) -> DLevelHitDecl
+
+pub fn dlevel_inductive_decl(Array[String], DLevelExpr, DInductiveSpec, decode_level? : DLevelExpr) -> DLevelInductiveDecl
+
+pub fn dlevel_max(DLevelExpr, DLevelExpr) -> DLevelExpr
+
+pub fn dlevel_succ(DLevelExpr) -> DLevelExpr
+
+pub fn dlevel_term_decl(String, Array[String], DTerm, DTerm) -> DLevelTermDecl
+
+pub fn dlevel_var(Int32) -> DLevelExpr
+
+pub fn dline_at(DLine, Double) -> DValue
+
+pub fn dline_bool() -> DLine
+
+pub fn dline_bool_not_ua() -> DLine
+
+pub fn dline_const(DValue) -> DLine
+
+pub fn dline_from_maps(DValue, DValue, (DValue) -> DValue, (DValue) -> DValue) -> DLine
+
+pub fn dline_of_lty(LTy) -> DLine
+
+pub fn dline_of_ty(Ty) -> DLine
+
+pub fn dline_of_upath(UPath) -> DLine
+
+pub fn dline_pi(DLine, ((Double) -> DValue) -> DLine) -> DLine
+
+pub fn dline_pi_constfam(DLine, DLine) -> DLine
+
+pub fn dline_rev(DLine) -> DLine
+
+pub fn dline_sigma(DLine, ((Double) -> DValue) -> DLine) -> DLine
+
+pub fn dline_sigma_constfam(DLine, DLine) -> DLine
+
+pub fn dline_subst(DLine, Dim) -> DLine
+
+pub fn dline_unit() -> DLine
+
+pub fn dline_univ(Int32) -> DLine
+
+pub fn dmax(Double, Double) -> Double
+
+pub fn dmin(Double, Double) -> Double
+
+pub fn dmutual_decl(String, Array[DInductiveSpec]) -> DMutualDecl
+
+pub fn dnested_constructor(String, Array[DNestedArg], constraints? : Array[DConstructorConstraint]) -> DNestedConstructor
+
+pub fn dnested_external(String, DTerm) -> DNestedArg
+
+pub fn dnested_iter_decl(String, Int32, String, Int32, DTerm, Array[DNestedConstructor]) -> DNestedIterDecl
+
+pub fn dnested_recursive(String, advance? : Int32) -> DNestedArg
+
+pub fn double_dyadic_interval(Double, Int32) -> (@algebra.Rat, @algebra.Rat)?
+
+pub fn dpath_at_value(DValue, Dim) -> DValue
+
+pub fn dpath_cong_term(DTerm, DTerm) -> DTerm
+
+pub fn dpath_cong_value(DValue, DValue, DValue) -> DValue
+
+pub fn dpath_funext_value(DValue, DValue) -> DValue
+
+pub fn dpath_prefix_value(DValue, Dim) -> DValue
+
+pub fn dpath_refl_term(DTerm) -> DTerm
+
+pub fn dpath_refl_value(DValue) -> DValue
+
+pub fn dpath_segment_value(DValue, Dim) -> DValue
+
+pub fn dpath_sym_term(DTerm) -> DTerm
+
+pub fn dpath_sym_value(DValue) -> DValue
+
+pub fn dpath_trans_square_value(DValue, DValue, DValue, Int32) -> DValue
+
+pub fn dpath_trans_sym_cancel_value(DValue, DValue, DValue, Int32) -> DValue
+
+pub fn dpath_trans_term(DTerm, DTerm, DTerm) -> DTerm
+
+pub fn dpath_trans_value(DValue, DValue, DValue, Int32) -> DValue
+
+pub fn dpositivity_report(Bool, Bool, Bool, Bool, Bool) -> DPositivityReport
+
+pub fn dsimultaneous_function(String, DTerm, Array[DTerm]) -> DSimultaneousFunction
+
+pub fn dsimultaneous_ir_spec(DInductiveSpec, Array[DSimultaneousFunction]) -> DSimultaneousIRSpec
+
+pub fn dsnd_typed(DValue, DValue, (DValue) -> DValue) -> DValue
+
+pub fn dsystem_canonical(Int32, Int32, (Dim) -> DValue, DSystem) -> DSystem
+
+pub fn dsystem_checked(Int32, Int32, (Dim) -> DValue, DSystem, DValue) -> DSystem?
+
+pub fn dsystem_checked_of(Int32, Int32, (Dim) -> DValue, Array[DTubeBranch], DValue) -> DSystem?
+
+pub fn dsystem_compatibility(Bool, DSystemIncompatibility, Int32, Int32) -> DSystemCompatibility
+
+pub fn dsystem_compatibility_report(Int32, Int32, (Dim) -> DValue, DSystem, DValue?) -> DSystemCompatibility
+
+pub fn dsystem_compatible_with_base(Int32, Int32, (Dim) -> DValue, DSystem, DValue) -> Bool
+
+pub fn dsystem_domain_face(DSystem) -> Face
+
+pub fn dsystem_empty() -> DSystem
+
+pub fn dsystem_first_match_checked(Int32, Int32, (Dim) -> DValue, DSystem, DValue) -> DSystem?
+
+pub fn dsystem_first_match_eq(Int32, Int32, (Dim) -> DValue, DSystem, DSystem) -> Bool
+
+pub fn dsystem_first_match_normal_form(Int32, Int32, (Dim) -> DValue, DSystem) -> DTubeNF
+
+pub fn dsystem_first_match_system(Int32, Int32, (Dim) -> DValue, DSystem) -> DSystem
+
+pub fn dsystem_first_path(DSystem, DValue) -> (Dim) -> DValue
+
+pub fn dsystem_map(DSystem, ((Dim) -> DValue) -> (Dim) -> DValue) -> DSystem
+
+pub fn dsystem_of(Array[DTubeBranch]) -> DSystem
+
+pub fn dsystem_of_first_match_nf(DTubeNF) -> DSystem
+
+pub fn dsystem_pairwise_compatible(Int32, Int32, (Dim) -> DValue, DSystem) -> Bool
+
+pub fn dsystem_repair_to_base(Int32, Int32, (Dim) -> DValue, DSystem, DValue) -> DSystemRepair
+
+pub fn dsystem_singleton(Face, (Dim) -> DValue) -> DSystem
+
+pub fn dtelescope_entry(String, DTerm) -> DTelescopeEntry
+
+pub fn dterm_cache_key(DTerm) -> String
+
+pub fn dterm_children(DTerm) -> Array[DTerm]
+
+pub fn dterm_family_occurs(DTerm, String) -> Bool
+
+pub fn dterm_family_positivity(DTerm, String) -> DPositivityReport
+
+pub fn dterm_family_strictly_positive(DTerm, String) -> Bool
+
+pub fn dterm_instantiate_levels(DTerm, Array[Int32]) -> DTerm?
+
+pub fn dterm_levels_in_scope(DTerm, Int32) -> Bool
+
+pub fn dterm_shift(DTerm, Int32, Int32) -> DTerm
+
+pub fn dterm_substitute(DTerm, Int32, DTerm) -> DTerm
+
+pub fn dtransport_back_term(DTerm, DTerm) -> DTerm
+
+pub fn dtransport_term(DTerm, DTerm) -> DTerm
+
+pub fn dtube_nf_class(Bdd, (Dim) -> DValue) -> DTubeNFClass
+
+pub fn dtype_operator_decl(String, DTerm, DTerm) -> DTypeOperatorDecl
+
+pub fn dv_nat_lit(Int32) -> DValue
+
+pub fn dvalue_of_ty(Ty) -> DValue
+
+pub fn dvalue_subst_dims(Int32, Int32, DValue, DValue, Array[Dim]) -> (DValue, DValue)
+
+pub fn dvalue_to_pval(DValue) -> PVal
+
+pub fn eigen_equations_hold(CMat, Array[Complex]) -> Bool
+
+pub fn eigenspace_kan_sound(CMat, Cube, Cube, Cube, Array[Double]) -> Bool
+
+pub fn eigenspace_well_formed(CMat, Array[Array[Complex]]) -> Bool
+
+pub fn elab_check(Elaborator, STerm, UTerm) -> ElabResult?
+
+pub fn elab_infer(Elaborator, STerm) -> ElabResult?
+
+pub fn elab_result_to_dterm(Elaborator, ElabResult) -> DTerm?
+
+pub fn elab_type_to_dterm(Elaborator, ElabResult) -> DTerm?
+
+pub fn elaborator_new() -> Elaborator
+
+pub fn elems_of(Ty) -> Array[PVal]
+
+pub let eps : Double
+
+pub fn equal_nat_pair_schema() -> DInductiveSpec
+
+pub fn equiv_bool_not() -> Equiv
+
+pub fn equiv_bwd_value(DValue, DValue, DValue) -> DValue
+
+pub fn equiv_comp(Equiv, Equiv) -> Equiv
+
+pub fn equiv_contractible_fibers_value(DValue, DValue, DValue, Int32) -> DValue
+
+pub fn equiv_ext_eq(Equiv, Equiv) -> Bool
+
+pub fn equiv_ext_eq_oracle(Equiv, Equiv) -> Bool
+
+pub fn equiv_fiber_center_value(DValue, DValue, DValue, DValue) -> DValue
+
+pub fn equiv_fiber_contraction_value(DValue, DValue, DValue, DValue, DValue, Int32) -> DValue
+
+pub fn equiv_fiber_path_value(DValue, DValue, DValue, DValue, DValue, DValue, Int32) -> DValue
+
+pub fn equiv_fiber_type_value(DEquivParts, DValue) -> DValue
+
+pub fn equiv_fun_value(DValue, DValue, DValue, DValue) -> DValue
+
+pub fn equiv_fwd_value(DValue, DValue, DValue) -> DValue
+
+pub fn equiv_id(Ty) -> Equiv
+
+pub fn equiv_id_value(DValue) -> DValue
+
+pub fn equiv_improved_sect_value(DValue, DValue, DValue, DValue, DValue, DValue, Int32) -> DValue
+
+pub fn equiv_inv(Equiv) -> Equiv
+
+pub fn equiv_inv_fun_value(DValue, DValue, DValue, DValue) -> DValue
+
+pub fn equiv_inv_value(DValue, DValue, DValue) -> DValue
+
+pub fn equiv_make_value(DValue, DValue, DValue, DValue, DValue, DValue) -> DValue
+
+pub fn equiv_of_wiring(Wiring) -> Equiv
+
+pub fn equiv_parts(DValue, DValue, DValue) -> DEquivParts
+
+pub fn equiv_prod(Equiv, Equiv) -> Equiv
+
+pub fn equiv_retr_type(DValue, DValue, DValue, DValue) -> DValue
+
+pub fn equiv_retr_value(DValue, DValue, DValue) -> DValue
+
+pub fn equiv_sect_type(DValue, DValue, DValue, DValue) -> DValue
+
+pub fn equiv_sect_value(DValue, DValue, DValue) -> DValue
+
+pub fn equiv_swap(Ty, Ty) -> Equiv
+
+pub fn equiv_to_universe_path_value(DValue, DValue, DValue, Int32) -> DValue
+
+pub fn equiv_triangle_type(DValue, DValue, DValue, DValue, DValue, DValue) -> DValue
+
+pub fn equiv_type_term(DTerm, DTerm) -> DTerm
+
+pub fn equiv_wf(Equiv) -> Bool
+
+pub fn equiv_wf_extensional(Equiv) -> Bool
+
+pub fn equiv_with_improved_sect(DValue, DValue, DValue, Int32) -> DValue
+
+pub fn eta_single_valued_on(Term, LTy, Array[LTy]) -> Bool
+
+pub fn eval(Term, Array[Value]) -> Value
+
+pub fn eval_bool_elim((DValue) -> DValue, DValue, DValue, DValue, Int32) -> DValue
+
+pub fn eval_check_t(Term, LTy, Array[LTy], Array[TValue]) -> TValue?
+
+pub fn eval_circle_elim((DValue) -> DValue, DValue, DValue, DValue, Int32) -> DValue
+
+pub fn eval_decode_term(DInductiveSpec, Array[DTerm], Array[DTerm], DTerm, DEnv, DDimEnv) -> DValue
+
+pub fn eval_dim(Dim, Array[Double]) -> Double
+
+pub fn eval_dim_bool(Dim, Array[Bool]) -> Bool
+
+pub fn eval_dim_expr(Dim, DDimEnv) -> Dim
+
+pub fn eval_glue_equiv_term(DTerm, Array[DEquivBranch], DEnv, DDimEnv) -> DValue
+
+pub fn eval_hit_elim(DHitSpec, (Array[DValue], DValue) -> DValue, Array[DValue], Array[DValue], Array[DValue], DValue, Int32) -> DValue
+
+pub fn eval_hit_elim_term(DHitSpec, DTerm, Array[DTerm], Array[DTerm], Array[DTerm], DTerm, DEnv, DDimEnv) -> DValue
+
+pub fn eval_hit_intro_term(DHitSpec, Int32, Array[DTerm], Array[DTerm], Array[Dim], DEnv, DDimEnv) -> DValue
+
+pub fn eval_hit_type_term(DHitSpec, Array[DTerm], DEnv, DDimEnv) -> DValue
+
+pub fn eval_inductive_decode(DInductiveSpec, Array[DValue], Array[DValue], DValue, Int32) -> DValue
+
+pub fn eval_inductive_elim(DInductiveSpec, (Array[DValue], DValue) -> DValue, Array[DValue], Array[DValue], Array[DValue], DValue, Int32) -> DValue
+
+pub fn eval_inductive_elim_term(DInductiveSpec, DTerm, Array[DTerm], Array[DTerm], Array[DTerm], DTerm, DEnv, DDimEnv) -> DValue
+
+pub fn eval_inductive_type_term(DInductiveSpec, Array[DTerm], DEnv, DDimEnv) -> DValue
+
+pub fn eval_infer_t(Term, Array[LTy], Array[TValue]) -> TypedValue?
+
+pub fn eval_intro_term(DInductiveSpec, Int32, Array[DTerm], Array[DTerm], DEnv, DDimEnv) -> DValue
+
+pub fn eval_list_elim(DValue, (DValue) -> DValue, DValue, DValue, DValue, Int32) -> DValue
+
+pub fn eval_mk_equiv_term(DTerm, DTerm, DTerm, DTerm, DTerm, DTerm, DEnv, DDimEnv) -> DValue
+
+pub fn eval_mutual_elim(DMutualFamily, Array[(Array[DValue], DValue) -> DValue], Array[Array[DValue]], Array[DValue], Int32, Array[DValue], DValue, Int32) -> DValue
+
+pub fn eval_nat_elim((DValue) -> DValue, DValue, DValue, DValue, Int32) -> DValue
+
+pub fn eval_simultaneous_ir(DSimultaneousIRSpec, Int32, Array[DValue], Array[DValue], DValue, Int32) -> DValue
+
+pub fn eval_torus_elim((DValue) -> DValue, (Dim, Dim) -> DValue, DValue, Int32) -> DValue
+
+pub fn eval_tube_terms(Array[DTubeTerm], DEnv, DDimEnv) -> DSystem
+
+pub fn eval_ua_term(DTerm, DEnv, DDimEnv) -> DValue
+
+pub fn even_odd_components() -> Array[DInductiveSpec]
+
+pub fn even_odd_family() -> DMutualFamily?
+
+pub fn example_projector() -> CMat
+
+pub fn example_unit() -> Array[Complex]
+
+pub fn extract_positive_functor(DTerm, String, Array[DTerm], operators? : Array[DTypeOperatorDecl]) -> DPositiveFunctor?
+
+pub fn face_agreement_region(Int32, Int32, Face, DValue, DValue, DValue) -> Bdd
+
+pub fn face_bound(Face, Int32) -> Face
+
+pub fn face_cnf_stats(Face, Int32) -> FaceCnfStats
+
+pub fn face_eq_decide(Face, Face, Int32, max_nodes? : Int32, max_steps? : Int32) -> FaceDecision
+
+pub fn face_eq_dpll(Face, Face, Int32, max_steps? : Int32) -> FaceDecision
+
+pub fn face_eq_mod(Face, Face, Int32) -> Bool
+
+pub fn face_eq_watched_dpll(Face, Face, Int32, max_steps? : Int32) -> FaceDecision
+
+pub fn face_eq_within_budget(Face, Face, Int32, Int32) -> FaceDecision
+
+pub fn face_eval_env(Face, DDimEnv) -> Face
+
+pub fn face_holds(Face, Array[Bool]) -> Bool
+
+pub fn face_is_bot_sem(Face) -> Bool
+
+pub fn face_is_sat_sem(Face) -> Bool
+
+pub fn face_is_top_sem(Face) -> Bool
+
+pub fn face_join_universal(Face, Face, Face, Int32) -> Bool
+
+pub fn face_le(Face, Face, Int32) -> Bool
+
+pub fn face_maps_commute(Cube, Double, Double) -> Bool
+
+pub fn face_meet_universal(Face, Face, Face, Int32) -> Bool
+
+pub fn face_not(Face) -> Face
+
+pub fn face_nvars_sem(Face) -> Int32
+
+pub fn face_of_bdd(Bdd) -> Face
+
+pub fn face_quote(Face, Int32) -> Face
+
+pub fn face_sat(Face, Int32) -> Bool
+
+pub fn face_sat_decide(Face, Int32, max_nodes? : Int32, max_steps? : Int32) -> FaceSatDecision
+
+pub fn face_sat_dpll(Face, Int32, max_steps? : Int32) -> FaceSatDecision
+
+pub fn face_sat_watched_dpll(Face, Int32, max_steps? : Int32) -> FaceSatDecision
+
+pub fn face_sat_within_budget(Face, Int32, Int32) -> FaceDecision
+
+pub fn face_simplify(Face) -> Face
+
+pub fn face_subst(Face, Int32, Bool) -> Face
+
+pub fn face_unsat(Face, Int32) -> Bool
+
+pub fn face_var0(Int32) -> Face
+
+pub fn face_var1(Int32) -> Face
+
+pub fn face_vars(Face) -> Array[Int32]
+
+pub fn face_witness(Face, Int32) -> Array[Bool]?
+
+pub fn fiber_type_term(DTerm, DTerm, DTerm, DTerm) -> DTerm
+
+pub fn fill_subline(SubLine, VecBox) -> Cube
+
+pub fn fill_value((Dim) -> DValue, DSystem, DValue, Int32) -> (Dim) -> DValue
+
+pub fn filler_respects_box(Cube, Cube, Cube, Cube, Array[Double]) -> Bool
+
+pub fn fin_schema() -> DInductiveSpec
+
+pub fn finite_transport(UPath, PVal) -> PVal
+
+pub fn flatten_pval(PVal) -> Array[PVal]
+
+pub fn force_value(DValue) -> DValue
+
+pub fn fresh_dim(DDimEnv) -> Dim
+
+pub fn generic_iterate_module() -> ModuleDef
+
+pub fn glue_box_compatible(GlueLineVec, VecBox, VecBox, Array[Double]) -> Bool
+
+pub fn glue_comp_finite(GlueLineFinite, GlueElem, Int32) -> GlueElem?
+
+pub fn glue_comp_finite_correct(GlueLineFinite, GlueElem, Int32) -> Bool
+
+pub fn glue_comp_vec(GlueLineVec, VecBox, VecBox) -> GlueCompVecResult
+
+pub fn glue_comp_vec_sound(GlueLineVec, VecBox, VecBox, Array[Double]) -> Bool
+
+pub fn glue_data_at0(GlueLineFinite) -> GlueData
+
+pub fn glue_data_at1(GlueLineFinite) -> GlueData
+
+pub fn glue_equiv_base_of(DGlueEquivParts, DValue) -> DValue
+
+pub fn glue_equiv_collapse(DValue) -> DValue
+
+pub fn glue_equiv_domain_face(Array[DEquivBranchValue]) -> Face
+
+pub fn glue_equiv_partial_values(DGlueEquivParts, DValue) -> Array[DValue]
+
+pub fn glue_equiv_store_partial(DGlueEquivParts, Array[DValue]) -> DValue
+
+pub fn glue_equiv_systems_conv(Int32, Int32, DValue, Array[DEquivBranchValue], Array[DEquivBranchValue]) -> Bool
+
+pub fn glue_equiv_term(DTerm, Array[DEquivBranch]) -> DTerm
+
+pub fn glue_equiv_top_index(DGlueEquivParts) -> Int32
+
+pub fn glue_from_base(GlueData, PVal) -> GlueElem
+
+pub fn glue_line_coherent(GlueLineFinite) -> Bool
+
+pub fn glue_partial_values(DGlueParts, DValue) -> Array[DValue]
+
+pub fn glue_restrict(GlueData, GlueElem, Array[Bool]) -> PVal?
+
+pub fn glue_sound(GlueData, GlueElem, Int32) -> Bool
+
+pub fn glue_store_partial(DGlueParts, Array[DValue]) -> DValue
+
+pub fn glue_wf(GlueData, GlueElem, Int32) -> Bool
+
+pub fn grid() -> Array[Double]
+
+pub fn happ(HTm, HTm) -> HTm
+
+pub fn hcomp_univ_value(Int32, DSystem, DValue, Int32) -> DValue
+
+pub fn hcomp_value(DValue, DSystem, DValue, Int32) -> DValue
+
+pub fn hfill_value(DValue, DSystem, DValue, Int32) -> (Dim) -> DValue
+
+pub fn hfst(HTm) -> HTm
+
+pub fn hit_arg_type(DHitSpec, DConstructorArg, Array[DValue], Array[DValue]) -> DValue
+
+pub fn hit_case_type(DHitSpec, (Array[DValue], DValue) -> DValue, Array[DValue], Array[DValue], Int32, Int32) -> DValue
+
+pub fn hit_cell_result_indices(DHitSpec, Int32, Array[DValue], Array[DValue]) -> Array[DValue]
+
+pub fn hit_cell_value(DHitSpec, Int32, Array[DValue], Array[DValue], Array[Dim]) -> DValue
+
+pub fn hit_elim_term(DHitSpec, DTerm, Array[DTerm], Array[DTerm], Array[DTerm], DTerm) -> DTerm
+
+pub fn hit_index_types(DHitSpec, Array[DValue], Array[DValue]) -> Array[DValue]
+
+pub fn hit_index_types_cached(DSchemaRegistry, DHitSpec, Array[DValue], Array[DValue]) -> Array[DValue]
+
+pub fn hit_intro_term(DHitSpec, Int32, Array[DTerm], Array[DTerm], Array[Dim]) -> DTerm
+
+pub fn hit_motive_type(DHitSpec, Array[DValue]) -> DValue
+
+pub fn hit_param_types(DHitSpec, Array[DValue]) -> Array[DValue]
+
+pub fn hit_param_types_cached(DSchemaRegistry, DHitSpec, Array[DValue]) -> Array[DValue]
+
+pub fn hit_parameter_positivity(DHitSpec, Int32) -> DPositivityReport
+
+pub fn hit_plan_type_term(DHitPlan, Array[DTerm]) -> DTerm
+
+pub fn hit_result_indices(DHitCellSpec, Array[DValue], Array[DValue]) -> Array[DValue]
+
+pub fn hit_schema_examples() -> Array[DHitSpec]
+
+pub fn hit_schema_key(DHitSpec) -> String
+
+pub fn hit_schema_validate(DHitSpec) -> Bool
+
+pub fn hit_type_term(DHitSpec, Array[DTerm]) -> DTerm
+
+pub fn hoas_const_example() -> HTm
+
+pub fn hoas_roundtrip_hoas(HTm, Int32) -> Bool
+
+pub fn hoas_roundtrip_term(Term, Int32) -> Bool
+
+pub fn hoas_swap_example() -> HTm
+
+pub fn hoas_to_term(Int32, HTm) -> Term
+
+pub fn homotopy_group_type_term(DTerm, DTerm, Int32) -> DTerm
+
+pub fn hopf_linking_number_numeric(Int32) -> Double
+
+pub fn hopf_map_s3_to_s2(Array[Double]) -> Array[Double]
+
+pub fn hopf_north_fiber(Double) -> Array[Double]
+
+pub fn hopf_phase_rotate(Array[Double], Double) -> Array[Double]
+
+pub fn hopf_south_fiber(Double) -> Array[Double]
+
+pub fn hou_fresh_meta(Unifier, Int32) -> UTerm
+
+pub fn hou_search_unify(UTerm, UTerm, Int32, Unifier, max_nodes? : Int32, max_depth? : Int32) -> HouSearchReport
+
+pub fn hou_search_unify_bool(UTerm, UTerm, Int32, Unifier, max_nodes? : Int32, max_depth? : Int32) -> Bool
+
+pub fn hou_semantic_optimize(UTerm, Unifier) -> UTerm
+
+pub fn hou_unify(UTerm, UTerm, Int32, Unifier) -> Bool
+
+pub fn hsnd(HTm) -> HTm
+
+pub fn identity_fibers_contractible_value(DValue) -> DValue
+
+pub fn in_image(CMat, Array[Complex]) -> Bool
+
+pub fn in_kernel(CMat, Array[Complex]) -> Bool
+
+pub fn in_ty(PVal, Ty) -> Bool
+
+pub fn inductive_arg_type(DInductiveSpec, DConstructorArg, Array[DValue], Array[DValue]) -> DValue
+
+pub fn inductive_arg_type_full(DInductiveSpec, DConstructorArg, Array[DConstructorArg], Array[DValue], Array[DValue]) -> DValue
+
+pub fn inductive_case_type(DInductiveSpec, (Array[DValue], DValue) -> DValue, Array[DValue], Int32) -> DValue
+
+pub fn inductive_decode_cases_validate(DInductiveSpec) -> Bool
+
+pub fn inductive_index_types(DInductiveSpec, Array[DValue], Array[DValue]) -> Array[DValue]
+
+pub fn inductive_index_types_cached(DSchemaRegistry, DInductiveSpec, Array[DValue], Array[DValue]) -> Array[DValue]
+
+pub fn inductive_motive_type(DInductiveSpec, Array[DValue]) -> DValue
+
+pub fn inductive_param_types(DInductiveSpec, Array[DValue]) -> Array[DValue]
+
+pub fn inductive_param_types_cached(DSchemaRegistry, DInductiveSpec, Array[DValue]) -> Array[DValue]
+
+pub fn inductive_parameter_positivity(DInductiveSpec, Int32) -> DPositivityReport
+
+pub fn inductive_plan_type_term(DInductivePlan, Array[DTerm]) -> DTerm
+
+pub fn inductive_result_indices(DConstructorSpec, Array[DValue], Array[DValue]) -> Array[DValue]
+
+pub fn inductive_schema_key(DInductiveSpec) -> String
+
+pub fn inductive_schema_validate(DInductiveSpec) -> Bool
+
+pub fn infer_decode(DInductiveSpec, Array[DTerm], Array[DTerm], DTerm, DEnv, DEnv, DDimEnv) -> DInfer?
+
+pub fn infer_equiv_projection(Int32, DTerm, DEnv, DEnv, DDimEnv) -> DInfer?
+
+pub fn infer_equiv_ty(DTerm, DTerm, DEnv, DEnv, DDimEnv) -> DInfer?
+
+pub fn infer_glue_equiv(DTerm, Array[DEquivBranch], DEnv, DEnv, DDimEnv) -> DInfer?
+
+pub fn infer_hit_elim(DHitSpec, DTerm, Array[DTerm], Array[DTerm], Array[DTerm], DTerm, DEnv, DEnv, DDimEnv) -> DInfer?
+
+pub fn infer_hit_intro(DHitSpec, Int32, Array[DTerm], Array[DTerm], Array[Dim], DEnv, DEnv, DDimEnv) -> DInfer?
+
+pub fn infer_hit_type(DHitSpec, Array[DTerm], DEnv, DEnv, DDimEnv) -> DInfer?
+
+pub fn infer_inductive_elim(DInductiveSpec, DTerm, Array[DTerm], Array[DTerm], Array[DTerm], DTerm, DEnv, DEnv, DDimEnv) -> DInfer?
+
+pub fn infer_inductive_type(DInductiveSpec, Array[DTerm], DEnv, DEnv, DDimEnv) -> DInfer?
+
+pub fn infer_intro(DInductiveSpec, Int32, Array[DTerm], Array[DTerm], DEnv, DEnv, DDimEnv) -> DInfer?
+
+pub fn infer_mk_equiv(DTerm, DTerm, DTerm, DTerm, DTerm, DTerm, DEnv, DEnv, DDimEnv) -> DInfer?
+
+pub fn infer_ua(DTerm, DEnv, DEnv, DDimEnv) -> DInfer?
+
+pub fn inner(Array[Complex], Array[Complex]) -> Complex
+
+pub fn instantiate_hit_level_scheme(DHitLevelScheme, Array[Int32]) -> DHitSpec?
+
+pub fn instantiate_inductive_level_scheme(DInductiveLevelScheme, Array[Int32]) -> DInductiveSpec?
+
+pub fn instantiate_level_hit_decl(DLevelHitDecl, Array[Int32]) -> DHitSpec?
+
+pub fn instantiate_level_inductive_decl(DLevelInductiveDecl, Array[Int32]) -> DInductiveSpec?
+
+pub fn instantiate_level_term_decl(DLevelTermDecl, Array[Int32]) -> DLevelTermInstance?
+
+pub fn int_pow(Int32, Int32) -> Int32
+
+pub fn integer_pred_value(DValue) -> DValue
+
+pub fn integer_schema() -> DInductiveSpec
+
+pub fn integer_succ_value(DValue) -> DValue
+
+pub fn integer_term(Int32) -> DTerm
+
+pub fn integer_type_term() -> DTerm
+
+pub fn integer_type_value() -> DValue
+
+pub fn integer_value(Int32) -> DValue
+
+pub fn interval_laws_hold(Array[Double]) -> Bool
+
+pub fn inv_sqrt2() -> Double
+
+pub fn is_contr_type_term(DTerm) -> DTerm
+
+pub fn is_hermitian(CMat) -> Bool
+
+pub fn is_idempotent(CMat) -> Bool
+
+pub fn is_projector(CMat) -> Bool
+
+pub fn iso_bool_not() -> Iso
+
+pub fn iso_of_wiring(Wiring) -> Iso
+
+pub fn iso_swap(Ty, Ty) -> Iso
+
+pub fn iso_to_equiv(Iso) -> Equiv
+
+pub fn iso_to_path(Iso) -> UPath
+
+pub fn iso_wf(Iso) -> Bool
+
+pub fn iso_wf_extensional(Iso) -> Bool
+
+pub fn iterated_refl_term(DTerm, Int32) -> DTerm
+
+pub fn iterated_refl_value(DValue, Int32) -> DValue
+
+pub fn j_elim_disc(Family, PVal, DiscPath) -> PVal?
+
+pub fn j_roundtrip(Family, PVal, DiscPath) -> Bool
+
+pub fn kan_box((Dim) -> DValue, DSystem, DValue, Int32) -> KanBox
+
+pub fn kan_box_comp(KanBox) -> DValue
+
+pub fn kan_box_fill(KanBox) -> (Dim) -> DValue
+
+pub fn kan_box_pathp(KanBox) -> DValue
+
+pub fn kan_comp_eigenspace(CMat, Cube, Cube, Cube) -> Cube
+
+pub fn kan_comp_path(Cube, Cube, Cube) -> Cube
+
+pub fn kan_fill_eigenspace(CMat, Cube, Cube, Cube) -> Cube
+
+pub fn karoubi_comp(CMat, CMat) -> CMat
+
+pub fn karoubi_id(CMat) -> CMat
+
+pub fn karoubi_morphism(CMat, CMat, CMat) -> Bool
+
+pub fn karoubi_wrap(CMat, CMat, CMat) -> CMat
+
+pub fn lazy_deval(DTerm, DEnv, DDimEnv) -> DValue
+
+pub fn lazy_force_count(DValue) -> Int32
+
+pub fn lazy_is_forced(DValue) -> Bool
+
+pub fn lazy_value(() -> DValue) -> DValue
+
+pub fn leaf_count(Ty) -> Int32
+
+pub fn leaves_of_ty(Ty) -> Array[LeafKind]
+
+pub fn level_decl_hit(DLevelHitDecl) -> DLevelDecl
+
+pub fn level_decl_inductive(DLevelInductiveDecl) -> DLevelDecl
+
+pub fn level_decl_term(DLevelTermDecl) -> DLevelDecl
+
+pub fn level_decl_validate(DLevelDecl) -> Bool
+
+pub fn level_hit_decl_validate(DLevelHitDecl) -> Bool
+
+pub fn level_identity_decl() -> DLevelTermDecl
+
+pub fn level_inductive_decl_validate(DLevelInductiveDecl) -> Bool
+
+pub fn level_term_decl_validate(DLevelTermDecl) -> Bool
+
+pub fn lin_equiv_from_unit_paths((Double) -> Array[Complex], (Double) -> Array[Complex]) -> LinEquivLine
+
+pub fn list_level_decl() -> DLevelInductiveDecl
+
+pub fn list_level_scheme() -> DInductiveLevelScheme
+
+pub fn list_schema() -> DInductiveSpec
+
+pub fn loop_space_type_term(DTerm, DTerm, Int32) -> DTerm
+
+pub fn loop_space_type_value(DValue, DValue, Int32) -> DValue
+
+pub fn lty_to_dterm(LTy) -> DTerm
+
+pub fn make_glue(GlueData, PVal, PVal, Int32) -> GlueElem?
+
+pub fn map_branches(DSystem, ((Dim) -> DValue) -> (Dim) -> DValue) -> DSystem
+
+pub fn map_cube_equiv_line(LinEquivLine, Cube, Int32) -> Cube
+
+pub fn map_cube_matrix(CMat, Cube) -> Cube
+
+pub fn mat_add(CMat, CMat) -> CMat
+
+pub fn mat_adjoint(CMat) -> CMat
+
+pub fn mat_approx_eq(CMat, CMat) -> Bool
+
+pub fn mat_commutes(CMat, CMat) -> Bool
+
+pub fn mat_from_rows(Array[Array[Complex]]) -> CMat
+
+pub fn mat_get(CMat, Int32, Int32) -> Complex
+
+pub fn mat_identity(Int32) -> CMat
+
+pub fn mat_mul(CMat, CMat) -> CMat
+
+pub fn mat_sub(CMat, CMat) -> CMat
+
+pub fn mat_trace_re(CMat) -> Double
+
+pub fn mat_vec(CMat, Array[Complex]) -> Array[Complex]
+
+pub fn mat_zero(Int32) -> CMat
+
+pub fn memo_dim_line((Dim) -> DValue) -> (Dim) -> DValue
+
+pub fn memo_family((DValue) -> DValue, DValue, Int32, Int32) -> (DValue) -> DValue
+
+pub fn mk_equiv_term(DTerm, DTerm, DTerm, DTerm, DTerm, DTerm) -> DTerm
+
+pub fn module_compile(ModuleEnv, ModuleDef, Array[ModuleDependencyFingerprint]) -> CompiledModule?
+
+pub fn module_compile_cache_lookup(ModuleCompileCache, ModuleDef, Array[ModuleDependencyFingerprint]) -> CompiledModule?
+
+pub fn module_compile_cache_new() -> ModuleCompileCache
+
+pub fn module_compile_cache_size(ModuleCompileCache) -> Int32
+
+pub fn module_compile_cached(ModuleCompileCache, ModuleEnv, ModuleDef, Array[ModuleDependencyFingerprint]) -> (CompiledModule, Bool)?
+
+pub fn module_compile_with_compiled(CompiledModuleEnv, ModuleDef) -> CompiledModule?
+
+pub fn module_decl(String, DTerm, DTerm, exported? : Bool, transparent? : Bool) -> ModuleDecl
+
+pub fn module_decl_abstract(String, DTerm, exported? : Bool, transparent? : Bool) -> ModuleDecl
+
+pub fn module_def(String, params? : Array[DTelescopeEntry], imports? : Array[ModuleImport], opens? : Array[String], decls? : Array[ModuleDecl]) -> ModuleDef
+
+pub fn module_dependency_fingerprint(String, Int32) -> ModuleDependencyFingerprint
+
+pub fn module_dependency_of_compiled(CompiledModule) -> ModuleDependencyFingerprint
+
+pub fn module_env_add(ModuleEnv, ModuleDef) -> Bool
+
+pub fn module_env_find(ModuleEnv, String) -> ModuleDef?
+
+pub fn module_env_new() -> ModuleEnv
+
+pub fn module_example_env() -> ModuleEnv
+
+pub fn module_import(String, args? : Array[DTerm], alias_name? : String, only? : Array[String], hiding? : Array[String], opened? : Bool, renames? : Array[ModuleRename]) -> ModuleImport
+
+pub fn module_instance_find(ModuleInstance, String) -> ModuleInstanceDecl?
+
+pub fn module_instantiate(ModuleEnv, ModuleDef, Array[DTerm]) -> ModuleInstance?
+
+pub fn module_link_instantiate(CompiledModuleEnv, ModuleDef, Array[DTerm], extra_sources? : Array[ModuleDef]) -> ModuleInstance?
+
+pub fn module_link_signature(CompiledModuleEnv, ModuleDef, extra_sources? : Array[ModuleDef]) -> ModuleSignature?
+
+pub fn module_ref(ModuleSignature, String) -> DTerm?
+
+pub fn module_rename(String, String) -> ModuleRename
+
+pub fn module_resolve(ModuleSignature, String) -> Int32?
+
+pub fn module_signature(ModuleEnv, ModuleDef) -> ModuleSignature?
+
+pub fn module_source_fingerprint(ModuleDef, Array[ModuleDependencyFingerprint]) -> String
+
+pub fn module_validate(ModuleEnv, ModuleDef) -> Bool
+
+pub fn mutual_ctor_index(DMutualFamily, Int32, Int32) -> Int32
+
+pub fn mutual_decl_elaborate(DMutualDecl) -> DMutualFamily?
+
+pub fn mutual_decl_positivity(DMutualDecl) -> DMutualPositivityReport
+
+pub fn mutual_elim_term(DMutualFamily, DTerm, Array[DTerm], Array[DTerm], Int32, Array[DTerm], DTerm) -> DTerm
+
+pub fn mutual_intro_term(DMutualFamily, Int32, Int32, Array[DTerm], Array[DTerm]) -> DTerm
+
+pub fn mutual_intro_value(DMutualFamily, Int32, Int32, Array[DValue], Array[DValue]) -> DValue
+
+pub fn mutual_motive_function(Array[(Array[DValue], DValue) -> DValue]) -> (Array[DValue], DValue) -> DValue
+
+pub fn mutual_nat_term(Int32) -> DTerm
+
+pub fn mutual_nat_value(Int32) -> DValue
+
+pub fn mutual_type_term(DMutualFamily, Int32, Array[DTerm]) -> DTerm
+
+pub fn mutual_type_value(DMutualFamily, Int32, Array[DValue], Array[DValue]) -> DValue
+
+pub fn nat_parity_double_ir() -> DSimultaneousIRSpec
+
+pub fn nat_schema() -> DInductiveSpec
+
+pub fn nat_schema_lit(Int32) -> DTerm
+
+pub fn nbe_single_valued(Array[Term], Int32) -> Bool
+
+pub fn nested_iter_intro_term_at(DNestedIterFamily, DTerm, Int32, Int32, Array[DTerm]) -> DTerm
+
+pub fn nested_iter_type_term(DNestedIterFamily, DTerm) -> DTerm
+
+pub fn nf(Term, Int32) -> Term
+
+pub fn nf_eta(Term, LTy, Array[LTy]) -> Term?
+
+pub fn numeric_mat_max_deviation(CMat, CMat) -> Double
+
+pub fn numeric_projector_residual(CMat) -> Double
+
+pub fn open_box_wf(Cube, Cube, Cube) -> Bool
+
+pub fn outer(Array[Complex]) -> CMat
+
+pub fn outer2(Array[Complex], Array[Complex]) -> CMat
+
+pub fn partial_domain_bdd(DPartialValue, Int32) -> Bdd
+
+pub fn partial_empty() -> DPartialValue
+
+pub fn partial_eq_at(Int32, Int32, DValue, DPartialValue, DPartialValue) -> Bool
+
+pub fn partial_normal_form(Int32, Int32, DValue, DPartialValue) -> DSystemNF
+
+pub fn partial_of(Array[DFaceValue]) -> DPartialValue
+
+pub fn partial_singleton(Face, DValue) -> DPartialValue
+
+pub fn path_end(Cube) -> Array[Complex]
+
+pub fn path_eval(Cube, Double) -> Array[Complex]
+
+pub fn path_from(DLine, Double, DValue) -> (Double) -> DValue
+
+pub fn path_line(Array[Complex], Array[Complex]) -> Cube
+
+pub fn path_refl(Array[Complex]) -> Cube
+
+pub fn path_start(Cube) -> Array[Complex]
+
+pub fn path_sym(Cube) -> Cube
+
+pub fn path_to_equiv_map_term(DTerm, DTerm) -> DTerm
+
+pub fn path_to_equiv_term(DTerm, DTerm, DTerm) -> DTerm
+
+pub fn path_to_equiv_value((Dim) -> DValue, DValue, DValue, Int32, Int32) -> DValue
+
+pub fn path_trans(Cube, Cube) -> Cube
+
+pub fn path_trans_endpoints(Cube, Cube) -> Bool
+
+pub fn pathp_canonical(UPath, PVal) -> PathPVal
+
+pub fn pathp_fst(PathPVal, Equiv) -> PathPVal
+
+pub fn pathp_prod(PathPVal, PathPVal) -> PathPVal
+
+pub fn pathp_prod_exchange_roundtrip(PathPVal, Equiv, Equiv) -> Bool
+
+pub fn pathp_snd(PathPVal, Equiv) -> PathPVal
+
+pub fn pathp_wf(PathPVal) -> Bool
+
+pub fn pi3_sphere_point_term(Int32, DTerm) -> DTerm
+
+pub fn pi3_sphere_type_term(Int32) -> DTerm
+
+pub fn point_client_module() -> ModuleDef
+
+pub fn point_implementation_module() -> ModuleDef
+
+pub fn positive_functor_ih_type(DPositiveFunctor, Array[DValue], Array[DValue], (Array[DValue]) -> DValue, (Array[DValue], DValue) -> DValue, DValue) -> DValue
+
+pub fn positive_functor_map(DPositiveFunctor, Array[DValue], Array[DValue], (Array[DValue]) -> DValue, (Array[DValue], DValue) -> DValue, (Array[DValue], DValue) -> DValue, DValue) -> DValue
+
+pub fn positive_functor_type(DPositiveFunctor, Array[DValue], Array[DValue], (Array[DValue]) -> DValue) -> DValue
+
+pub fn pow2(Int32) -> Int32
+
+pub fn print_report() -> Bool
+
+pub fn projector_certificate_ok(ProjectorCertificate) -> Bool
+
+pub fn projector_from_orthonormal(Array[Array[Complex]], Int32) -> CMat
+
+pub fn prop_trunc_schema() -> DHitSpec
+
+pub fn prop_trunc_schema_at(Int32) -> DHitSpec
+
+pub fn prune_cube(CMat, Cube) -> Cube
+
+pub fn prune_cube_subline(SubLine, Cube, Int32) -> Cube
+
+pub fn prune_system(VecSystem, Int32) -> VecSystem
+
+pub fn prune_to_eigenspace(CMat, Array[Complex]) -> Array[Complex]
+
+pub fn pruning_is_retraction(CMat, Array[Array[Complex]]) -> Bool
+
+pub fn pruning_repairs_filler(CMat, Cube, Cube, Cube, Array[Complex], Array[Double]) -> Bool
+
+pub fn pruning_respects_quotient(VecSystem, Int32) -> Bool
+
+pub fn pval_fst(PVal) -> PVal
+
+pub fn pval_not(PVal) -> PVal
+
+pub fn pval_snd(PVal) -> PVal
+
+pub fn pval_swap(PVal) -> PVal
+
+pub fn pval_to_dvalue(PVal) -> DValue
+
+pub fn qcc_add(QuadC, QuadC) -> QuadC
+
+pub fn qcc_conj(QuadC) -> QuadC
+
+pub fn qcc_eq(QuadC, QuadC) -> Bool
+
+pub fn qcc_i() -> QuadC
+
+pub fn qcc_is_zero(QuadC) -> Bool
+
+pub fn qcc_make(@algebra.QuadNum, @algebra.QuadNum) -> QuadC
+
+pub fn qcc_mul(QuadC, QuadC) -> QuadC
+
+pub fn qcc_neg(QuadC) -> QuadC
+
+pub fn qcc_one() -> QuadC
+
+pub fn qcc_rat(@algebra.Rat, @algebra.Rat) -> QuadC
+
+pub fn qcc_real(@algebra.QuadNum) -> QuadC
+
+pub fn qcc_scale_quad(@algebra.QuadNum, QuadC) -> QuadC
+
+pub fn qcc_sub(QuadC, QuadC) -> QuadC
+
+pub fn qcc_to_complex(QuadC) -> Complex
+
+pub fn qcc_zero() -> QuadC
+
+pub fn quad_to_double(@algebra.QuadNum) -> Double
+
+pub fn quote(Int32, Value) -> Term
+
+pub fn quote_at(Int32, Int32, DValue, DValue) -> DTerm
+
+pub fn quote_decode_neutral(Int32, Int32, DInductiveSpec, Array[DValue], Array[DValue], DNeutral) -> DTerm
+
+pub fn quote_dneutral(Int32, Int32, DNeutral, DValue) -> DTerm
+
+pub fn quote_eta(Int32, LTy, TValue) -> Term
+
+pub fn quote_glue_equiv_type(Int32, Int32, DGlueEquivParts) -> DTerm
+
+pub fn quote_hit_cell_at(Int32, Int32, DHitSpec, Array[DValue], DValue, DValue) -> DTerm
+
+pub fn quote_hit_elim_neutral(Int32, Int32, DHitSpec, (Array[DValue], DValue) -> DValue, Array[DValue], Array[DValue], Array[DValue], DNeutral) -> DTerm
+
+pub fn quote_hit_type(Int32, Int32, DHitSpec, Array[DValue], Array[DValue]) -> DTerm
+
+pub fn quote_inductive_elim_neutral(Int32, Int32, DInductiveSpec, (Array[DValue], DValue) -> DValue, Array[DValue], Array[DValue], Array[DValue], DNeutral) -> DTerm
+
+pub fn quote_inductive_type(Int32, Int32, DInductiveSpec, Array[DValue], Array[DValue]) -> DTerm
+
+pub fn quote_intro_at(Int32, Int32, DInductiveSpec, Array[DValue], DValue, DValue) -> DTerm
+
+pub fn quote_neutral(Int32, Neutral) -> Term
+
+pub fn quote_schema_args(Int32, Int32, Array[DConstructorArg], Array[DValue], (Array[DValue]) -> DValue, Array[DValue]) -> Array[DTerm]
+
+pub fn quote_schema_args_full(Int32, Int32, Array[DConstructorArg], Array[DValue], (Array[DValue]) -> DValue, (Array[DValue], DValue) -> DValue, Array[DValue]) -> Array[DTerm]
+
+pub fn quote_schema_motive(Int32, Int32, Array[DTelescopeEntry], Array[DValue], Array[DValue], (Array[DValue]) -> DValue, (Array[DValue], DValue) -> DValue) -> DTerm
+
+pub fn quote_telescope_values(Int32, Int32, Array[DTelescopeEntry], Array[DValue], Array[DValue], Array[DValue]) -> Array[DTerm]
+
+pub fn quote_tneutral(Int32, TNeutral, LTy) -> Term
+
+pub fn quote_tube_branches(Int32, Int32, (Dim) -> DValue, DSystem) -> Array[DTubeTerm]
+
+pub fn quote_ty(Int32, Int32, DValue) -> DTerm
+
+pub fn quotient_eq_term(Array[DTerm], DTerm, DTerm, DTerm, Dim) -> DTerm
+
+pub fn quotient_point_term(Array[DTerm], DTerm) -> DTerm
+
+pub fn quotient_schema() -> DHitSpec
+
+pub fn refl_path(Ty, PVal) -> DiscPath
+
+pub fn restrict_face(Cube, Int32, Double) -> Cube
+
+pub fn rose_tree_schema() -> DInductiveSpec
+
+pub fn run_all_checks() -> Array[CheckResult]
+
+pub fn sample_terms() -> Array[Term]
+
+pub fn sample_vectors() -> Array[Array[Complex]]
+
+pub fn schema_apply_constraint_proofs(DValue, Array[DConstructorConstraint], Array[DValue], Array[DValue]) -> DValue
+
+pub fn schema_arg_spec_prefix(Array[DConstructorArg], Int32) -> Array[DConstructorArg]
+
+pub fn schema_arg_type(DConstructorArg, Array[DValue], Array[DValue], (Array[DValue]) -> DValue) -> DValue
+
+pub fn schema_arg_type_full(DConstructorArg, Array[DConstructorArg], Array[DValue], Array[DValue], (Array[DValue]) -> DValue, (Array[DValue], DValue) -> DValue) -> DValue
+
+pub fn schema_concat_values(Array[DValue], Array[DValue]) -> Array[DValue]
+
+pub fn schema_constraint_parts(DConstructorConstraint, Array[DValue], Array[DValue]) -> (DValue, DValue, DValue)
+
+pub fn schema_constraints_hold(Int32, Int32, Array[DConstructorConstraint], Array[DValue], Array[DValue]) -> Bool
+
+pub fn schema_constraints_pi(Array[DConstructorConstraint], Array[DValue], Array[DValue], DValue) -> DValue
+
+pub fn schema_elim_term(DInductiveSpec, DTerm, Array[DTerm], Array[DTerm], Array[DTerm], DTerm) -> DTerm
+
+pub fn schema_examples() -> Array[DInductiveSpec]
+
+pub fn schema_expected_param_terms(Int32, Int32) -> Array[DTerm]
+
+pub fn schema_intro_term(DInductiveSpec, Int32, Array[DTerm], Array[DTerm]) -> DTerm
+
+pub fn schema_motives_conv(Int32, Int32, Array[DTelescopeEntry], Array[DValue], Array[DValue], (Array[DValue]) -> DValue, (Array[DValue], DValue) -> DValue, (Array[DValue], DValue) -> DValue) -> Bool
+
+pub fn schema_registry_hit_by_id(DSchemaRegistry, Int32) -> DHitPlan?
+
+pub fn schema_registry_hit_by_name(DSchemaRegistry, String) -> DHitPlan?
+
+pub fn schema_registry_hit_plan(DSchemaRegistry, DHitSpec) -> DHitPlan?
+
+pub fn schema_registry_inductive_by_id(DSchemaRegistry, Int32) -> DInductivePlan?
+
+pub fn schema_registry_inductive_by_name(DSchemaRegistry, String) -> DInductivePlan?
+
+pub fn schema_registry_inductive_plan(DSchemaRegistry, DInductiveSpec) -> DInductivePlan?
+
+pub fn schema_registry_manifest(DSchemaRegistry) -> String
+
+pub fn schema_registry_merge_into(DSchemaRegistry, DSchemaRegistry) -> Int32
+
+pub fn schema_registry_new() -> DSchemaRegistry
+
+pub fn schema_registry_register_hit(DSchemaRegistry, DHitSpec) -> DHitPlan
+
+pub fn schema_registry_register_inductive(DSchemaRegistry, DInductiveSpec) -> DInductivePlan
+
+pub fn schema_registry_register_inductives(DSchemaRegistry, Array[DInductiveSpec]) -> Array[DInductivePlan]
+
+pub fn schema_registry_restore(DSchemaRegistrySnapshot) -> DSchemaRegistry
+
+pub fn schema_registry_snapshot(DSchemaRegistry) -> DSchemaRegistrySnapshot
+
+pub fn schema_registry_stats(DSchemaRegistry) -> (Int32, Int32, Int32, Int32, Int32, Int32, Int32)
+
+pub fn schema_registry_validate_hit(DSchemaRegistry, DHitSpec) -> Bool
+
+pub fn schema_registry_validate_inductive(DSchemaRegistry, DInductiveSpec) -> Bool
+
+pub fn schema_telescope_family_occurs(Array[DTelescopeEntry], String) -> Bool
+
+pub fn schema_type_term(DInductiveSpec, Array[DTerm]) -> DTerm
+
+pub fn schema_value_prefix(Array[DValue], Int32) -> Array[DValue]
+
+pub fn segment_schema() -> DHitSpec
+
+pub fn simultaneous_ir_validate(DSimultaneousIRSpec) -> Bool
+
+pub fn singleton_contraction_value(DValue) -> DValue
+
+pub fn sort_ints(Array[Int32]) -> Array[Int32]
+
+pub fn spec_count() -> Int32
+
+pub fn spec_covers(String) -> Bool
+
+pub fn spec_registry() -> Array[SpecEntry]
+
+pub fn spec_registry_sound() -> Bool
+
+pub fn sphere2_north_term() -> DTerm
+
+pub fn sphere2_north_value() -> DValue
+
+pub fn sphere2_schema() -> DHitSpec
+
+pub fn sphere3_from_swapped_value(DValue, Int32) -> DValue
+
+pub fn sphere3_meridian_term(DTerm, Dim) -> DTerm
+
+pub fn sphere3_meridian_value(DValue, Dim) -> DValue
+
+pub fn sphere3_north_term() -> DTerm
+
+pub fn sphere3_north_value() -> DValue
+
+pub fn sphere3_schema() -> DHitSpec
+
+pub fn sphere3_south_term() -> DTerm
+
+pub fn sphere3_south_value() -> DValue
+
+pub fn sphere3_swapped_equiv_value() -> DValue
+
+pub fn sphere3_swapped_meridian_value(DValue, Dim) -> DValue
+
+pub fn sphere3_swapped_north_value() -> DValue
+
+pub fn sphere3_swapped_retr_value(DValue, Int32) -> DValue
+
+pub fn sphere3_swapped_schema() -> DHitSpec
+
+pub fn sphere3_swapped_sect_value(DValue, Int32) -> DValue
+
+pub fn sphere3_swapped_south_value() -> DValue
+
+pub fn sphere3_swapped_type_term() -> DTerm
+
+pub fn sphere3_to_swapped_value(DValue, Int32) -> DValue
+
+pub fn sphere3_type_term() -> DTerm
+
+pub fn sphere3_type_value() -> DValue
+
+pub fn sphere_degree_function_value(Int32, Int32) -> DValue
+
+pub fn sphere_degree_value(Int32, Int32, DValue, Int32) -> DValue
+
+pub fn sphere_loop_compose_value(Int32, DValue, DValue, Int32) -> DValue
+
+pub fn sphere_loop_expr_degree(SphereLoopExpr) -> Int32
+
+pub fn sphere_loop_expr_of_integer(Int32) -> SphereLoopExpr
+
+pub fn sphere_loop_expr_value(Int32, SphereLoopExpr) -> DValue
+
+pub fn sphere_loop_power_value(Int32, Int32) -> DValue
+
+pub fn sphere_north_term(Int32) -> DTerm
+
+pub fn sphere_north_value(Int32) -> DValue
+
+pub fn sphere_schema(Int32) -> DHitSpec
+
+pub fn sphere_type_term(Int32) -> DTerm
+
+pub fn sphere_type_value(Int32) -> DValue
+
+pub fn square_fill(Cube, Cube, Cube) -> Cube
+
+pub fn subline_const(CMat) -> SubLine
+
+pub fn subline_from_unit_path((Double) -> Array[Complex]) -> SubLine
+
+pub fn subst_pathp_value((DValue) -> DValue, DValue, DValue, Int32) -> DValue
+
+pub fn subst_value((DValue) -> DValue, DValue, DValue, Int32) -> DValue
+
+pub fn suspend_loop_value(DHitSpec, DValue, DValue, DValue, Int32, Int32) -> DValue
+
+pub fn suspension_map_value(DHitSpec, DHitSpec, (DValue) -> DValue, DValue, Int32) -> DValue
+
+pub fn suspension_meridian_path_value(DHitSpec, DValue) -> DValue
+
+pub fn suspension_schema(String, DHitSpec) -> DHitSpec?
+
+pub fn suspension_unit_loop_value(DHitSpec, DValue, DValue, Int32) -> DValue
+
+pub fn swap_involutive_on_element() -> Bool
+
+pub fn swap_naturality(Equiv, Equiv) -> Bool
+
+pub fn system_compatible(VecSystem, Int32) -> Bool
+
+pub fn system_domain_bdd(VecSystem, Int32) -> Bdd
+
+pub fn system_eq_mod(VecSystem, VecSystem, Int32) -> Bool
+
+pub fn system_eq_mod_sym(VecSystem, VecSystem, Int32) -> Bool
+
+pub fn system_extend_top(VecSystem, Array[Complex], Int32) -> VecSystem?
+
+pub fn system_lookup(VecSystem, Array[Bool]) -> Array[Complex]?
+
+pub fn system_normal_form(VecSystem, Int32) -> SystemNF
+
+pub fn system_of(Array[VecBranch]) -> VecSystem
+
+pub fn system_union(VecSystem, VecSystem) -> VecSystem
+
+pub fn tapp(TValue, TValue, LTy) -> TValue
+
+pub fn tarski_universe_schema() -> DInductiveSpec
+
+pub fn telescope_next_type(Array[DTelescopeEntry], Array[DValue], Array[DValue], Array[DValue], Array[DValue]) -> DValue
+
+pub fn telescope_type_values(Array[DTelescopeEntry], Array[DValue], Array[DValue], Array[DValue]) -> Array[DValue]
+
+pub fn telescope_type_values_cached(DSchemaRegistry, Array[DTelescopeEntry], Array[DValue], Array[DValue], Array[DValue]) -> Array[DValue]
+
+pub fn term_to_hoas(Term, Array[HTm]) -> HTm
+
+pub fn tfst(TValue, LTy) -> TValue
+
+pub fn tm_coe_swap_at(LTy, LTy) -> Term
+
+pub fn tm_comp_at(Term, Term, LTy, LTy, LTy) -> Term
+
+pub fn tm_comp_closed(Term, Term) -> Term
+
+pub fn tm_const() -> Term
+
+pub fn tm_id() -> Term
+
+pub fn tm_id_at(LTy) -> Term
+
+pub fn tm_shift(Term, Int32, Int32) -> Term
+
+pub fn tm_swap() -> Term
+
+pub fn tm_swap_at(LTy, LTy) -> Term
+
+pub fn torus_dims_of(DValue) -> (Dim, Dim)
+
+pub fn torus_point(Dim, Dim) -> DValue
+
+pub fn torus_schema() -> DHitSpec
+
+pub fn transport_back_value((Dim) -> DValue, DValue, Int32) -> DValue
+
+pub fn transport_checked_line_value(DCheckedTypeLine, DValue, Int32) -> DValue
+
+pub fn transport_filler_value((Dim) -> DValue, DValue, Int32) -> (Dim) -> DValue
+
+pub fn transport_pathp_value((Dim) -> DValue, DValue, Int32) -> DValue
+
+pub fn transport_roundtrip_path_value((Dim) -> DValue, DValue, Int32) -> DValue
+
+pub fn transport_value((Dim) -> DValue, DValue, Int32) -> DValue
+
+pub fn tree_forest_components() -> Array[DInductiveSpec]
+
+pub fn tree_forest_family() -> DMutualFamily?
+
+pub fn tree_schema() -> DInductiveSpec
+
+pub fn trunc_point_term(DTerm, DTerm) -> DTerm
+
+pub fn trunc_rec_unit_term(DTerm) -> DTerm
+
+pub fn trunc_squash_path_term(DTerm, DTerm, DTerm) -> DTerm
+
+pub fn trunc_squash_term(DTerm, DTerm, DTerm, Dim) -> DTerm
+
+pub fn trunc_type_term(DTerm) -> DTerm
+
+pub fn tsnd(TValue, LTy) -> TValue
+
+pub fn tube_branch(Face, (Dim) -> DValue) -> DTubeBranch
+
+pub fn tube_paths_conv_under_face(Int32, Int32, Face, (Dim) -> DValue, (Dim) -> DValue, (Dim) -> DValue) -> Bool
+
+pub fn tube_system_nf_at(Int32, Int32, (Dim) -> DValue, DSystem, Dim) -> DSystemNF
+
+pub fn ty_check(Term, LTy, Array[LTy]) -> Bool
+
+pub fn ty_infer(Term, Array[LTy]) -> LTy?
+
+pub fn type_operator_is_strictly_positive(DTypeOperatorDecl) -> Bool
+
+pub fn type_operator_positivity(DTypeOperatorDecl) -> DPositivityReport
+
+pub fn ua(Equiv) -> UPath
+
+pub fn ua_beta_back_path_value(DValue, DValue, DValue, Int32, DValue, Int32) -> DValue
+
+pub fn ua_beta_path_value(DValue, DValue, DValue, Int32, DValue, Int32) -> DValue
+
+pub fn ua_line_value(DValue, DValue, DValue, Int32) -> (Dim) -> DValue
+
+pub fn ua_map_term(DTerm, DTerm) -> DTerm
+
+pub fn ua_term(DTerm) -> DTerm
+
+pub fn ua_transport_value(DValue, DValue, DValue, Int32, DValue, Int32) -> DValue
+
+pub fn ua_type_at(DValue, DValue, DValue, Int32, Dim) -> DValue
+
+pub fn ua_value(DValue, DValue, DValue, Int32) -> DValue
+
+pub fn unglue(GlueElem) -> PVal
+
+pub fn unifier_new() -> Unifier
+
+pub fn union_commutes_mod(VecSystem, VecSystem, Int32) -> Bool
+
+pub fn univalence_equiv_value(DValue, DValue, Int32, Int32) -> DValue
+
+pub fn univalence_retr_path_value(DValue, DValue, DValue, Int32, Int32) -> DValue
+
+pub fn univalence_sect_square_value((Dim) -> DValue, DValue, DValue, Int32, Int32) -> DValue
+
+pub fn universe_path_normal_form(UniversePath, Int32) -> DValue
+
+pub fn universe_path_of_checked_line(DCheckedTypeLine) -> UniversePath
+
+pub fn universe_path_of_ua_term_closed(DTerm) -> UniversePath?
+
+pub fn universe_path_path_value(UniversePath) -> DValue
+
+pub fn universe_path_to_equiv_value(UniversePath, Int32) -> DValue
+
+pub fn universe_path_transport_conv(UniversePath, UniversePath, Int32) -> Bool
+
+pub fn upath_eq(UPath, UPath) -> Bool
+
+pub fn upath_left(UPath) -> Ty
+
+pub fn upath_refl(Ty) -> UPath
+
+pub fn upath_right(UPath) -> Ty
+
+pub fn upath_sym(UPath) -> UPath
+
+pub fn upath_to_equiv(UPath) -> Equiv
+
+pub fn upath_trans(UPath, UPath) -> UPath?
+
+pub fn uterm_contains_unsolved_meta(UTerm, Unifier) -> Bool
+
+pub fn uterm_whnf(UTerm, Unifier) -> UTerm
+
+pub fn uty_arrow(UTerm, UTerm) -> UTerm
+
+pub fn uty_bool() -> UTerm
+
+pub fn uty_implicit_arrow(UTerm, UTerm) -> UTerm
+
+pub fn uty_nat() -> UTerm
+
+pub fn uty_unit() -> UTerm
+
+pub fn vapp(Value, Value) -> Value
+
+pub fn vec_add(Array[Complex], Array[Complex]) -> Array[Complex]
+
+pub fn vec_approx_eq(Array[Complex], Array[Complex]) -> Bool
+
+pub fn vec_box(Cube, Cube, Cube) -> VecBox
+
+pub fn vec_e3() -> Array[Complex]
+
+pub fn vec_lex_lt(Array[Complex], Array[Complex]) -> Bool
+
+pub fn vec_norm2(Array[Complex]) -> Double
+
+pub fn vec_normalize(Array[Complex]) -> Array[Complex]
+
+pub fn vec_orthogonal(Array[Complex], Array[Complex]) -> Bool
+
+pub fn vec_scale(Double, Array[Complex]) -> Array[Complex]
+
+pub fn vec_scale_c(Complex, Array[Complex]) -> Array[Complex]
+
+pub fn vec_schema() -> DInductiveSpec
+
+pub fn vec_sub(Array[Complex], Array[Complex]) -> Array[Complex]
+
+pub fn vec_zero(Int32) -> Array[Complex]
+
+pub fn vfst(Value) -> Value
+
+pub fn vsnd(Value) -> Value
+
+pub fn w_schema() -> DInductiveSpec
+
+pub fn wiring_apply(Wiring, PVal) -> PVal
+
+pub fn wiring_assoc(Ty, Ty, Ty) -> Wiring
+
+pub fn wiring_comp(Wiring, Wiring) -> Wiring
+
+pub fn wiring_eq(Wiring, Wiring) -> Bool
+
+pub fn wiring_id(Ty) -> Wiring
+
+pub fn wiring_inv(Wiring) -> Wiring
+
+pub fn wiring_left_unitor(Ty) -> Wiring
+
+pub fn wiring_not() -> Wiring
+
+pub fn wiring_prod(Wiring, Wiring) -> Wiring
+
+pub fn wiring_right_unitor(Ty) -> Wiring
+
+pub fn wiring_swap(Ty, Ty) -> Wiring
+
+pub fn wiring_wf(Wiring) -> Bool
+
+// Errors
+
+// Types and methods
+pub struct AlgC {
+  re : @algebra.AlgNum
+  im : @algebra.AlgNum
+}
+
+pub struct AlgCertMat {
+  n : Int32
+  rows : Array[Array[AlgC]]
+}
+
+pub struct AlgCertPath {
+  coeffs : Array[Array[AlgC]]
+}
+
+pub struct AlgCertSquare {
+  coeffs : Array[Array[Array[AlgC]]]
+}
+
+pub enum Bdd {
+  BddZero
+  BddOne
+  BddNode(Int32, Bdd, Bdd)
+} derive(Eq, @debug.Debug)
+pub fn Bdd::equal(Self, Self) -> Bool
+pub fn Bdd::not_equal(Self, Self) -> Bool
+pub fn Bdd::to_repr(Self) -> @debug.Repr
+
+pub struct BddApplyEntry {
+  op : Int32
+  a : Int32
+  b : Int32
+  result : Int32
+}
+
+pub struct BddBestBuild {
+  built : BddDagFace
+  order : Array[Int32]
+}
+
+pub struct BddDagFace {
+  manager : BddManager
+  root : Int32
+  ok : Bool
+}
+
+pub struct BddDagNode {
+  rank : Int32
+  lo : Int32
+  hi : Int32
+}
+
+pub struct BddManager {
+  n : Int32
+  order : Array[Int32]
+  position : Array[Int32]
+  nodes : Array[BddDagNode]
+  buckets : Array[Array[Int32]]
+  apply_buckets : Array[Array[BddApplyEntry]]
+  max_nodes : Int32
+  mut exceeded : Bool
+  mut apply_hits : Int32
+  mut apply_misses : Int32
+  mut mk_calls : Int32
+}
+
+pub struct BddOptimizedBuild {
+  built : BddDagFace
+  order : Array[Int32]
+  initial_reachable : Int32
+  reachable : Int32
+  attempts : Int32
+  improved : Bool
+}
+
+pub struct CMat {
+  n : Int32
+  rows : Array[Array[Complex]]
+}
+
+pub struct CertMat {
+  n : Int32
+  rows : Array[Array[QuadC]]
+}
+
+pub struct CertPath {
+  coeffs : Array[Array[QuadC]]
+}
+
+pub struct CertSquare {
+  coeffs : Array[Array[Array[QuadC]]]
+}
+
+pub struct CheckResult {
+  name : String
+  ok : Bool
+}
+
+pub struct CompiledModule {
+  format_version : Int32
+  module_path : String
+  params : Array[DTelescopeEntry]
+  entries : Array[ModuleEntry]
+  exports : Array[ModuleExport]
+  dependencies : Array[ModuleDependencyFingerprint]
+  interface_hash : Int32
+  implementation_hash : Int32
+  interface_encoding : String
+} derive(Eq, @debug.Debug)
+pub fn CompiledModule::equal(Self, Self) -> Bool
+pub fn CompiledModule::not_equal(Self, Self) -> Bool
+pub fn CompiledModule::to_repr(Self) -> @debug.Repr
+
+pub struct CompiledModuleEnv {
+  modules : Array[CompiledModule]
+} derive(Eq, @debug.Debug)
+pub fn CompiledModuleEnv::equal(Self, Self) -> Bool
+pub fn CompiledModuleEnv::not_equal(Self, Self) -> Bool
+pub fn CompiledModuleEnv::to_repr(Self) -> @debug.Repr
+
+pub struct Complex {
+  re : Double
+  im : Double
+} derive(Eq, @debug.Debug)
+pub fn Complex::equal(Self, Self) -> Bool
+pub fn Complex::not_equal(Self, Self) -> Bool
+pub fn Complex::to_repr(Self) -> @debug.Repr
+
+pub struct Cube {
+  dim : Int32
+  cell : (Array[Double]) -> Array[Complex]
+}
+
+pub struct DAdjointEquivParts {
+  equiv : DEquivParts
+  triangle : DValue
+}
+
+pub enum DArgKind {
+  DArgExternal
+  DArgRecursive
+  DArgFunction
+  DArgNested
+  DArgDecoded
+  DArgDecodedFunction
+} derive(Eq, @debug.Debug)
+pub fn DArgKind::equal(Self, Self) -> Bool
+pub fn DArgKind::not_equal(Self, Self) -> Bool
+pub fn DArgKind::to_repr(Self) -> @debug.Repr
+
+pub struct DCheckedTypeLine {
+  body : DTerm
+  ctx : DEnv
+  env : DEnv
+  denv : DDimEnv
+  level : Int32
+  constant : Bool
+  line : (Dim) -> DValue
+}
+
+pub struct DConstructorArg {
+  name : String
+  kind : DArgKind
+  ty : DTerm
+  index : Array[DTerm]
+  nested : DPositiveFunctor
+  target : Int32
+} derive(Eq, @debug.Debug)
+pub fn DConstructorArg::equal(Self, Self) -> Bool
+pub fn DConstructorArg::not_equal(Self, Self) -> Bool
+pub fn DConstructorArg::to_repr(Self) -> @debug.Repr
+
+pub struct DConstructorConstraint {
+  ty : DTerm
+  lhs : DTerm
+  rhs : DTerm
+} derive(Eq, @debug.Debug)
+pub fn DConstructorConstraint::equal(Self, Self) -> Bool
+pub fn DConstructorConstraint::not_equal(Self, Self) -> Bool
+pub fn DConstructorConstraint::to_repr(Self) -> @debug.Repr
+
+pub struct DConstructorSpec {
+  name : String
+  args : Array[DConstructorArg]
+  result_index : Array[DTerm]
+  constraints : Array[DConstructorConstraint]
+} derive(Eq, @debug.Debug)
+pub fn DConstructorSpec::equal(Self, Self) -> Bool
+pub fn DConstructorSpec::not_equal(Self, Self) -> Bool
+pub fn DConstructorSpec::to_repr(Self) -> @debug.Repr
+
+pub enum DDimEnv {
+  DDimEnvNil
+  DDimEnvCons(Dim, DDimEnv, Int32)
+}
+
+pub enum DEnv {
+  DEnvNil
+  DEnvCons(DValue, DEnv, Int32)
+}
+
+pub struct DEquivBranch {
+  face : Face
+  ty : DTerm
+  equiv : DTerm
+} derive(Eq, @debug.Debug)
+pub fn DEquivBranch::equal(Self, Self) -> Bool
+pub fn DEquivBranch::not_equal(Self, Self) -> Bool
+pub fn DEquivBranch::to_repr(Self) -> @debug.Repr
+
+pub struct DEquivBranchValue {
+  face : Face
+  ty : DValue
+  equiv : DValue
+}
+
+pub struct DEquivParts {
+  src : DValue
+  dst : DValue
+  fwd : DValue
+  bwd : DValue
+  sect : DValue
+  retr : DValue
+}
+
+pub struct DEquivTypeParts {
+  src : DValue
+  dst : DValue
+  level : Int32
+}
+
+pub struct DFaceConvReport {
+  holds : Bool
+  nodes_visited : Int32
+  pruned_nodes : Int32
+  leaf_checks : Int32
+}
+
+pub struct DFaceTerm {
+  face : Face
+  body : DTerm
+} derive(Eq, @debug.Debug)
+pub fn DFaceTerm::equal(Self, Self) -> Bool
+pub fn DFaceTerm::not_equal(Self, Self) -> Bool
+pub fn DFaceTerm::to_repr(Self) -> @debug.Repr
+
+pub struct DFaceValue {
+  face : Face
+  value : DValue
+}
+
+pub struct DFamilyParts {
+  dom : DValue
+  fam : (DValue) -> DValue
+}
+
+pub struct DGlueEquivParts {
+  branches : Array[DEquivBranchValue]
+  face : Face
+  base : DValue
+  level : Int32
+}
+
+pub struct DGlueParts {
+  system : DSystem
+  face : Face
+  line : (Dim) -> DValue
+  base : DValue
+  level : Int32
+}
+
+pub struct DHitCellSpec {
+  name : String
+  dim_count : Int32
+  args : Array[DConstructorArg]
+  result_index : Array[DTerm]
+  faces : Array[DHitFaceExpr]
+  constraints : Array[DConstructorConstraint]
+} derive(Eq, @debug.Debug)
+pub fn DHitCellSpec::equal(Self, Self) -> Bool
+pub fn DHitCellSpec::not_equal(Self, Self) -> Bool
+pub fn DHitCellSpec::to_repr(Self) -> @debug.Repr
+
+pub struct DHitFaceExpr {
+  cell : Int32
+  args : Array[DTerm]
+  dims : Array[Dim]
+} derive(Eq, @debug.Debug)
+pub fn DHitFaceExpr::equal(Self, Self) -> Bool
+pub fn DHitFaceExpr::not_equal(Self, Self) -> Bool
+pub fn DHitFaceExpr::to_repr(Self) -> @debug.Repr
+
+pub struct DHitLevelScheme {
+  name : String
+  level_arity : Int32
+  result_level : DLevelExpr
+  build : (Array[Int32]) -> DHitSpec
+}
+
+pub struct DHitPlan {
+  id : Int32
+  key : String
+  spec : DHitSpec
+  valid : Bool
+  generic_param_types : Array[DValue]
+  generic_index_types : Array[DValue]
+}
+
+pub struct DHitSpec {
+  name : String
+  level : Int32
+  params : Array[DTelescopeEntry]
+  indices : Array[DTelescopeEntry]
+  cells : Array[DHitCellSpec]
+} derive(Eq, @debug.Debug)
+pub fn DHitSpec::equal(Self, Self) -> Bool
+pub fn DHitSpec::not_equal(Self, Self) -> Bool
+pub fn DHitSpec::to_repr(Self) -> @debug.Repr
+
+pub struct DInductiveLevelScheme {
+  name : String
+  level_arity : Int32
+  result_level : DLevelExpr
+  build : (Array[Int32]) -> DInductiveSpec
+}
+
+pub struct DInductivePlan {
+  id : Int32
+  key : String
+  spec : DInductiveSpec
+  valid : Bool
+  generic_param_types : Array[DValue]
+  generic_index_types : Array[DValue]
+}
+
+pub struct DInductiveSpec {
+  name : String
+  level : Int32
+  params : Array[DTelescopeEntry]
+  indices : Array[DTelescopeEntry]
+  constructors : Array[DConstructorSpec]
+  decode_cases : Array[DTerm]
+  decode_level : Int32
+} derive(Eq, @debug.Debug)
+pub fn DInductiveSpec::equal(Self, Self) -> Bool
+pub fn DInductiveSpec::not_equal(Self, Self) -> Bool
+pub fn DInductiveSpec::to_repr(Self) -> @debug.Repr
+
+pub struct DInfer {
+  value : DValue
+  ty : DValue
+}
+
+pub enum DLevelDecl {
+  DLevelInductive(DLevelInductiveDecl)
+  DLevelHit(DLevelHitDecl)
+  DLevelTerm(DLevelTermDecl)
+}
+
+pub enum DLevelExpr {
+  DLevelConst(Int32)
+  DLevelVar(Int32)
+  DLevelSucc(DLevelExpr)
+  DLevelMax(DLevelExpr, DLevelExpr)
+} derive(Eq, @debug.Debug)
+pub fn DLevelExpr::equal(Self, Self) -> Bool
+pub fn DLevelExpr::not_equal(Self, Self) -> Bool
+pub fn DLevelExpr::to_repr(Self) -> @debug.Repr
+
+pub struct DLevelHitDecl {
+  binders : Array[String]
+  result_level : DLevelExpr
+  template : DHitSpec
+}
+
+pub struct DLevelInductiveDecl {
+  binders : Array[String]
+  result_level : DLevelExpr
+  decode_level : DLevelExpr
+  template : DInductiveSpec
+}
+
+pub struct DLevelTermDecl {
+  name : String
+  binders : Array[String]
+  ty : DTerm
+  body : DTerm
+}
+
+pub struct DLevelTermInstance {
+  ty : DTerm
+  body : DTerm
+}
+
+pub struct DLine {
+  at : (Double) -> DValue
+  coe_fn : (Double, Double, DValue) -> DValue
+  fill_fn : (((Double) -> DValue)?, DValue) -> (Double) -> DValue
+}
+
+pub struct DMutualDecl {
+  name : String
+  components : Array[DInductiveSpec]
+}
+
+pub struct DMutualFamily {
+  name : String
+  components : Array[DInductiveSpec]
+  combined : DInductiveSpec
+  ctor_offsets : Array[Int32]
+}
+
+pub struct DMutualPositivityReport {
+  strictly_positive : Bool
+  cross_edges : Array[(Int32, Int32)]
+  offending_component : Int32
+}
+
+pub enum DNestedArg {
+  DNestedExternal(String, DTerm)
+  DNestedRecursive(String, Int32)
+}
+
+pub struct DNestedConstructor {
+  name : String
+  args : Array[DNestedArg]
+  constraints : Array[DConstructorConstraint]
+}
+
+pub struct DNestedIterDecl {
+  name : String
+  level : Int32
+  param_name : String
+  param_level : Int32
+  transform : DTerm
+  constructors : Array[DNestedConstructor]
+}
+
+pub struct DNestedIterFamily {
+  decl : DNestedIterDecl
+  auxiliary : DInductiveSpec
+}
+
+pub enum DNeutral {
+  DNVar(Int32)
+  DNApp(DNeutral, DValue, DValue)
+  DNFst(DNeutral, (DValue) -> DValue)
+  DNSnd(DNeutral, DValue, (DValue) -> DValue)
+  DNAppDim(DNeutral, Dim)
+  DNBoolElim((DValue) -> DValue, DValue, DValue, DNeutral)
+  DNNatElim((DValue) -> DValue, DValue, DValue, DNeutral)
+  DNListElim(DValue, (DValue) -> DValue, DValue, DValue, DNeutral)
+  DNCircleElim((DValue) -> DValue, DValue, DValue, DNeutral)
+  DNTorusElim((DValue) -> DValue, (Dim, Dim) -> DValue, DNeutral)
+  DNInductiveElim(DInductiveSpec, (Array[DValue], DValue) -> DValue, Array[DValue], Array[DValue], Array[DValue], DNeutral)
+  DNHitElim(DHitSpec, (Array[DValue], DValue) -> DValue, Array[DValue], Array[DValue], Array[DValue], DNeutral)
+  DNDecode(DInductiveSpec, Array[DValue], Array[DValue], DNeutral)
+  DNEquivFwd(DNeutral, DValue, DValue)
+  DNEquivBwd(DNeutral, DValue, DValue)
+  DNEquivSect(DNeutral, DValue, DValue)
+  DNEquivRetr(DNeutral, DValue, DValue)
+  DNComp((Dim) -> DValue, DSystem, DValue)
+  DNHComp(DValue, DSystem, DValue)
+}
+
+pub struct DPartialValue {
+  branches : Array[DFaceValue]
+}
+
+pub struct DPathParts {
+  line : (Dim) -> DValue
+  left : DValue
+  right : DValue
+}
+
+pub enum DPositiveFunctor {
+  DFunctorIdentity(Array[DTerm])
+  DFunctorConst(DTerm)
+  DFunctorProduct(DPositiveFunctor, DPositiveFunctor)
+  DFunctorSum(DPositiveFunctor, DPositiveFunctor)
+  DFunctorList(DPositiveFunctor)
+  DFunctorPi(DTerm, DPositiveFunctor)
+  DFunctorContainer(DTerm, DTerm, Array[DTerm])
+  DFunctorSigma(DPositiveFunctor, DPositiveFunctor)
+} derive(Eq, @debug.Debug)
+pub fn DPositiveFunctor::equal(Self, Self) -> Bool
+pub fn DPositiveFunctor::not_equal(Self, Self) -> Bool
+pub fn DPositiveFunctor::to_repr(Self) -> @debug.Repr
+
+pub struct DPositivityReport {
+  occurs : Bool
+  strictly_positive : Bool
+  positive_polarity : Bool
+  negative_polarity : Bool
+  unknown : Bool
+} derive(Eq, @debug.Debug)
+pub fn DPositivityReport::equal(Self, Self) -> Bool
+pub fn DPositivityReport::not_equal(Self, Self) -> Bool
+pub fn DPositivityReport::to_repr(Self) -> @debug.Repr
+
+pub struct DSchemaRegistry {
+  inductives : Array[DInductivePlan]
+  hits : Array[DHitPlan]
+  inductive_buckets : Array[Array[Int32]]
+  hit_buckets : Array[Array[Int32]]
+  telescopes : Array[DTelescopeCacheEntry]
+  mut validation_hits : Int32
+  mut validation_misses : Int32
+  mut telescope_hits : Int32
+  mut telescope_misses : Int32
+}
+
+pub struct DSchemaRegistrySnapshot {
+  inductive_specs : Array[DInductiveSpec]
+  inductive_valid : Array[Bool]
+  hit_specs : Array[DHitSpec]
+  hit_valid : Array[Bool]
+}
+
+pub struct DSimultaneousFunction {
+  name : String
+  result_type : DTerm
+  cases : Array[DTerm]
+}
+
+pub struct DSimultaneousIRSpec {
+  base : DInductiveSpec
+  functions : Array[DSimultaneousFunction]
+}
+
+pub struct DSystem {
+  branches : Array[DTubeBranch]
+}
+
+pub struct DSystemClass {
+  region : Bdd
+  value : DValue
+}
+
+pub struct DSystemCompatibility {
+  compatible : Bool
+  reason : DSystemIncompatibility
+  branch : Int32
+  other_branch : Int32
+} derive(Eq, @debug.Debug)
+pub fn DSystemCompatibility::equal(Self, Self) -> Bool
+pub fn DSystemCompatibility::not_equal(Self, Self) -> Bool
+pub fn DSystemCompatibility::to_repr(Self) -> @debug.Repr
+
+pub enum DSystemIncompatibility {
+  DSystemOk
+  DSystemBaseIncompatible
+  DSystemBranchesIncompatible
+} derive(Eq, @debug.Debug)
+pub fn DSystemIncompatibility::equal(Self, Self) -> Bool
+pub fn DSystemIncompatibility::not_equal(Self, Self) -> Bool
+pub fn DSystemIncompatibility::to_repr(Self) -> @debug.Repr
+
+pub struct DSystemNF {
+  classes : Array[DSystemClass]
+  undefined : Bdd
+}
+
+pub struct DSystemRepair {
+  system : DSystem
+  base_removed_region : Bdd
+  repaired_branches : Int32
+  compatible : Bool
+}
+
+pub struct DTelescopeCacheEntry {
+  entries : Array[DTelescopeEntry]
+  prefix_types : Array[DValue]
+  prefix_values : Array[DValue]
+  values : Array[DValue]
+  types : Array[DValue]
+}
+
+pub struct DTelescopeEntry {
+  name : String
+  ty : DTerm
+} derive(Eq, @debug.Debug)
+pub fn DTelescopeEntry::equal(Self, Self) -> Bool
+pub fn DTelescopeEntry::not_equal(Self, Self) -> Bool
+pub fn DTelescopeEntry::to_repr(Self) -> @debug.Repr
+
+pub enum DTerm {
+  DTVar(Int32)
+  DUniv(Int32)
+  DUnivLevel(DLevelExpr)
+  DBoolTy
+  DUnitTy
+  DPi(DTerm, DTerm)
+  DSigma(DTerm, DTerm)
+  DLam(DTerm, DTerm)
+  DApp(DTerm, DTerm)
+  DPair(DTerm, DTerm)
+  DFst(DTerm)
+  DSnd(DTerm)
+  DBoolLit(Bool)
+  DBoolElim(DTerm, DTerm, DTerm, DTerm)
+  DUnitLit
+  DAnn(DTerm, DTerm)
+  DPartial(Array[DFaceTerm])
+  DPathP(DTerm, DTerm, DTerm)
+  DPath(DTerm, DTerm, DTerm)
+  DLamDim(DTerm)
+  DAppDim(DTerm, Dim)
+  DCoe(DTerm, Dim, Dim, DTerm)
+  DComp(DTerm, Array[DTubeTerm], DTerm)
+  DHComp(DTerm, Array[DTubeTerm], DTerm)
+  DHFill(DTerm, Array[DTubeTerm], DTerm, Dim)
+  DNatTy
+  DNatZero
+  DSucc(DTerm)
+  DNatElim(DTerm, DTerm, DTerm, DTerm)
+  DListTy(DTerm)
+  DNil
+  DCons(DTerm, DTerm)
+  DListElim(DTerm, DTerm, DTerm, DTerm)
+  DCircleTy
+  DCircleBase
+  DCircleLoop
+  DCircleElim(DTerm, DTerm, DTerm, DTerm)
+  DTorusTy
+  DTorusBase
+  DTorusLoopA
+  DTorusLoopB
+  DTorusSquare
+  DTorusElim(DTerm, DTerm, DTerm)
+  DInductive(DInductiveSpec, Array[DTerm])
+  DIntro(DInductiveSpec, Int32, Array[DTerm], Array[DTerm])
+  DInductiveElim(DInductiveSpec, DTerm, Array[DTerm], Array[DTerm], Array[DTerm], DTerm)
+  DHitType(DHitSpec, Array[DTerm])
+  DHitIntro(DHitSpec, Int32, Array[DTerm], Array[DTerm], Array[Dim])
+  DHitElim(DHitSpec, DTerm, Array[DTerm], Array[DTerm], Array[DTerm], DTerm)
+  DDecode(DInductiveSpec, Array[DTerm], Array[DTerm], DTerm)
+  DEquivTy(DTerm, DTerm)
+  DMkEquiv(DTerm, DTerm, DTerm, DTerm, DTerm, DTerm)
+  DEquivFwd(DTerm)
+  DEquivBwd(DTerm)
+  DEquivSect(DTerm)
+  DEquivRetr(DTerm)
+  DGlueEquiv(DTerm, Array[DEquivBranch])
+  DUa(DTerm)
+} derive(Eq, @debug.Debug)
+pub fn DTerm::equal(Self, Self) -> Bool
+pub fn DTerm::not_equal(Self, Self) -> Bool
+pub fn DTerm::to_repr(Self) -> @debug.Repr
+
+pub struct DThunk {
+  mut forced : DValue?
+  compute : () -> DValue
+  mut force_count : Int32
+}
+
+pub struct DTubeBranch {
+  face : Face
+  path : (Dim) -> DValue
+}
+
+pub struct DTubeNF {
+  classes : Array[DTubeNFClass]
+  undefined : Bdd
+}
+
+pub struct DTubeNFClass {
+  region : Bdd
+  path : (Dim) -> DValue
+}
+
+pub struct DTubeTerm {
+  face : Face
+  body : DTerm
+} derive(Eq, @debug.Debug)
+pub fn DTubeTerm::equal(Self, Self) -> Bool
+pub fn DTubeTerm::not_equal(Self, Self) -> Bool
+pub fn DTubeTerm::to_repr(Self) -> @debug.Repr
+
+pub struct DTypeOperatorDecl {
+  name : String
+  head : DTerm
+  body : DTerm
+}
+
+pub struct DTypeVal {
+  value : DValue
+  level : Int32
+}
+
+pub enum DValue {
+  DVUniv(Int32)
+  DVBoolTy
+  DVUnitTy
+  DVPi(DValue, (DValue) -> DValue)
+  DVSigma(DValue, (DValue) -> DValue)
+  DVLam((DValue) -> DValue)
+  DVPair(DValue, DValue)
+  DVBool(Bool)
+  DVUnit
+  DVPathTy((Dim) -> DValue, DValue, DValue)
+  DVPathLam((Dim) -> DValue)
+  DVNatTy
+  DVZeroNat
+  DVSucc(DValue)
+  DVListTy(DValue)
+  DVNil
+  DVCons(DValue, DValue)
+  DVCircleTy
+  DVCirclePoint(Dim)
+  DVTorusTy
+  DVTorusPoint(Dim, Dim)
+  DVInductive(DInductiveSpec, Array[DValue], Array[DValue])
+  DVIntro(DInductiveSpec, Int32, Array[DValue], Array[DValue])
+  DVHitType(DHitSpec, Array[DValue], Array[DValue])
+  DVHitCell(DHitSpec, Int32, Array[DValue], Array[DValue], Array[Dim])
+  DVGlue(DSystem, DValue, Int32)
+  DVEquivTy(DValue, DValue, Int32)
+  DVEquiv(DValue, DValue, DValue, DValue, DValue, DValue)
+  DVGlueEquiv(Array[DEquivBranchValue], DValue, Int32)
+  DVPartial(DPartialValue)
+  DVThunk(DThunk)
+  DVNeutral(DNeutral)
+}
+
+pub enum Dim {
+  DZero
+  DOne
+  DVar(Int32)
+  DNeg(Dim)
+  DAnd(Dim, Dim)
+  DOr(Dim, Dim)
+} derive(Eq, @debug.Debug)
+pub fn Dim::equal(Self, Self) -> Bool
+pub fn Dim::not_equal(Self, Self) -> Bool
+pub fn Dim::to_repr(Self) -> @debug.Repr
+
+pub struct DiscPath {
+  ty : Ty
+  lo : PVal
+  hi : PVal
+  point : (Double) -> PVal
+}
+
+pub struct ElabResult {
+  term : UTerm
+  ty : UTerm
+} derive(Eq, @debug.Debug)
+pub fn ElabResult::equal(Self, Self) -> Bool
+pub fn ElabResult::not_equal(Self, Self) -> Bool
+pub fn ElabResult::to_repr(Self) -> @debug.Repr
+
+pub struct ElabVar {
+  name : String
+  ty : UTerm
+} derive(Eq, @debug.Debug)
+pub fn ElabVar::equal(Self, Self) -> Bool
+pub fn ElabVar::not_equal(Self, Self) -> Bool
+pub fn ElabVar::to_repr(Self) -> @debug.Repr
+
+pub struct Elaborator {
+  unifier : Unifier
+  vars : Array[ElabVar]
+} derive(Eq, @debug.Debug)
+pub fn Elaborator::equal(Self, Self) -> Bool
+pub fn Elaborator::not_equal(Self, Self) -> Bool
+pub fn Elaborator::to_repr(Self) -> @debug.Repr
+
+pub struct Equiv {
+  src : Ty
+  dst : Ty
+  fwd : (PVal) -> PVal
+  bwd : (PVal) -> PVal
+  wiring : Wiring
+}
+
+pub enum Face {
+  FTop
+  FBot
+  FEq0(Dim)
+  FEq1(Dim)
+  FAnd(Face, Face)
+  FOr(Face, Face)
+} derive(Eq, @debug.Debug)
+pub fn Face::equal(Self, Self) -> Bool
+pub fn Face::not_equal(Self, Self) -> Bool
+pub fn Face::to_repr(Self) -> @debug.Repr
+
+type FaceBoolExpr derive(Eq, @debug.Debug)
+pub fn FaceBoolExpr::equal(Self, Self) -> Bool
+pub fn FaceBoolExpr::not_equal(Self, Self) -> Bool
+pub fn FaceBoolExpr::to_repr(Self) -> @debug.Repr
+
+pub struct FaceCnfStats {
+  variables : Int32
+  auxiliary_variables : Int32
+  clauses : Int32
+  literals : Int32
+} derive(Eq, @debug.Debug)
+pub fn FaceCnfStats::equal(Self, Self) -> Bool
+pub fn FaceCnfStats::not_equal(Self, Self) -> Bool
+pub fn FaceCnfStats::to_repr(Self) -> @debug.Repr
+
+pub enum FaceDecision {
+  FaceDecided(Bool)
+  FaceBudgetExceeded
+} derive(Eq, @debug.Debug)
+pub fn FaceDecision::equal(Self, Self) -> Bool
+pub fn FaceDecision::not_equal(Self, Self) -> Bool
+pub fn FaceDecision::to_repr(Self) -> @debug.Repr
+
+pub enum FaceSatDecision {
+  FaceSat(Array[Bool])
+  FaceUnsat
+  FaceSearchBudgetExceeded
+} derive(Eq, @debug.Debug)
+pub fn FaceSatDecision::equal(Self, Self) -> Bool
+pub fn FaceSatDecision::not_equal(Self, Self) -> Bool
+pub fn FaceSatDecision::to_repr(Self) -> @debug.Repr
+
+pub struct Family {
+  fiber : (PVal) -> Ty
+}
+
+pub struct GlueCompVecResult {
+  t_fill : Cube
+  a_fill_raw : Cube
+  t_cap : Cube
+  a_cap_raw : Cube
+  a_cap : Cube
+  correction : Cube
+}
+
+pub struct GlueData {
+  base_ty : Ty
+  partial_ty : Ty
+  equiv : Equiv
+  face : Face
+}
+
+pub struct GlueElem {
+  partial : PVal
+  base : PVal
+}
+
+pub struct GlueLineFinite {
+  a_line : UPath
+  t_line : UPath
+  e0 : Equiv
+  e1 : Equiv
+  face0 : Face
+  face1 : Face
+}
+
+pub struct GlueLineVec {
+  base_line : SubLine
+  part_line : SubLine
+  equiv : LinEquivLine
+  face_active : Bool
+}
+
+pub enum HTm {
+  HVar(Int32)
+  HBool(Bool)
+  HUnit
+  HPair(HTm, HTm)
+  HLam((HTm) -> HTm)
+  HApp(HTm, HTm)
+  HFst(HTm)
+  HSnd(HTm)
+}
+
+pub struct HouSearchReport {
+  status : HouSearchStatus
+  solved_metas : Int32
+  nodes : Int32
+  branches_tried : Int32
+  max_depth_reached : Int32
+} derive(Eq, @debug.Debug)
+pub fn HouSearchReport::equal(Self, Self) -> Bool
+pub fn HouSearchReport::not_equal(Self, Self) -> Bool
+pub fn HouSearchReport::to_repr(Self) -> @debug.Repr
+
+pub enum HouSearchStatus {
+  HouSolved
+  HouNoUnifier
+  HouResidual
+  HouBudgetExceeded
+} derive(Eq, @debug.Debug)
+pub fn HouSearchStatus::equal(Self, Self) -> Bool
+pub fn HouSearchStatus::not_equal(Self, Self) -> Bool
+pub fn HouSearchStatus::to_repr(Self) -> @debug.Repr
+
+pub struct Iso {
+  src : Ty
+  dst : Ty
+  to_fn : (PVal) -> PVal
+  from_fn : (PVal) -> PVal
+  wiring : Wiring
+}
+
+pub struct KanBox {
+  line : (Dim) -> DValue
+  system : DSystem
+  base : DValue
+  dlevel : Int32
+}
+
+pub enum LTy {
+  LBool
+  LUnit
+  LProd(LTy, LTy)
+  LFun(LTy, LTy)
+} derive(Eq, @debug.Debug)
+pub fn LTy::equal(Self, Self) -> Bool
+pub fn LTy::not_equal(Self, Self) -> Bool
+pub fn LTy::to_repr(Self) -> @debug.Repr
+
+pub enum LeafKind {
+  LKBool
+  LKUnit
+} derive(Eq, @debug.Debug)
+pub fn LeafKind::equal(Self, Self) -> Bool
+pub fn LeafKind::not_equal(Self, Self) -> Bool
+pub fn LeafKind::to_repr(Self) -> @debug.Repr
+
+pub struct LeafMap {
+  src_index : Int32
+  neg : Bool
+} derive(Eq, @debug.Debug)
+pub fn LeafMap::equal(Self, Self) -> Bool
+pub fn LeafMap::not_equal(Self, Self) -> Bool
+pub fn LeafMap::to_repr(Self) -> @debug.Repr
+
+pub struct LinEquivLine {
+  fwd : (Double) -> CMat
+  bwd : (Double) -> CMat
+}
+
+pub struct ModuleBinaryLoad {
+  status : ModuleBinaryStatus
+  module_ : CompiledModule?
+} derive(Eq, @debug.Debug)
+pub fn ModuleBinaryLoad::equal(Self, Self) -> Bool
+pub fn ModuleBinaryLoad::not_equal(Self, Self) -> Bool
+pub fn ModuleBinaryLoad::to_repr(Self) -> @debug.Repr
+
+pub enum ModuleBinaryStatus {
+  ModuleBinaryOk
+  ModuleBinaryBadMagic
+  ModuleBinaryUnsupportedVersion
+  ModuleBinaryTruncated
+  ModuleBinaryChecksumMismatch
+  ModuleBinaryMalformed
+  ModuleBinaryTrailingBytes
+  ModuleBinaryValidationFailed
+} derive(Eq, @debug.Debug)
+pub fn ModuleBinaryStatus::equal(Self, Self) -> Bool
+pub fn ModuleBinaryStatus::not_equal(Self, Self) -> Bool
+pub fn ModuleBinaryStatus::to_repr(Self) -> @debug.Repr
+
+pub struct ModuleBinding {
+  name : String
+  ordinal : Int32
+} derive(Eq, @debug.Debug)
+pub fn ModuleBinding::equal(Self, Self) -> Bool
+pub fn ModuleBinding::not_equal(Self, Self) -> Bool
+pub fn ModuleBinding::to_repr(Self) -> @debug.Repr
+
+pub struct ModuleCompileCache {
+  entries : Array[ModuleCompileCacheEntry]
+} derive(Eq, @debug.Debug)
+pub fn ModuleCompileCache::equal(Self, Self) -> Bool
+pub fn ModuleCompileCache::not_equal(Self, Self) -> Bool
+pub fn ModuleCompileCache::to_repr(Self) -> @debug.Repr
+
+pub struct ModuleCompileCacheEntry {
+  module_path : String
+  fingerprint : String
+  compiled : CompiledModule
+} derive(Eq, @debug.Debug)
+pub fn ModuleCompileCacheEntry::equal(Self, Self) -> Bool
+pub fn ModuleCompileCacheEntry::not_equal(Self, Self) -> Bool
+pub fn ModuleCompileCacheEntry::to_repr(Self) -> @debug.Repr
+
+pub struct ModuleDecl {
+  name : String
+  ty : DTerm
+  body : DTerm?
+  exported : Bool
+  transparent : Bool
+} derive(Eq, @debug.Debug)
+pub fn ModuleDecl::equal(Self, Self) -> Bool
+pub fn ModuleDecl::not_equal(Self, Self) -> Bool
+pub fn ModuleDecl::to_repr(Self) -> @debug.Repr
+
+pub struct ModuleDef {
+  path : String
+  params : Array[DTelescopeEntry]
+  imports : Array[ModuleImport]
+  opens : Array[String]
+  decls : Array[ModuleDecl]
+} derive(Eq, @debug.Debug)
+pub fn ModuleDef::equal(Self, Self) -> Bool
+pub fn ModuleDef::not_equal(Self, Self) -> Bool
+pub fn ModuleDef::to_repr(Self) -> @debug.Repr
+
+pub struct ModuleDependencyFingerprint {
+  path : String
+  interface_hash : Int32
+} derive(Eq, @debug.Debug)
+pub fn ModuleDependencyFingerprint::equal(Self, Self) -> Bool
+pub fn ModuleDependencyFingerprint::not_equal(Self, Self) -> Bool
+pub fn ModuleDependencyFingerprint::to_repr(Self) -> @debug.Repr
+
+pub struct ModuleEntry {
+  canonical_name : String
+  local_name : String
+  source_module : String
+  ty : DTerm
+  body : DTerm?
+  exported : Bool
+  transparent : Bool
+} derive(Eq, @debug.Debug)
+pub fn ModuleEntry::equal(Self, Self) -> Bool
+pub fn ModuleEntry::not_equal(Self, Self) -> Bool
+pub fn ModuleEntry::to_repr(Self) -> @debug.Repr
+
+pub struct ModuleEnv {
+  modules : Array[ModuleDef]
+} derive(Eq, @debug.Debug)
+pub fn ModuleEnv::equal(Self, Self) -> Bool
+pub fn ModuleEnv::not_equal(Self, Self) -> Bool
+pub fn ModuleEnv::to_repr(Self) -> @debug.Repr
+
+pub struct ModuleExport {
+  name : String
+  ordinal : Int32
+  transparent : Bool
+} derive(Eq, @debug.Debug)
+pub fn ModuleExport::equal(Self, Self) -> Bool
+pub fn ModuleExport::not_equal(Self, Self) -> Bool
+pub fn ModuleExport::to_repr(Self) -> @debug.Repr
+
+pub struct ModuleImport {
+  module_path : String
+  alias_name : String
+  args : Array[DTerm]
+  only : Array[String]
+  hiding : Array[String]
+  opened : Bool
+  renames : Array[ModuleRename]
+} derive(Eq, @debug.Debug)
+pub fn ModuleImport::equal(Self, Self) -> Bool
+pub fn ModuleImport::not_equal(Self, Self) -> Bool
+pub fn ModuleImport::to_repr(Self) -> @debug.Repr
+
+pub struct ModuleInstance {
+  module_path : String
+  decls : Array[ModuleInstanceDecl]
+  bindings : Array[ModuleBinding]
+} derive(Eq, @debug.Debug)
+pub fn ModuleInstance::equal(Self, Self) -> Bool
+pub fn ModuleInstance::not_equal(Self, Self) -> Bool
+pub fn ModuleInstance::to_repr(Self) -> @debug.Repr
+
+pub struct ModuleInstanceDecl {
+  name : String
+  canonical_name : String
+  ty : DTerm
+  body : DTerm
+  exported : Bool
+  transparent : Bool
+} derive(Eq, @debug.Debug)
+pub fn ModuleInstanceDecl::equal(Self, Self) -> Bool
+pub fn ModuleInstanceDecl::not_equal(Self, Self) -> Bool
+pub fn ModuleInstanceDecl::to_repr(Self) -> @debug.Repr
+
+pub struct ModuleRename {
+  from_name : String
+  to_name : String
+} derive(Eq, @debug.Debug)
+pub fn ModuleRename::equal(Self, Self) -> Bool
+pub fn ModuleRename::not_equal(Self, Self) -> Bool
+pub fn ModuleRename::to_repr(Self) -> @debug.Repr
+
+pub struct ModuleSignature {
+  module_path : String
+  entries : Array[ModuleEntry]
+  bindings : Array[ModuleBinding]
+  exports : Array[ModuleExport]
+} derive(Eq, @debug.Debug)
+pub fn ModuleSignature::equal(Self, Self) -> Bool
+pub fn ModuleSignature::not_equal(Self, Self) -> Bool
+pub fn ModuleSignature::to_repr(Self) -> @debug.Repr
+
+pub enum Neutral {
+  NeVar(Int32)
+  NeApp(Neutral, Value)
+  NeFst(Neutral)
+  NeSnd(Neutral)
+}
+
+pub struct NumericProjectorCertificate {
+  exact : ProjectorCertificate
+  max_deviation : Double
+  numeric_residual : Double
+  tolerance : Double
+  ok : Bool
+}
+
+pub enum PVal {
+  PVUnit
+  PVBool(Bool)
+  PVPair(PVal, PVal)
+} derive(Eq, @debug.Debug)
+pub fn PVal::equal(Self, Self) -> Bool
+pub fn PVal::not_equal(Self, Self) -> Bool
+pub fn PVal::to_repr(Self) -> @debug.Repr
+
+pub struct PathPVal {
+  line : UPath
+  at0 : PVal
+  at1 : PVal
+  point : (Double) -> PVal
+}
+
+pub struct ProjectorCertificate {
+  matrix : CertMat
+  hermitian : Bool
+  idempotent : Bool
+  complement_projector : Bool
+  orthogonal_split : Bool
+  trace : QuadC
+}
+
+pub struct QuadC {
+  re : @algebra.QuadNum
+  im : @algebra.QuadNum
+} derive(Eq, @debug.Debug)
+pub fn QuadC::equal(Self, Self) -> Bool
+pub fn QuadC::not_equal(Self, Self) -> Bool
+pub fn QuadC::to_repr(Self) -> @debug.Repr
+
+pub enum STerm {
+  SVar(String)
+  SLam(String, UTerm?, STerm)
+  SApp(STerm, STerm)
+  SPair(STerm, STerm)
+  SFst(STerm)
+  SSnd(STerm)
+  SBoolLit(Bool)
+  SUnitLit
+  SNatZero
+  SSucc(STerm)
+  SNatElim(STerm, STerm, STerm, STerm)
+  SAnn(STerm, UTerm)
+  SHole
+} derive(Eq, @debug.Debug)
+pub fn STerm::equal(Self, Self) -> Bool
+pub fn STerm::not_equal(Self, Self) -> Bool
+pub fn STerm::to_repr(Self) -> @debug.Repr
+
+pub struct SpecEntry {
+  name : String
+  kind : SpecKind
+  symbols : Array[String]
+  canonical : String
+  categorical : String
+  decision : String
+}
+
+pub enum SpecKind {
+  SpecType
+  SpecOperator
+  SpecStructure
+  SpecTheorem
+} derive(Eq, @debug.Debug)
+pub fn SpecKind::equal(Self, Self) -> Bool
+pub fn SpecKind::not_equal(Self, Self) -> Bool
+pub fn SpecKind::to_repr(Self) -> @debug.Repr
+
+pub enum SphereLoopExpr {
+  SphereLoopRefl
+  SphereLoopGenerator
+  SphereLoopInverse(SphereLoopExpr)
+  SphereLoopCompose(SphereLoopExpr, SphereLoopExpr)
+} derive(Eq, @debug.Debug)
+pub fn SphereLoopExpr::equal(Self, Self) -> Bool
+pub fn SphereLoopExpr::not_equal(Self, Self) -> Bool
+pub fn SphereLoopExpr::to_repr(Self) -> @debug.Repr
+
+pub struct SubLine {
+  proj : (Double) -> CMat
+}
+
+pub struct SymRegion {
+  value : Array[Complex]
+  mut region : Bdd
+}
+
+pub struct SystemNF {
+  classes : Array[SymRegion]
+  undefined : Bdd
+}
+
+pub enum TNeutral {
+  TNeVar(Int32)
+  TNeApp(TNeutral, TValue, LTy)
+  TNeFst(TNeutral, LTy)
+  TNeSnd(TNeutral, LTy)
+}
+
+pub enum TValue {
+  TVUnit
+  TVBool(Bool)
+  TVPair(TValue, TValue)
+  TVClosure((TValue) -> TValue)
+  TVNeutral(TNeutral)
+}
+
+pub enum Term {
+  TmVar(Int32)
+  TmLam(Term)
+  TmApp(Term, Term)
+  TmPair(Term, Term)
+  TmFst(Term)
+  TmSnd(Term)
+  TmBool(Bool)
+  TmUnit
+  TmCoeRefl
+  TmCoeUaSwap
+  TmAnn(Term, LTy)
+} derive(Eq, @debug.Debug)
+pub fn Term::equal(Self, Self) -> Bool
+pub fn Term::not_equal(Self, Self) -> Bool
+pub fn Term::to_repr(Self) -> @debug.Repr
+
+pub enum Ty {
+  TyBool
+  TyUnit
+  TyProd(Ty, Ty)
+} derive(Eq, @debug.Debug)
+pub fn Ty::equal(Self, Self) -> Bool
+pub fn Ty::not_equal(Self, Self) -> Bool
+pub fn Ty::to_repr(Self) -> @debug.Repr
+
+pub struct TypedValue {
+  value : TValue
+  ty : LTy
+}
+
+pub struct UMetaInfo {
+  context_depth : Int32
+  mut solution : UTerm?
+} derive(Eq, @debug.Debug)
+pub fn UMetaInfo::equal(Self, Self) -> Bool
+pub fn UMetaInfo::not_equal(Self, Self) -> Bool
+pub fn UMetaInfo::to_repr(Self) -> @debug.Repr
+
+pub struct UPath {
+  equiv : Equiv
+}
+
+pub enum UTerm {
+  UVar(Int32)
+  UMeta(Int32, Array[UTerm])
+  UConst(String)
+  UType(Int32)
+  ULam(UTerm, UTerm)
+  UApp(UTerm, UTerm)
+  UPi(UTerm, UTerm)
+  UImplicitPi(UTerm, UTerm)
+  USigma(UTerm, UTerm)
+  UPair(UTerm, UTerm)
+  UFst(UTerm)
+  USnd(UTerm)
+  UBoolLit(Bool)
+  UNatZero
+  USucc(UTerm)
+  UNatElim(UTerm, UTerm, UTerm, UTerm)
+} derive(Eq, @debug.Debug)
+pub fn UTerm::equal(Self, Self) -> Bool
+pub fn UTerm::not_equal(Self, Self) -> Bool
+pub fn UTerm::to_repr(Self) -> @debug.Repr
+
+pub struct Unifier {
+  metas : Array[UMetaInfo]
+  mut solved_count : Int32
+} derive(Eq, @debug.Debug)
+pub fn Unifier::equal(Self, Self) -> Bool
+pub fn Unifier::not_equal(Self, Self) -> Bool
+pub fn Unifier::to_repr(Self) -> @debug.Repr
+
+pub struct UniversePath {
+  line : DCheckedTypeLine
+  src : DValue
+  dst : DValue
+  level : Int32
+}
+
+pub enum Value {
+  VUnit
+  VBool(Bool)
+  VPair(Value, Value)
+  VClosure((Value) -> Value)
+  VNeutral(Neutral)
+}
+
+pub struct VecBox {
+  bottom : Cube
+  left : Cube
+  right : Cube
+}
+
+pub struct VecBranch {
+  face : Face
+  value : Array[Complex]
+}
+
+pub struct VecSystem {
+  branches : Array[VecBranch]
+}
+
+pub struct Wiring {
+  src : Ty
+  dst : Ty
+  mapping : Array[LeafMap]
+}
+
+// Type aliases
+pub type AlgCertVec = Array[AlgC]
+
+pub type CVec = Array[Complex]
+
+pub type CertVec = Array[QuadC]
+
+// Traits

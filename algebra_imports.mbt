@@ -1,0 +1,50 @@
+///|
+// Architecture boundary: the root package consumes the exact-algebra
+// package only through this explicit import list.  Keep this list
+// minimal; new root dependencies on `algebra` should be reviewed as
+// layer-crossing changes (see ARCHITECTURE.md / architecture.json).
+
+///|
+using @algebra {
+  type Rat,
+  type QuadNum,
+  type AlgNum,
+  type QPoly,
+  alg_add,
+  alg_div,
+  alg_eq,
+  alg_generator,
+  alg_is_zero,
+  alg_mul,
+  alg_neg,
+  alg_one,
+  alg_sub,
+  alg_zero,
+  qpoly_normalize,
+  rat_eq,
+  rat_int,
+  rat_is_zero,
+  rat_make,
+  rat_sub,
+  rat_zero,
+  quad_add,
+  quad_eq,
+  quad_inv,
+  quad_is_zero,
+  quad_mul,
+  quad_neg,
+  quad_one,
+  quad_rat,
+  quad_sqrt_rat,
+  quad_sub,
+  quad_zero,
+  check_symbolic_algebra_all,
+  check_algebraic_extensions_and_Jordan,
+  check_Jacobi_interval,
+  check_qpoly_factor_complete,
+  check_qpoly_fast_arithmetic,
+  check_root_isolation,
+  check_splitting_field,
+  check_radical_denesting,
+  check_Jacobi_arbitrary_precision,
+}

@@ -1,0 +1,265 @@
+{
+  "version": 1,
+  "module": "username/cubical-hermitian",
+  "packages": [
+    {
+      "id": "algebra",
+      "path": "algebra",
+      "moon": "username/cubical-hermitian/algebra",
+      "layer": 1,
+      "depends_on": [],
+      "summary_en": "Exact rational/algebraic computation: symbolic polynomials, Q-linear algebra, algebraic numbers, Jordan theory, spectral identities, and certified Jacobi intervals.",
+      "summary_zh": "精確有理／代數計算：符號多項式、Q 線性代數、代數數、Jordan 理論、譜恆等與認證 Jacobi 區間。"
+    },
+    {
+      "id": "root",
+      "path": ".",
+      "moon": "username/cubical-hermitian",
+      "layer": 2,
+      "depends_on": [
+        "algebra"
+      ],
+      "summary_en": "The mutually recursive cubical dependent kernel, plus the still-logical foundation/finite/numeric/model/frontend components that are not yet separate MoonBit packages.",
+      "summary_zh": "互相遞迴的立方依賴核心，以及尚未拆成實體 MoonBit 套件的 foundation／finite／numeric／model／frontend 邏輯元件。"
+    },
+    {
+      "id": "cmd-main",
+      "path": "cmd/main",
+      "moon": "username/cubical-hermitian/cmd/main",
+      "layer": 3,
+      "depends_on": [
+        "root"
+      ],
+      "summary_en": "Executable theorem-registry report.",
+      "summary_zh": "印出定理登記表的執行入口。"
+    }
+  ],
+  "components": [
+    {
+      "id": "foundation",
+      "package": "root",
+      "layer": 0,
+      "files": [
+        "interval.mbt",
+        "bdd.mbt",
+        "bdd_dag.mbt",
+        "face_sat_watched.mbt"
+      ],
+      "depends_on": [],
+      "summary_en": "De Morgan dimensions, face formulas, ROBDDs and DAG BDD decisions.",
+      "summary_zh": "De Morgan 維度、面公式、ROBDD 與 DAG BDD 判定。"
+    },
+    {
+      "id": "numeric-hermitian",
+      "package": "root",
+      "layer": 1,
+      "files": [
+        "complex.mbt",
+        "projector.mbt",
+        "system.mbt",
+        "system_symbolic.mbt",
+        "cube.mbt"
+      ],
+      "depends_on": [
+        "foundation"
+      ],
+      "summary_en": "Floating complex linear algebra, Hermitian projectors, vector partial systems and affine cubes with pruning.",
+      "summary_zh": "浮點複線性代數、Hermitian 投影、向量偏系統與剪枝仿射立方體。"
+    },
+    {
+      "id": "exact-algebra",
+      "package": "algebra",
+      "layer": 1,
+      "files": [
+        "algebra/symalg.mbt",
+        "algebra/qpoly.mbt",
+        "algebra/qmat.mbt",
+        "algebra/algnum.mbt",
+        "algebra/Jordan.mbt",
+        "algebra/spectral_symbolic.mbt",
+        "algebra/Jacobi_interval.mbt",
+        "algebra/qpoly_factor.mbt",
+        "algebra/root_isolation.mbt",
+        "algebra/splitting_field.mbt",
+        "algebra/radical_denest.mbt"
+      ],
+      "depends_on": [],
+      "summary_en": "A physically separate exact-algebra MoonBit package: BigInt rationals, complete Q-factorization, real/complex root isolation, splitting fields, radical denesting and arbitrary-precision Jacobi intervals.",
+      "summary_zh": "已實體拆出的精確代數 MoonBit 套件：BigInt 有理數、Q 上完整因式分解、實／複根隔離、分裂域、根式去巢與任意精度 Jacobi 區間。"
+    },
+    {
+      "id": "finite-cubical",
+      "package": "root",
+      "layer": 2,
+      "files": [
+        "nbe.mbt",
+        "nbe_eta.mbt",
+        "wiring.mbt",
+        "pathp_glue.mbt"
+      ],
+      "depends_on": [
+        "foundation"
+      ],
+      "summary_en": "Simply typed NbE/HOAS and the finite Bool/Unit/product universe with wiring equivalences, ua, PathP, Glue and J.",
+      "summary_zh": "簡單型別 NbE／HOAS，以及 Bool／Unit／積有限宇宙的 wiring 等價、ua、PathP、Glue 與 J。"
+    },
+    {
+      "id": "dependent-kernel",
+      "package": "root",
+      "layer": 3,
+      "files": [
+        "nbe_dep.mbt",
+        "kan_ast.mbt",
+        "equiv_ast.mbt",
+        "checked_line.mbt",
+        "dsystem_compat.mbt",
+        "dterm_transform.mbt",
+        "schema.mbt",
+        "schema_extensions.mbt",
+        "schema_functor.mbt",
+        "schema_positivity.mbt",
+        "schema_registry.mbt",
+        "schema_phase9.mbt"
+      ],
+      "depends_on": [
+        "foundation",
+        "finite-cubical"
+      ],
+      "summary_en": "One compilation SCC by design: dependent NbE, AST Kan operations, first-class equivalences/Glue, checked lines, DTerm transforms, inductive/HIT schema generation, universe-polymorphic and simultaneous declarations call each other.",
+      "summary_zh": "設計上同一個編譯 SCC：依賴 NbE、AST Kan、一等 Equiv／Glue、受檢查線、DTerm 轉換、歸納／HIT schema 生成、宇宙多態與同時宣告互相呼叫。"
+    },
+    {
+      "id": "dependent-kan-lines",
+      "package": "root",
+      "layer": 4,
+      "files": [
+        "kan_dep.mbt"
+      ],
+      "depends_on": [
+        "foundation",
+        "dependent-kernel",
+        "finite-cubical"
+      ],
+      "summary_en": "Host-level dependent type lines (DLine) and embeddings of simple/finite types.",
+      "summary_zh": "宿主層依賴型別線 DLine，以及簡單／有限型別的嵌入。"
+    },
+    {
+      "id": "models",
+      "package": "root",
+      "layer": 4,
+      "files": [
+        "categories.mbt",
+        "glue_comp.mbt",
+        "certified_numeric.mbt",
+        "certified_algebraic.mbt"
+      ],
+      "depends_on": [
+        "foundation",
+        "numeric-hermitian",
+        "finite-cubical",
+        "exact-algebra"
+      ],
+      "summary_en": "Cross-domain categorical/Hermitian models: syntactic categories, general finite/subspace Glue composition, exact numeric shadows and certified algebra over general algebraic extensions.",
+      "summary_zh": "跨域範疇／Hermitian 模型：句法範疇、有限／子空間 Glue comp、精確數值影子與一般代數擴張上的認證代數。"
+    },
+    {
+      "id": "frontend",
+      "package": "root",
+      "layer": 5,
+      "files": [
+        "hou_elaborator.mbt",
+        "module_system.mbt",
+        "module_compilation.mbt",
+        "module_binary.mbt"
+      ],
+      "depends_on": [
+        "dependent-kernel",
+        "foundation"
+      ],
+      "summary_en": "Surface elaboration and separate compilation: extended pattern HOU, parameterized modules, compiled interfaces, linking and incremental cache. Nothing in the kernel may depend back on this layer.",
+      "summary_zh": "表面闡釋與分離編譯：擴展 pattern HOU、參數化模組、已編譯介面、連結與增量快取。核心不得反向依賴此層。"
+    },
+    {
+      "id": "cubical",
+      "package": "root",
+      "layer": 5,
+      "files": [
+        "sphere3.mbt",
+        "cubical_algorithms.mbt",
+        "univalence.mbt",
+        "sphere_homotopy.mbt",
+        "equivalence_phase9.mbt",
+        "truncation.mbt",
+        "equivalence_phase10.mbt",
+        "sphere_classification.mbt"
+      ],
+      "depends_on": [
+        "foundation",
+        "finite-cubical",
+        "dependent-kernel"
+      ],
+      "summary_en": "High-level cubical constructions and algorithms: spheres and homotopy representatives, propositional truncation, adjoint-equivalence data, transport/path algebra, path-to-equivalence and computational univalence certificates.",
+      "summary_zh": "高層立方構造與演算法：球面與同倫代表元、命題截斷、adjoint equivalence 資料、transport／路徑代數、path-to-equivalence 與計算性 univalence 證書。"
+    },
+    {
+      "id": "laws",
+      "package": "mixed",
+      "layer": 6,
+      "files": [
+        "*_laws.mbt",
+        "algebra/*_laws.mbt"
+      ],
+      "depends_on": [
+        "*"
+      ],
+      "summary_en": "Executable law bundles. They may observe lower layers but no production component may depend on them except the registry.",
+      "summary_zh": "可執行律束。可以觀察低層，但除 registry 外，生產元件不得依賴它們。"
+    },
+    {
+      "id": "registry",
+      "package": "root",
+      "layer": 7,
+      "files": [
+        "spec.mbt",
+        "verify.mbt",
+        "algebra_imports.mbt",
+        "cubical-hermitian.mbt"
+      ],
+      "depends_on": [
+        "*"
+      ],
+      "summary_en": "Specification/theorem registries and explicit cross-package import boundary.",
+      "summary_zh": "規格／定理登記表與明確的跨套件 import 邊界。"
+    },
+    {
+      "id": "tests",
+      "package": "mixed",
+      "layer": 8,
+      "files": [
+        "*_wbtest.mbt",
+        "*_test.mbt",
+        "algebra/*_wbtest.mbt",
+        "algebra/*_test.mbt"
+      ],
+      "depends_on": [
+        "*"
+      ],
+      "summary_en": "White-box and black-box tests, including differential oracles that are forbidden on library decision paths.",
+      "summary_zh": "白箱與黑箱測試，包括禁止進入函式庫判定路徑的差分 oracle。"
+    },
+    {
+      "id": "app",
+      "package": "cmd-main",
+      "layer": 9,
+      "files": [
+        "cmd/main/main.mbt"
+      ],
+      "depends_on": [
+        "registry"
+      ],
+      "summary_en": "Executable entry point.",
+      "summary_zh": "執行入口。"
+    }
+  ],
+  "exceptions": []
+}
