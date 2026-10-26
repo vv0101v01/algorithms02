@@ -797,69 +797,42 @@ pub fn check_sphere_homotopy_representatives() -> Bool {
 // ---------------------------------------------------------------------------
 
 ///|
-pub fn hopf_map_rat(q : Array[@algebra.Rat]) -> Array[@algebra.Rat] {
+pub fn hopf_map_rat(q : Array[Rat]) -> Array[Rat] {
   if q.length() != 4 {
-    return [@algebra.rat_zero(), @algebra.rat_zero(), @algebra.rat_zero()]
+    return [rat_zero(), rat_zero(), rat_zero()]
   }
-  let two = @algebra.rat_int(2)
+  let two = rat_int(2)
   [
-    @algebra.rat_mul(
-      two,
-      @algebra.rat_add(
-        @algebra.rat_mul(q[0], q[2]),
-        @algebra.rat_mul(q[1], q[3]),
-      ),
-    ),
-    @algebra.rat_mul(
-      two,
-      @algebra.rat_sub(
-        @algebra.rat_mul(q[1], q[2]),
-        @algebra.rat_mul(q[0], q[3]),
-      ),
-    ),
-    @algebra.rat_sub(
-      @algebra.rat_add(
-        @algebra.rat_mul(q[0], q[0]),
-        @algebra.rat_mul(q[1], q[1]),
-      ),
-      @algebra.rat_add(
-        @algebra.rat_mul(q[2], q[2]),
-        @algebra.rat_mul(q[3], q[3]),
-      ),
+    rat_mul(two, rat_add(rat_mul(q[0], q[2]), rat_mul(q[1], q[3]))),
+    rat_mul(two, rat_sub(rat_mul(q[1], q[2]), rat_mul(q[0], q[3]))),
+    rat_sub(
+      rat_add(rat_mul(q[0], q[0]), rat_mul(q[1], q[1])),
+      rat_add(rat_mul(q[2], q[2]), rat_mul(q[3], q[3])),
     ),
   ]
 }
 
 ///|
 /// Multiply both complex coordinates by `u + i v` exactly.
-pub fn hopf_rotate_rat(
-  q : Array[@algebra.Rat],
-  u : @algebra.Rat,
-  v : @algebra.Rat,
-) -> Array[@algebra.Rat] {
+pub fn hopf_rotate_rat(q : Array[Rat], u : Rat, v : Rat) -> Array[Rat] {
   if q.length() != 4 {
-    return [
-      @algebra.rat_zero(),
-      @algebra.rat_zero(),
-      @algebra.rat_zero(),
-      @algebra.rat_zero(),
-    ]
+    return [rat_zero(), rat_zero(), rat_zero(), rat_zero()]
   }
   [
-    @algebra.rat_sub(@algebra.rat_mul(u, q[0]), @algebra.rat_mul(v, q[1])),
-    @algebra.rat_add(@algebra.rat_mul(v, q[0]), @algebra.rat_mul(u, q[1])),
-    @algebra.rat_sub(@algebra.rat_mul(u, q[2]), @algebra.rat_mul(v, q[3])),
-    @algebra.rat_add(@algebra.rat_mul(v, q[2]), @algebra.rat_mul(u, q[3])),
+    rat_sub(rat_mul(u, q[0]), rat_mul(v, q[1])),
+    rat_add(rat_mul(v, q[0]), rat_mul(u, q[1])),
+    rat_sub(rat_mul(u, q[2]), rat_mul(v, q[3])),
+    rat_add(rat_mul(v, q[2]), rat_mul(u, q[3])),
   ]
 }
 
 ///|
-fn hopf_rat_eq(a : Array[@algebra.Rat], b : Array[@algebra.Rat]) -> Bool {
+fn hopf_rat_eq(a : Array[Rat], b : Array[Rat]) -> Bool {
   if a.length() != b.length() {
     return false
   }
   for i in 0..<a.length() {
-    if !@algebra.rat_is_zero(@algebra.rat_sub(a[i], b[i])) {
+    if !rat_is_zero(rat_sub(a[i], b[i])) {
       return false
     }
   }
@@ -867,10 +840,10 @@ fn hopf_rat_eq(a : Array[@algebra.Rat], b : Array[@algebra.Rat]) -> Bool {
 }
 
 ///|
-fn hopf_rat_norm2(q : Array[@algebra.Rat]) -> @algebra.Rat {
-  let mut acc = @algebra.rat_zero()
+fn hopf_rat_norm2(q : Array[Rat]) -> Rat {
+  let mut acc = rat_zero()
   for i in 0..<q.length() {
-    acc = @algebra.rat_add(acc, @algebra.rat_mul(q[i], q[i]))
+    acc = rat_add(acc, rat_mul(q[i], q[i]))
   }
   acc
 }
@@ -882,13 +855,8 @@ fn hopf_rat_point(
   c : Int32,
   d : Int32,
   den : Int32,
-) -> Array[@algebra.Rat] {
-  [
-    @algebra.rat_make(a, den),
-    @algebra.rat_make(b, den),
-    @algebra.rat_make(c, den),
-    @algebra.rat_make(d, den),
-  ]
+) -> Array[Rat] {
+  [rat_make(a, den), rat_make(b, den), rat_make(c, den), rat_make(d, den)]
 }
 
 ///|
@@ -899,7 +867,7 @@ fn hopf_rat_point(
 /// and two distinct sampled fibers have no sampled point in
 /// common.
 pub fn check_hopf_exact_rational() -> Bool {
-  let one = @algebra.rat_one()
+  let one = rat_one()
   let points = [
     hopf_rat_point(1, 0, 0, 0, 1),
     hopf_rat_point(0, 0, 1, 0, 1),
@@ -910,48 +878,44 @@ pub fn check_hopf_exact_rational() -> Bool {
     hopf_rat_point(4, 4, 7, 0, 9),
     hopf_rat_point(2, 6, 3, 0, 7),
   ]
-  let rotations : Array[(@algebra.Rat, @algebra.Rat)] = [
-    (@algebra.rat_make(1, 1), @algebra.rat_make(0, 1)),
-    (@algebra.rat_make(0, 1), @algebra.rat_make(1, 1)),
-    (@algebra.rat_make(3, 5), @algebra.rat_make(4, 5)),
-    (@algebra.rat_make(5, 13), @algebra.rat_make(12, 13)),
-    (@algebra.rat_make(8, 17), @algebra.rat_make(-15, 17)),
-    (@algebra.rat_make(-7, 25), @algebra.rat_make(24, 25)),
+  let rotations : Array[(Rat, Rat)] = [
+    (rat_make(1, 1), rat_make(0, 1)),
+    (rat_make(0, 1), rat_make(1, 1)),
+    (rat_make(3, 5), rat_make(4, 5)),
+    (rat_make(5, 13), rat_make(12, 13)),
+    (rat_make(8, 17), rat_make(-15, 17)),
+    (rat_make(-7, 25), rat_make(24, 25)),
   ]
   for r in 0..<rotations.length() {
     let (u, v) = rotations[r]
-    if !@algebra.rat_is_zero(@algebra.rat_sub(hopf_rat_norm2([u, v]), one)) {
+    if !rat_is_zero(rat_sub(hopf_rat_norm2([u, v]), one)) {
       return false
     }
   }
   for p in 0..<points.length() {
     let q = points[p]
-    if !@algebra.rat_is_zero(@algebra.rat_sub(hopf_rat_norm2(q), one)) {
+    if !rat_is_zero(rat_sub(hopf_rat_norm2(q), one)) {
       return false
     }
     let image = hopf_map_rat(q)
-    if !@algebra.rat_is_zero(@algebra.rat_sub(hopf_rat_norm2(image), one)) {
+    if !rat_is_zero(rat_sub(hopf_rat_norm2(image), one)) {
       return false
     }
     for r in 0..<rotations.length() {
       let (u, v) = rotations[r]
       let rotated = hopf_rotate_rat(q, u, v)
-      if !@algebra.rat_is_zero(@algebra.rat_sub(hopf_rat_norm2(rotated), one)) ||
+      if !rat_is_zero(rat_sub(hopf_rat_norm2(rotated), one)) ||
         !hopf_rat_eq(hopf_map_rat(rotated), image) {
         return false
       }
     }
   }
   // Pole fibers, exactly.
-  let zero = @algebra.rat_zero()
+  let zero = rat_zero()
   for r in 0..<rotations.length() {
     let (u, v) = rotations[r]
     if !hopf_rat_eq(hopf_map_rat([u, v, zero, zero]), [zero, zero, one]) ||
-      !hopf_rat_eq(hopf_map_rat([zero, zero, u, v]), [
-        zero,
-        zero,
-        @algebra.rat_int(-1),
-      ]) {
+      !hopf_rat_eq(hopf_map_rat([zero, zero, u, v]), [zero, zero, rat_int(-1)]) {
       return false
     }
   }

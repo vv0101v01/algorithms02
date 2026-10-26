@@ -35,7 +35,7 @@
 - 有界 Huet 搜尋、版本化已編譯模組 byte codec，以及 BDD
   sifting/cache、watched-literal DPLL 與 sparse/Karatsuba `QPoly` 乘法；
 - `SPEC.md`/`SPEC.en.md` 與雙語附錄對全部型別、算子、規格、結構逐符號
-  （3118 個、75 條規格）給出規範形式與範疇化；
+  （3338 個、85 條規格）給出規範形式與範疇化；
 - 實體套件圖 `cmd/main → root → algebra` 與 13 個邏輯元件，
   由 `architecture.json`/`tools/arch_check.py` 管制依賴與計數。
 
@@ -43,8 +43,8 @@
 
 ```text
 moon check --deny-warn                 # 全專案通過且零警告
-moon test                              # 63 個白箱測試（root+algebra）
-moon run cmd/main                      # 64 項定理登記表，期望 64/64
+moon test                              # 95 個白箱測試（root+algebra）
+moon run cmd/main                      # 74 項定理登記表，期望 74/74
 python3 tools/arch_check.py            # 依賴層級、唯一檔案歸位與計數
 moon info && python3 tools/audit_spec.py --check
                                        # 雙語符號附錄與各套件介面集合相等
@@ -283,6 +283,35 @@ point、PathP 或巢狀 PathP square，端點由低維 face 的消去值給出�
   模組 `ModuleItem` 交錯 import 與宣告；二進位進 v2（含
   producer、v1 遷移、tag 8 拒絕）與進程內 artifact store。
 
+### 第十二期：同規格遞迴、eliminator 編譯、結構合意、case-split、儲存庫、塔體、分層外延與主合一子
+
+- **Schema**：無規格標記 `DFunctorSelfFamily` 達成 Bush 型同
+  規格非均勻遞迴；函子 handler 以真實宿主 Self 型別取代佔位；
+  不透明算子正性走宣告制（`DPositivityDeclaration`，另有 λ
+  結構驗證版；宣告受信，不冒充證明）。同時 IR 多一條
+  eliminator 編譯路線（函數層級嚴格低於 base 層級的
+  predicative 片斷，閉項經強制套用逐 case 驗證）。
+- **DSystem/轉換**：合意檢查只探分支實際出現的維度；exact
+  repair 可在驗證下補入候選分支（極大非最大）。新增項層級
+  Bool case-split 轉換；Circle/Torus 分支帽改以一般座標讀法
+  保留繞數，路徑值 comp 算出環路帽。
+- **持久化**：抽象位元組儲存上的 `ArtifactRepository`
+  （manifest 雙哈希、index 最後提交、掃描復原）；模組/註冊
+  位元組共用 DAG codec（CHMODBIN v3/CHREGBIN v2）與版本
+  政策/peer 協商。仍是抽象協議、非磁碟服務。
+- **代數/Jacobi**：不可約證書 fast path（`x⁴+1` 零
+  Kronecker 預算判不可約）；根式判等塔增純三次與三二次體；
+  Jacobi 區間迭代內建簇感知精化（與事後 Sturm 分離分開）。
+- **成本/外延**：精確最佳 BDD 序進到子集 DP（n≤12）；CDCL
+  加 LBD 刪除與 RUP 證明輸出（獨立重播核驗）；宿主立方以
+  面內部/對角/連接三層有限探針分層檢查開盒相容（強檢查，
+  非外延證明）。
+- **球面/HOU**：單次 subst 跨複合環路串接繞數（π₁(S¹)≃ℤ
+  對任意中性環路仍未證）；環路單位律以連接旋轉 3-胞在
+  代表元上驗證，Hopf 恆等式改精確有理驗證（內部 Hopf/π₃
+  分類不宣稱）；`hou_unify_mgu` 給 Miller pattern 片斷
+  MGU／無解／殘留約束三態語意。
+
 ## 概念對照（精簡表）
 
 | 概念 | 實作 | 檔案 |
@@ -311,8 +340,9 @@ point、PathP 或巢狀 PathP square，端點由低維 face 的消去值給出�
 | 第九期收束 | 完備因式分解/根隔離、層級宣告、DSystem 修復、AlgC、球面同倫代表元、非 Miller HOU、已編譯模組介面 | `algebra/qpoly_factor.mbt`, `schema_phase9.mbt`, `certified_algebraic.mbt`, `sphere_homotopy.mbt`, `module_compilation.mbt` |
 | 第十期收束 | 一般 `lemIso`／adjointification、`IntegerS` 與 π₃ 商呈現、有界 Huet、模組 byte codec、BDD/SAT/QPoly 成本控制 | `equivalence_phase10.mbt`, `sphere_classification.mbt`, `hou_elaborator.mbt`, `module_binary.mbt`, `face_sat_watched.mbt`, `algebra/qpoly.mbt` |
 | 第十一期收束 | 跨家族函子／同時 IR 編譯、Face 合意與精確修復、lemIso 一般點、CHREGBIN＋hash-consing、圖樣剪枝／雙二次去巢、不透明立方／最佳序／CDCL、圓 encode/decode、模組交錯與 v2 遷移 | `schema_functor.mbt`, `dcube_filler.mbt`, `dterm_intern.mbt`, `schema_registry_persist.mbt`, `algebra/biquad_denest.mbt`, `algebra/poly_cube.mbt`, `circle_classify.mbt`, `phase11_laws.mbt` |
+| 第十二期收束 | 同規格自嵌／正性宣告、同時 IR eliminator 編譯、結構合意與補入、Bool case-split 與路徑值 comp、artifact 儲存庫／DAG codec／版本協商、不可約證書／三次三二次塔／簇感知 Jacobi、子集 DP 序／CDCL 刪除＋RUP、分層外延、單位律 3-胞／精確 Hopf、HOU 三態 MGU | `schema_phase9.mbt`, `schema_positivity.mbt`, `conv_case_split.mbt`, `artifact_repository.mbt`, `algebra/qpoly_certificate.mbt`, `algebra/tower_fields.mbt`, `phase12_laws.mbt` |
 | 套件與依賴治理 | `cmd/main → root → algebra`、13 元件、禁止向上邊 | `architecture.json`, `tools/arch_check.py`, `ARCHITECTURE.md` |
-| 規格範形登記 | 75 條目＋3118 雙語附錄符號＋多套件審計 | `spec.mbt`, `SPEC*.md`, `SPEC-APPENDIX*.md`, `tools/audit_spec.py` |
+| 規格範形登記 | 85 條目＋3338 雙語附錄符號＋多套件審計 | `spec.mbt`, `SPEC*.md`, `SPEC-APPENDIX*.md`, `tools/audit_spec.py` |
 
 ## 檔案地圖
 
@@ -357,7 +387,11 @@ dcube_filler.mbt / dterm_intern.mbt / schema_registry_persist.mbt
                               不透明立方開盒、DTerm hash-consing、CHREGBIN 註冊持久化
 algebra/{biquad_denest,poly_cube}.mbt / circle_classify.mbt / phase11_laws.mbt
                               雙二次去巢與精確立方；圓的 helix encode/decode；第十一期律束
-spec.mbt / verify.mbt         75 條規格登記；64 項定理登記表
+conv_case_split.mbt / artifact_repository.mbt
+                              Bool case-split 轉換；抽象儲存上的工件儲存庫
+algebra/{qpoly_certificate,tower_fields}.mbt / phase12_laws.mbt
+                              不可約證書、純三次／三二次塔；第十二期律束
+spec.mbt / verify.mbt         85 條規格登記；74 項定理登記表
 *_wbtest.mbt                  白箱測試（差分 oracle 只在這裡）
 cmd/main/                     打印登記表的入口
 ```
@@ -380,4 +414,11 @@ lemIso、CHREGBIN＋全域 hash-consing、圖樣剪枝與雙二次去巢
 （完備於雙二次片斷）、宿主不透明立方、可證最佳 BDD 序（n≤8）
 與 CDCL、圓的 helix 覆疊 encode/decode（複合環路以細分
 transport 計算；任意中性環路的完整 π₁(S¹)≃ℤ 仍未內部化）、
-Jacobi 簇分離、HOU 深搜尋與模組交錯編排。細節見 `SPEC.md` 第四節。
+Jacobi 簇分離、HOU 深搜尋與模組交錯編排。第十二期再補：同
+規格自嵌與同時 IR eliminator 編譯、結構合意與 repair 補入、
+Bool case-split 轉換與路徑值合成、抽象工件儲存庫與共用 DAG
+codec、不可約證書與三次／三二次塔、簇感知 Jacobi、子集 DP
+最佳序與 CDCL 刪除＋RUP、宿主立方分層外延檢查、單位律 3-胞
+與精確有理 Hopf、HOU 主合一子三態語意。現行邊界（任意中性
+環路的 π₁(S¹)≃ℤ、π₃ 分類與內部 Hopf、Eckmann–Hilton 3-胞、
+非 pattern HOU 的殘留求解等）細節見 `SPEC.md` 第四節。

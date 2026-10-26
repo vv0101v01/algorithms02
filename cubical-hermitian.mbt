@@ -44,6 +44,8 @@
 //   schema_extensions.mbt mutual/quotient/universe schemes, high-dim HITs
 //   dsystem_compat.mbt  raw DSystem compatibility and first-match forms
 //   equiv_ast.mbt       first-class AST Equiv, ua and GlueEquiv
+//   conv_case_split.mbt Bool case-split strengthening of term conversion
+//   artifact_repository.mbt named artifacts over an abstract byte store
 //   checked_line.mbt / schema_registry.mbt checked lines; schema plans
 //   qpoly.mbt / qmat.mbt exact univariate polynomials and rational matrices
 //   algnum.mbt / Jordan.mbt algebraic extensions; generalized/Jordan theory

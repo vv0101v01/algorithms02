@@ -578,6 +578,49 @@ pub fn run_all_checks() -> Array[CheckResult] {
       check_module_interleaved_items() &&
       check_module_binary_versions_and_store(),
     },
+    CheckResult::{
+      name: "第十二期 BDD/SAT：子集 DP 精確最佳變量序（n≤12）、CDCL LBD 子句刪除與 RUP 可驗證證明",
+      ok: check_bdd_optimal_order_dp() && check_cdcl_proof_and_reduction(),
+    },
+    CheckResult::{
+      name: "第十二期 Schema：DFunctorSelfFamily 同規格非均勻遞迴（Bush）、真實 Self 參數型別、不透明算子正性宣告",
+      ok: check_self_family_and_gather_shapes() &&
+      check_positivity_declarations(),
+    },
+    CheckResult::{
+      name: "第十二期同時 IR eliminator 編譯：互賴函數塊編為同一 base 家族的 eliminator 閉項（函數層級嚴格低於 base 層級）",
+      ok: check_simultaneous_ir_eliminator_compilation(),
+    },
+    CheckResult::{
+      name: "第十二期 DSystem：相關維度結構合意剪枝、exact repair 候選分支補入",
+      ok: check_dsystem_structural_agreement_and_supplementation(),
+    },
+    CheckResult::{
+      name: "第十二期轉換與路徑合成：Bool 變量 case-split 轉換、Circle/Torus 路徑值 comp（一般座標讀法保留繞數）",
+      ok: check_case_split_conversion_and_path_comp(),
+    },
+    CheckResult::{
+      name: "第十二期持久層與版本協商：抽象 artifact repository 原子提交與損壞復原、CHMODBIN v3/CHREGBIN v2 共享 DAG codec、peer 版本協商",
+      ok: check_artifact_repository_and_dag_codec(),
+    },
+    CheckResult::{
+      name: "第十二期精確代數：不可約證書 fast path（Eisenstein 平移）、三次與三二次塔體、Jacobi 迭代內簇感知精化",
+      ok: check_qpoly_irreducibility_certificates() &&
+      check_tower_fields() &&
+      check_jacobi_cluster_aware_iteration(),
+    },
+    CheckResult::{
+      name: "第十二期 HOU 語意：Miller pattern 主合一子（MGU）、無合一子與殘留約束三態",
+      ok: check_hou_pattern_mgu_and_residuals(),
+    },
+    CheckResult::{
+      name: "第十二期宿主立方分層外延檢查：面內部、對角與連接層探針與分層開盒驗證",
+      ok: check_dcube_stratified_extensionality(),
+    },
+    CheckResult::{
+      name: "第十二期球面代表元 3-胞與精確 Hopf：環路單位律連接旋轉 3-胞、Hopf 恆等式精確有理驗證",
+      ok: check_loop_unit_3cells_and_hopf_exact(),
+    },
   ]
 }
 

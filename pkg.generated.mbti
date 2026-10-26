@@ -534,6 +534,8 @@ pub fn check_lemiso_generic_points() -> Bool
 
 pub fn check_level_polymorphic_declarations() -> Bool
 
+pub fn check_loop_unit_3cells_and_hopf_exact() -> Bool
+
 pub fn check_module_binary_format() -> Bool
 
 pub fn check_module_binary_versions_and_store() -> Bool

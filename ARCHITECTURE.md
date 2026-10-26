@@ -57,7 +57,7 @@ MoonBit 以 package 為編譯單位：同一目錄的 `.mbt` 宣告共同求解�
 | 4 | `dependent-kan-lines` | root | 宿主層 `DLine`、維度代換與簡單／有限型別嵌入 | foundation、dependent-kernel、finite-cubical |
 | 4 | `models` | root | 範疇模型、有限／子空間 Glue comp、認證數值影子與一般代數認證 | foundation、numeric、finite、exact-algebra |
 | 5 | `frontend` | root | pattern／有界 Huet HOU elaborator、參數化模組、已編譯介面、增量快取與穩定 byte codec | dependent-kernel、foundation（模組 codec 內的 `Dim`／`Face`） |
-| 5 | `cubical` | root | S³／同倫代表元、IntegerS／π 商呈現、命題截斷、adjoint 與一般纖維、立方體演算法、計算性單值性 | foundation、finite、dependent-kernel |
+| 5 | `cubical` | root | S³／同倫代表元、IntegerS／π 商呈現、命題截斷、adjoint 與一般纖維、立方體演算法、計算性單值性 | foundation、finite、dependent-kernel、exact-algebra（第十二期精確有理 Hopf 的 `Rat`） |
 | 6 | `laws` | mixed | `*_laws.mbt` 行為律見證 | 同套件內較低層 |
 | 7 | `registry` | root | theorem/spec 登記表與 root→algebra 的集中匯入邊界 | 全部較低層 |
 | 8 | `tests` | mixed | `*_wbtest.mbt` / `*_test.mbt` | 被測套件 |
@@ -79,8 +79,9 @@ python3 tools/arch_check.py --json
 的領域，不把互相遞迴核心硬切成多個 package。
 
 `algebra/`（`symalg`、`qpoly`、`qmat`、`algnum`、`Jordan`、
-`spectral_symbolic`、`Jacobi_interval`、`qpoly_factor`、`root_isolation`、
-`splitting_field`、`radical_denest` 與其 laws/tests）原本就沒有
+`spectral_symbolic`、`Jacobi_interval`、`qpoly_factor`、`qpoly_certificate`、
+`root_isolation`、`splitting_field`、`radical_denest`、`biquad_denest`、
+`tower_fields`、`poly_cube` 與其 laws/tests）原本就沒有
 引用立方體核心，root 只是使用它，屬於教科書式單向依賴，所以
 成為真正的 MoonBit 子套件。它只使用 MoonBit core 套件（debug/math 與 prelude BigInt）；
 root 在 `moon.pkg` import 它為 `@algebra`，公開符號集中由

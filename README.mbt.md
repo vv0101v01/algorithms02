@@ -45,7 +45,21 @@ CDCL clause learning; the schema circle's universal cover with
 encode-by-substitution and decode-by-integer-elimination; exact Jacobi
 eigenvalue-cluster separation; deeper HOU search with iterative deepening;
 interleaved import/local module items with v1-to-v2 binary migration and an
-in-process compiled-module store; host-level
+in-process compiled-module store; same-spec non-uniform recursion
+(`DFunctorSelfFamily`) with trusted or lambda-verified positivity
+declarations for opaque operators; simultaneous-IR compilation onto base
+eliminators in a predicative fragment; relevant-dimension structural
+DSystem agreement and repair by verified supplementation; term-level Bool
+case-split conversion and path-valued Circle/Torus composition keeping
+winding data; an artifact repository over an abstract byte store with
+shared DAG module/registry codecs (v3/v2) and version negotiation;
+irreducibility certificates, pure-cubic and triquadratic radical towers
+and cluster-aware interval Jacobi iteration; subset-DP exact BDD orders
+(n<=12), CDCL with LBD clause deletion and replayable RUP proofs;
+stratified extensionality checks for host cube functions; single
+substitutions accumulating circle windings; connection-rotation unit-law
+3-cells on sphere representatives and exact rational Hopf identities; and
+a three-state principal-unifier semantics for Miller patterns; host-level
 cubical algorithms (KanBox transport/fillers, path algebra, funext and subst);
 computational univalence (decidable finite-universe wiring univalence and
 checked ua/pathToEquiv, ua-beta, and round-trip certificates for the dependent
@@ -53,9 +67,9 @@ AST); a three-package architecture (`cmd/main -> root -> algebra`) governed by
 `architecture.json`; and audited bilingual per-symbol
 canonical-form/categorification specifications.
 
-Run: `moon check --deny-warn`, `moon test` (81 tests), `moon run cmd/main`
-(expected: 64/64 checks), `python3 tools/arch_check.py`, and
-`moon info && python3 tools/audit_spec.py --check` (3118 interface symbols,
-75 spec entries). Documentation: [English guide](GUIDE.en.md),
+Run: `moon check --deny-warn`, `moon test` (95 tests), `moon run cmd/main`
+(expected: 74/74 checks), `python3 tools/arch_check.py`, and
+`moon info && python3 tools/audit_spec.py --check` (3338 interface symbols,
+85 spec entries). Documentation: [English guide](GUIDE.en.md),
 [English specification](SPEC.en.md), [中文指南](GUIDE.md),
 [中文規格](SPEC.md), and [architecture](ARCHITECTURE.md).

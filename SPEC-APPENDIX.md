@@ -7,7 +7,7 @@
 > `architecture.json` 登記的 MoonBit 套件（`root` / `algebra` / `cmd-main`）。
 
 <!-- APPENDIX:BEGIN -->
-共 **3118** 個公共符號（宣告＋構造子＋欄位），分屬 61 個規格族；按套件：`algebra` 746、`root` 2372。
+共 **3338** 個公共符號（宣告＋構造子＋欄位），分屬 61 個規格族；按套件：`algebra` 815、`root` 2523。
 
 ### 複數標量
 
@@ -179,13 +179,16 @@
 | `bdd_or` | root | 函數 |
 | `bdd_sat_face` | root | 函數 |
 | `bdd_satisfying_cubes` | root | 函數 |
+| `bdd_tree_cofactor` | root | 函數 |
 | `check_bdd_canonical` | root | 函數 |
+| `check_bdd_optimal_order_dp` | root | 函數 |
 | `check_interval_faces` | root | 函數 |
 | `contains_int` | root | 函數 |
 | `dim_of_face` | root | 函數 |
 | `dim_simplify` | root | 函數 |
 | `dim_subst` | root | 函數 |
 | `face_bound` | root | 函數 |
+| `face_cdcl_proof_check` | root | 函數 |
 | `face_eq_decide` | root | 函數 |
 | `face_eq_mod` | root | 函數 |
 | `face_holds` | root | 函數 |
@@ -443,7 +446,7 @@
 
 - 規範形式：按型別 quote 的 η 長依賴正規形；Π/Σ 第二分量為語義閉包族；累積 Typeᵢ 層級
 - 範疇化：帶族範疇 (CwF) 模型：脈絡延伸與依賴代入是閉包施用
-- 判定：雙向 elaboration＋型別導向轉換；相等=範形相等
+- 判定：雙向 elaboration＋型別導向轉換；相等=範形相等；項層級另有對離散 Bool 脈絡變量的 case-split 轉換加強（兩分支代入後遞迴判定，含相依型別代入；Nat 變量不切分），不改變覈心轉換
 
 | 符號 | 套件 | 類別 |
 |---|---|---|
@@ -580,6 +583,8 @@
 | `check_dep_universe` | root | 函數 |
 | `conv_at` | root | 函數 |
 | `conv_neutral` | root | 函數 |
+| `conv_terms_case_split` | root | 函數 |
+| `conv_terms_plain` | root | 函數 |
 | `conv_ty` | root | 函數 |
 | `d_as_type` | root | 函數 |
 | `d_check` | root | 函數 |
@@ -632,6 +637,7 @@
 | `dep_def_eq_closed` | root | 函數 |
 | `deval_dim` | root | 函數 |
 | `dim_quote` | root | 函數 |
+| `dterm_dim_vars` | root | 函數 |
 | `eval_dim_expr` | root | 函數 |
 | `eval_tube_terms` | root | 函數 |
 | `face_eval_env` | root | 函數 |
@@ -643,7 +649,7 @@
 
 - 規範形式：分支一律攜帶為 DSystem；在一般維度按型別頭派遣；頂分支取帽、形式合成為 DNComp/DNHComp
 - 範疇化：各型別構造子保存 Kan 纖維化結構；hcompU 是 Glue 黏合
-- 判定：系統 base/重疊相容＋型別遞迴；coe/fill 為 comp 線段限制
+- 判定：系統 base/重疊相容＋型別遞迴；Circle/Torus 分支配帽由一般分支值的座標表式代入 1 讀出（保留走完環路的座標 1，不被端點範形塌回基點 0），使 Path 型別上的路徑值合成（含移動端點的截斷環路）計算出環路本身；coe/fill 為 comp 線段限制
 
 | 符號 | 套件 | 類別 |
 |---|---|---|
@@ -795,6 +801,7 @@
 | `DTubeBranch.face` | root | 欄位 |
 | `DTubeBranch.path` | root | 欄位 |
 | `check_dsystem_canonical_partial_nf` | root | 函數 |
+| `check_dsystem_structural_agreement_and_supplementation` | root | 函數 |
 | `check_multibranch_glue_partial` | root | 函數 |
 | `check_phase5_semantic_systems` | root | 函數 |
 | `d_face_term` | root | 函數 |
@@ -818,6 +825,7 @@
 | `dsystem_pairwise_compatible` | root | 函數 |
 | `dsystem_repair_to_base` | root | 函數 |
 | `dsystem_repair_to_base_exact` | root | 函數 |
+| `dsystem_repair_with_candidates` | root | 函數 |
 | `dsystem_singleton` | root | 函數 |
 | `glue_partial_values` | root | 函數 |
 | `glue_store_partial` | root | 函數 |
@@ -933,6 +941,7 @@
 | `inductive_param_types` | root | 函數 |
 | `inductive_param_types_cached` | root | 函數 |
 | `inductive_parameter_positivity` | root | 函數 |
+| `inductive_parameter_positivity_declared` | root | 函數 |
 | `inductive_plan_type_term` | root | 函數 |
 | `inductive_result_indices` | root | 函數 |
 | `inductive_schema_key` | root | 函數 |
@@ -965,7 +974,10 @@
 | `schema_registry_binary_format_version` | root | 函數 |
 | `schema_registry_binary_from_hex` | root | 函數 |
 | `schema_registry_binary_roundtrip_ok` | root | 函數 |
+| `schema_registry_binary_supported_versions` | root | 函數 |
 | `schema_registry_binary_to_hex` | root | 函數 |
+| `schema_registry_binary_version_of` | root | 函數 |
+| `schema_registry_binary_version_policy` | root | 函數 |
 | `schema_registry_from_binary` | root | 函數 |
 | `schema_registry_hit_by_id` | root | 函數 |
 | `schema_registry_hit_by_name` | root | 函數 |
@@ -984,6 +996,8 @@
 | `schema_registry_snapshot_from_binary` | root | 函數 |
 | `schema_registry_snapshot_load_binary_report` | root | 函數 |
 | `schema_registry_snapshot_to_binary` | root | 函數 |
+| `schema_registry_snapshot_to_binary_for_peer` | root | 函數 |
+| `schema_registry_snapshot_to_binary_version` | root | 函數 |
 | `schema_registry_stats` | root | 函數 |
 | `schema_registry_to_binary` | root | 函數 |
 | `schema_registry_validate_hit` | root | 函數 |
@@ -1488,6 +1502,7 @@
 | `PathPVal.line` | root | 欄位 |
 | `PathPVal.point` | root | 欄位 |
 | `check_j` | root | 函數 |
+| `check_jacobi_cluster_aware_iteration` | algebra | 函數 |
 | `check_pathp_exchange` | root | 函數 |
 | `disc_path_sym` | root | 函數 |
 | `disc_path_wf` | root | 函數 |
@@ -1607,7 +1622,7 @@
 
 - 規範形式：hash-consed DAG 節點 ID；root 的 reachable node count 為 ROBDD 大小；apply cache 於 apply_misses 超過桶數四倍時 doubling rehash；sifting 逐變量試全部插入位置並以 reachable size 衡量 並回報 initial/final/attempts/improved；CNF 以 Tseitin 門變量線性編碼
 - 範疇化：布林函數在固定變量次序下的共享規範圖；apply 是格運算的 memoized 實現；watched-literal DPLL 是面格可滿足性的搜尋判定
-- 判定：同 manager root-id 相等、root≠0 的 sat、節點預算 FaceDecision、或有步數預算的 DPLL（舊掃描式與 watched-literal）；另有候選變量次序最小化與 3ⁿ 最壞節點界；watched/list DPLL 以 2^n brute force 差分驗證，sifting 以恆等哨兵避免大小同分時誤稱改善；CDCL 在 watched 傳播上加 1-UIP 子句學習、VSIDS 與 Luby 重啟，於生成面與鴿洞實例對驗；n≤8 時全排列枚舉給出可證最優變量序，超出上限明示非精確
+- 判定：同 manager root-id 相等、root≠0 的 sat、節點預算 FaceDecision、或有步數預算的 DPLL（舊掃描式與 watched-literal）；另有候選變量次序最小化與 3ⁿ 最壞節點界；watched/list DPLL 以 2^n brute force 差分驗證，sifting 以恆等哨兵避免大小同分時誤稱改善；CDCL 在 watched 傳播上加 1-UIP 子句學習、VSIDS 與 Luby 重啟、LBD 子句刪除（僅 decision level 0、reason 子句保留）與 RUP 證明輸出（獨立核驗器重播單位傳播驗證），於生成面與鴿洞實例對驗；精確最佳變量序於 n≤8 全排列枚舉、n≤12 改以子集 DP 對各前綴子集求最小上層寬度，超出上限明示非精確
 
 | 符號 | 套件 | 類別 |
 |---|---|---|
@@ -1655,12 +1670,18 @@
 | `FaceBoolExpr::equal` | root | 函數 |
 | `FaceBoolExpr::not_equal` | root | 函數 |
 | `FaceBoolExpr::to_repr` | root | 函數 |
+| `FaceCdclProofResult` | root | 結構 |
+| `FaceCdclProofResult.decision` | root | 欄位 |
+| `FaceCdclProofResult.original_clauses` | root | 欄位 |
+| `FaceCdclProofResult.proof_clauses` | root | 欄位 |
+| `FaceCdclProofResult.stats` | root | 欄位 |
 | `FaceCdclResult` | root | 結構 |
 | `FaceCdclResult.decision` | root | 欄位 |
 | `FaceCdclResult.stats` | root | 欄位 |
 | `FaceCdclStats` | root | 結構 |
 | `FaceCdclStats.conflicts` | root | 欄位 |
 | `FaceCdclStats.decisions` | root | 欄位 |
+| `FaceCdclStats.deleted` | root | 欄位 |
 | `FaceCdclStats.learned` | root | 欄位 |
 | `FaceCdclStats.propagations` | root | 欄位 |
 | `FaceCdclStats.restarts` | root | 欄位 |
@@ -1701,6 +1722,7 @@
 | `bdd_dag_of_face` | root | 函數 |
 | `bdd_dag_of_face_best` | root | 函數 |
 | `bdd_dag_of_face_optimal` | root | 函數 |
+| `bdd_dag_of_face_optimal_dp` | root | 函數 |
 | `bdd_dag_of_face_optimized` | root | 函數 |
 | `bdd_dag_or` | root | 函數 |
 | `bdd_dag_reachable_count` | root | 函數 |
@@ -1729,6 +1751,7 @@
 | `face_eq_watched_dpll` | root | 函數 |
 | `face_eq_within_budget` | root | 函數 |
 | `face_sat_cdcl` | root | 函數 |
+| `face_sat_cdcl_proof` | root | 函數 |
 | `face_sat_cdcl_report` | root | 函數 |
 | `face_sat_dpll` | root | 函數 |
 | `face_sat_watched_dpll` | root | 函數 |
@@ -1738,7 +1761,7 @@
 
 - 規範形式：相容系統沿用 DSystem 型別導向範形；任意 first-match 系統化為不交有效區域 DTubeNF；兩值的合意區域同時給出布林 BDD 形與保留雙端點的 Face 值形，exact repair 以 Face 值合意面截斷分支而不動端點
 - 範疇化：面相對切片中的偏元素；checked 構造是進入 composition 系統子類的反射
-- 判定：BDD cube 枚舉上的局部脈絡轉換，檢查 base 與兩兩重疊；不相容回報首個衝突
+- 判定：局部脈絡轉換只在分支實際提及的相關維度上枚舉（不相干維度由 BDD cofactor 結構剪去），檢查 base 與兩兩重疊；不相容回報首個衝突；exact repair 除截斷外可在驗證相容後依序補入候選分支（得順序相依的極大而非最大相容子系統）
 
 | 符號 | 套件 | 類別 |
 |---|---|---|
@@ -1772,6 +1795,13 @@
 | `DSystemRepairExact.compatible` | root | 欄位 |
 | `DSystemRepairExact.repaired_branches` | root | 欄位 |
 | `DSystemRepairExact.system` | root | 欄位 |
+| `DSystemRepairSupplemented` | root | 結構 |
+| `DSystemRepairSupplemented.added_branches` | root | 欄位 |
+| `DSystemRepairSupplemented.base_removed_region` | root | 欄位 |
+| `DSystemRepairSupplemented.compatible` | root | 欄位 |
+| `DSystemRepairSupplemented.rejected_candidates` | root | 欄位 |
+| `DSystemRepairSupplemented.repaired_branches` | root | 欄位 |
+| `DSystemRepairSupplemented.system` | root | 欄位 |
 | `DTubeNF` | root | 結構 |
 | `DTubeNF.classes` | root | 欄位 |
 | `DTubeNF.undefined` | root | 欄位 |
@@ -1883,7 +1913,7 @@
 
 ### Schema 註冊與 elaboration 快取
 
-- 規範形式：DSchemaRegistry 中以穩定 Debug 鍵 intern 的 DInductivePlan/DHitPlan 與 telescope 前綴鏈；位元組形 CHREGBIN v1＝magic＋版本＋長度＋校驗＋全 DTerm/schema codec 的 payload
+- 規範形式：DSchemaRegistry 中以穩定 Debug 鍵 intern 的 DInductivePlan/DHitPlan 與 telescope 前綴鏈；位元組形 CHREGBIN v2＝magic＋版本＋長度＋校驗＋與 CHMODBIN v3 共享的 DAG DTerm/schema codec payload（v1 仍可讀）
 - 範疇化：schema 描述子是可共享計劃；快取只保存同一 elaboration 函數的有限圖，不改變指稱
 - 判定：驗證布爾值與語義 telescope 前綴按 (term,args,args) 鍵查表；hit/miss 計數可觀察
 
@@ -1934,9 +1964,9 @@
 
 ### Schema 函子、正性與歸納遞迴
 
-- 規範形式：DPositiveFunctor 的 Id/Const/Product/Sum/List/Pi/Container/DecodedFunction/Family 語法及其解碼型別（Family 以 DFunctorParamArg 區分宿主 Self 代入與外部參數項，僅跨家族、參數須葉出現且 IH 可 gather）；DPositivityReport 記錄出現與極性
+- 規範形式：DPositiveFunctor 的 Id/Const/Product/Sum/List/Pi/Container/DecodedFunction/Family/SelfFamily 語法（SelfFamily 為不攜帶規格的同規格自嵌標記，支援 Bush 型非均勻遞迴，參數的 Self 型別由已建立的宿主 Self 型別給出而非佔位）及其解碼型別（Family 以 DFunctorParamArg 區分宿主 Self 代入與外部參數項，僅跨家族、參數須葉出現且 IH 可 gather）；DPositivityReport 記錄出現與極性
 - 範疇化：正性型別函子的初始代數與 decoded induction hypothesis；DDecode 是 Tarski 宇宙的歸納—遞迴解碼函數
-- 判定：在別名展開後的 DTerm 上做極性遞迴：巢狀函子與正位置接受、負位置/未知中性族應用拒絕；IH 由函子遞迴生成
+- 判定：在別名展開後的 DTerm 上做極性遞迴：巢狀函子與正位置接受、負位置拒絕、未知中性族應用在無宣告時拒絕；不透明中性算子可攜帶受信的 DPositivityDeclaration（以 depth-aware walk 在 binder 下移位比對、參數位置標記 strict/positive），另有 λ 驗證版由結構分析自動核可（宣告本身不構成不透明算子正性的證明）；IH 由函子遞迴生成
 
 | 符號 | 套件 | 類別 |
 |---|---|---|
@@ -1954,11 +1984,21 @@
 | `DPositiveFunctor::DFunctorList` | root | 構造子 |
 | `DPositiveFunctor::DFunctorPi` | root | 構造子 |
 | `DPositiveFunctor::DFunctorProduct` | root | 構造子 |
+| `DPositiveFunctor::DFunctorSelfFamily` | root | 構造子 |
 | `DPositiveFunctor::DFunctorSigma` | root | 構造子 |
 | `DPositiveFunctor::DFunctorSum` | root | 構造子 |
 | `DPositiveFunctor::equal` | root | 函數 |
 | `DPositiveFunctor::not_equal` | root | 函數 |
 | `DPositiveFunctor::to_repr` | root | 函數 |
+| `DPositivityDeclaration` | root | 結構 |
+| `DPositivityDeclaration.arity` | root | 欄位 |
+| `DPositivityDeclaration.head` | root | 欄位 |
+| `DPositivityDeclaration.positive_args` | root | 欄位 |
+| `DPositivityDeclaration.scope` | root | 欄位 |
+| `DPositivityDeclaration.strict_args` | root | 欄位 |
+| `DPositivityDeclaration::equal` | root | 函數 |
+| `DPositivityDeclaration::not_equal` | root | 函數 |
+| `DPositivityDeclaration::to_repr` | root | 函數 |
 | `DPositivityReport` | root | 結構 |
 | `DPositivityReport.negative_polarity` | root | 欄位 |
 | `DPositivityReport.occurs` | root | 欄位 |
@@ -1987,13 +2027,18 @@
 | `dfunctor_param_term` | root | 函數 |
 | `dfunctor_pi` | root | 函數 |
 | `dfunctor_product` | root | 函數 |
+| `dfunctor_self_family` | root | 函數 |
 | `dfunctor_sigma` | root | 函數 |
 | `dfunctor_sum` | root | 函數 |
+| `dpositivity_declaration` | root | 函數 |
+| `dpositivity_declaration_from_lambda` | root | 函數 |
 | `dpositivity_report` | root | 函數 |
 | `dterm_children` | root | 函數 |
 | `dterm_family_occurs` | root | 函數 |
 | `dterm_family_positivity` | root | 函數 |
+| `dterm_family_positivity_declared` | root | 函數 |
 | `dterm_family_strictly_positive` | root | 函數 |
+| `dterm_family_strictly_positive_declared` | root | 函數 |
 | `dterm_shift` | root | 函數 |
 | `dterm_substitute` | root | 函數 |
 | `infer_decode` | root | 函數 |
@@ -2160,7 +2205,10 @@
 | `qpoly_int` | algebra | 函數 |
 | `qpoly_integer_coeffs` | algebra | 函數 |
 | `qpoly_integer_coeffs_big` | algebra | 函數 |
+| `qpoly_irreducibility_certificate` | algebra | 函數 |
+| `qpoly_irreducibility_certificate_check` | algebra | 函數 |
 | `qpoly_irreducible_by_mod_patterns` | algebra | 函數 |
+| `qpoly_irreducible_certified` | algebra | 函數 |
 | `qpoly_irreducible_upto3` | algebra | 函數 |
 | `qpoly_is_one` | algebra | 函數 |
 | `qpoly_is_squarefree` | algebra | 函數 |
@@ -2200,7 +2248,7 @@
 
 ### 代數擴張與根式範形
 
-- 規範形式：QuadNum 的 a+b√d（d 無平方因數）；AlgNum 的 Q[x]/(m) 餘式多項式
+- 規範形式：QuadNum 的 a+b√d（d 無平方因數）；CubicNum 的 a+b∛m+c∛m²（m 無立方因數）；TriquadNum 在三個平方類獨立生成元的 8 維基底；AlgNum 的 Q[x]/(m) 餘式多項式
 - 範疇化：二次擴張與一般有限代數擴張體；範數/跡由乘法矩陣行列式/跡給出
 - 判定：模極小多項式的剩餘算術與擴張歐氏求逆；根式去巢以平方判別；相等為係數相等
 
@@ -2212,6 +2260,14 @@
 | `AlgNum::equal` | algebra | 函數 |
 | `AlgNum::not_equal` | algebra | 函數 |
 | `AlgNum::to_repr` | algebra | 函數 |
+| `CubicNum` | algebra | 結構 |
+| `CubicNum.a` | algebra | 欄位 |
+| `CubicNum.b` | algebra | 欄位 |
+| `CubicNum.c` | algebra | 欄位 |
+| `CubicNum.m` | algebra | 欄位 |
+| `CubicNum::equal` | algebra | 函數 |
+| `CubicNum::not_equal` | algebra | 函數 |
+| `CubicNum::to_repr` | algebra | 函數 |
 | `QuadNum` | algebra | 結構 |
 | `QuadNum.a` | algebra | 欄位 |
 | `QuadNum.b` | algebra | 欄位 |
@@ -2219,6 +2275,12 @@
 | `QuadNum::equal` | algebra | 函數 |
 | `QuadNum::not_equal` | algebra | 函數 |
 | `QuadNum::to_repr` | algebra | 函數 |
+| `TriquadNum` | algebra | 結構 |
+| `TriquadNum.coeffs` | algebra | 欄位 |
+| `TriquadNum.gens` | algebra | 欄位 |
+| `TriquadNum::equal` | algebra | 函數 |
+| `TriquadNum::not_equal` | algebra | 函數 |
+| `TriquadNum::to_repr` | algebra | 函數 |
 | `alg_add` | algebra | 函數 |
 | `alg_coeffs` | algebra | 函數 |
 | `alg_compatible` | algebra | 函數 |
@@ -2251,6 +2313,21 @@
 | `alg_to_rat` | algebra | 函數 |
 | `alg_trace` | algebra | 函數 |
 | `alg_zero` | algebra | 函數 |
+| `cubic_add` | algebra | 函數 |
+| `cubic_cuberoot_rat` | algebra | 函數 |
+| `cubic_div` | algebra | 函數 |
+| `cubic_eq` | algebra | 函數 |
+| `cubic_generator` | algebra | 函數 |
+| `cubic_inv` | algebra | 函數 |
+| `cubic_is_rat` | algebra | 函數 |
+| `cubic_is_zero` | algebra | 函數 |
+| `cubic_make` | algebra | 函數 |
+| `cubic_mul` | algebra | 函數 |
+| `cubic_neg` | algebra | 函數 |
+| `cubic_norm` | algebra | 函數 |
+| `cubic_rat` | algebra | 函數 |
+| `cubic_sign` | algebra | 函數 |
+| `cubic_sub` | algebra | 函數 |
 | `int_sqrt_exact` | algebra | 函數 |
 | `int_squarefree_decomp` | algebra | 函數 |
 | `quad_add` | algebra | 函數 |
@@ -2280,6 +2357,20 @@
 | `quad_to_rat` | algebra | 函數 |
 | `quad_trace` | algebra | 函數 |
 | `quad_zero` | algebra | 函數 |
+| `triquad_add` | algebra | 函數 |
+| `triquad_align` | algebra | 函數 |
+| `triquad_div` | algebra | 函數 |
+| `triquad_embed_biquad` | algebra | 函數 |
+| `triquad_eq` | algebra | 函數 |
+| `triquad_inv` | algebra | 函數 |
+| `triquad_is_zero` | algebra | 函數 |
+| `triquad_make` | algebra | 函數 |
+| `triquad_mul` | algebra | 函數 |
+| `triquad_neg` | algebra | 函數 |
+| `triquad_reembed` | algebra | 函數 |
+| `triquad_sign` | algebra | 函數 |
+| `triquad_sqrt_of_biquad` | algebra | 函數 |
+| `triquad_sub` | algebra | 函數 |
 
 ### 廣義特徵空間與 Jordan 理論
 
@@ -2554,7 +2645,7 @@
 
 - 規範形式：RatInterval/CInterval 矩形包絡與 dyadic 外向捨入後的 Hermitian 區間矩陣；每次旋轉保存 before/after 與累積酉變換
 - 範疇化：Hermitian 相似變換在區間矩陣包絡上的單調提升；Gershgorin 圓盤給出譜的像分解與重數簇
-- 判定：精確有理平方比較證明 sqrt/相位/c/s 包絡包含真值；逐旋轉重算 J†J−I∋0 與 J†AJ⊆after，最終圓盤分簇計數；特徵值簇分離以平方自由部分（Sturm 鏈＋與導數 gcd）的 Sturm 區間對原多項式計數回多重數，區間重疊唯一匹配
+- 判定：精確有理平方比較證明 sqrt/相位/c/s 包絡包含真值；逐旋轉重算 J†J−I∋0 與 J†AJ⊆after，最終圓盤分簇計數；特徵值簇分離以平方自由部分（Sturm 鏈＋與導數 gcd）的 Sturm 區間對原多項式計數回多重數，區間重疊唯一匹配；區間迭代本身具簇感知精化：Gershgorin 簇在迭代內偵測、旋轉以簇懲罰改變 pivot 選擇、精度不足時升級重跑，並在迭代內把 count-2 簇分離為不交單點（事後簇分離與迭代內精化為兩條分開記錄的路徑）
 
 | 符號 | 套件 | 類別 |
 |---|---|---|
@@ -2581,6 +2672,15 @@
 | `JacobiCertificate::equal` | algebra | 函數 |
 | `JacobiCertificate::not_equal` | algebra | 函數 |
 | `JacobiCertificate::to_repr` | algebra | 函數 |
+| `JacobiClusterAwareReport` | algebra | 結構 |
+| `JacobiClusterAwareReport.certificate` | algebra | 欄位 |
+| `JacobiClusterAwareReport.max_cluster_width` | algebra | 欄位 |
+| `JacobiClusterAwareReport.precision_bits_used` | algebra | 欄位 |
+| `JacobiClusterAwareReport.restarts` | algebra | 欄位 |
+| `JacobiClusterAwareReport.separated` | algebra | 欄位 |
+| `JacobiClusterAwareReport::equal` | algebra | 函數 |
+| `JacobiClusterAwareReport::not_equal` | algebra | 函數 |
+| `JacobiClusterAwareReport::to_repr` | algebra | 函數 |
 | `JacobiClusterSeparation` | algebra | 結構 |
 | `JacobiClusterSeparation.complete` | algebra | 欄位 |
 | `JacobiClusterSeparation.intervals` | algebra | 欄位 |
@@ -2661,6 +2761,7 @@
 | `jacobi_cluster_separation_certified` | algebra | 函數 |
 | `jacobi_coefficients` | algebra | 函數 |
 | `jacobi_interval_eigen` | algebra | 函數 |
+| `jacobi_interval_eigen_cluster_aware` | algebra | 函數 |
 | `jacobi_separate_clusters` | algebra | 函數 |
 | `jacobi_similarity_interval` | algebra | 函數 |
 | `jacobi_unitary_interval` | algebra | 函數 |
@@ -2713,7 +2814,7 @@
 
 - 規範形式：UTerm 的 Miller pattern spine `?F x₁…xₙ` 與 zonk 後 beta/投影簡化核心；表面 STerm 按名解析為 de Bruijn UTerm；HouSearchReport 記錄 status/nodes/branches/depth
 - 範疇化：pattern HOU 是高階合一的可判定片斷；有界 Huet 搜尋在此之上以 transactional state 試 rigid/spine 分解、同頭不變座標、distinct flex-flex、imitation 與 projection；雙向 elaboration 把隱含引數與 dependent motive 問題送入同一合一器再編譯至依賴覈心
-- 判定：確定性層以 WHNF 後 rigid 分解、pattern 抽象、occurs/scope 檢查與閉項 fallback 判定；搜尋層在節點與證明項深度預算內求 solved/no-unifier，否則以 residual 或 budget-exceeded 明示未定（一般 HOU 不可判定，不作完備宣稱）；check/infer 插入隱含 metavariables，未解者拒絕轉 DTerm；第十一期增加深層 imitation、projection 候選上限與同頭 identification，迭代加深以 HouIterativeReport 記錄輪次與求解深度
+- 判定：確定性層以 WHNF 後 rigid 分解、pattern 抽象、occurs/scope 檢查與閉項 fallback 判定；搜尋層在節點與證明項深度預算內求 solved/no-unifier，否則以 residual 或 budget-exceeded 明示未定（一般 HOU 不可判定，不作完備宣稱）；check/infer 插入隱含 metavariables，未解者拒絕轉 DTerm；第十一期增加深層 imitation、projection 候選上限與同頭 identification，迭代加深以 HouIterativeReport 記錄輪次與求解深度；第十二期增加 hou_unify_mgu 對 Miller pattern 片斷的三態語意——主合一子（principal MGU）、可證無合一子、或部分替代加可續解的殘留約束（重複變量/constructor spine 一般回殘留，不冒充單一 MGU）
 
 | 符號 | 套件 | 類別 |
 |---|---|---|
@@ -2735,6 +2836,13 @@
 | `Elaborator::equal` | root | 函數 |
 | `Elaborator::not_equal` | root | 函數 |
 | `Elaborator::to_repr` | root | 函數 |
+| `HouConstraint` | root | 結構 |
+| `HouConstraint.depth` | root | 欄位 |
+| `HouConstraint.lhs` | root | 欄位 |
+| `HouConstraint.rhs` | root | 欄位 |
+| `HouConstraint::equal` | root | 函數 |
+| `HouConstraint::not_equal` | root | 函數 |
+| `HouConstraint::to_repr` | root | 函數 |
 | `HouIterativeReport` | root | 結構 |
 | `HouIterativeReport.report` | root | 欄位 |
 | `HouIterativeReport.rounds` | root | 欄位 |
@@ -2742,6 +2850,20 @@
 | `HouIterativeReport::equal` | root | 函數 |
 | `HouIterativeReport::not_equal` | root | 函數 |
 | `HouIterativeReport::to_repr` | root | 函數 |
+| `HouMguReport` | root | 結構 |
+| `HouMguReport.residual` | root | 欄位 |
+| `HouMguReport.status` | root | 欄位 |
+| `HouMguReport.substitution` | root | 欄位 |
+| `HouMguReport::equal` | root | 函數 |
+| `HouMguReport::not_equal` | root | 函數 |
+| `HouMguReport::to_repr` | root | 函數 |
+| `HouMguStatus` | root | 列舉 |
+| `HouMguStatus::HouMguNoUnifier` | root | 構造子 |
+| `HouMguStatus::HouMguPrincipal` | root | 構造子 |
+| `HouMguStatus::HouMguResidual` | root | 構造子 |
+| `HouMguStatus::equal` | root | 函數 |
+| `HouMguStatus::not_equal` | root | 函數 |
+| `HouMguStatus::to_repr` | root | 函數 |
 | `HouSearchReport` | root | 結構 |
 | `HouSearchReport.branches_tried` | root | 欄位 |
 | `HouSearchReport.max_depth_reached` | root | 欄位 |
@@ -2824,6 +2946,7 @@
 | `hou_search_unify_iterative_bool` | root | 函數 |
 | `hou_semantic_optimize` | root | 函數 |
 | `hou_unify` | root | 函數 |
+| `hou_unify_mgu` | root | 函數 |
 | `unifier_new` | root | 函數 |
 | `uterm_contains_unsolved_meta` | root | 函數 |
 | `uterm_whnf` | root | 函數 |
@@ -2960,7 +3083,7 @@
 
 - 規範形式：KanBox 打包型別線、系統與 base；transport filler 是 PathP；路徑傳遞是 hcomp 方塊的頂邊
 - 範疇化：cubical CwF 中由 Kan 纖維化結構生成的路徑物件運算：反演、串接、函子性與依賴代入
-- 判定：派遣至覈心 coe/comp/fill 並以轉換驗證端點；閉項 builders 再由 dep_check_closed 驗收
+- 判定：派遣至覈心 coe/comp/fill 並以轉換驗證端點；單位律的 3-胞以 transitivity 方塊的連接旋轉建構（左單位兩階段保持端點、右單位滑行）；閉項 builders 再由 dep_check_closed 驗收
 
 | 符號 | 套件 | 類別 |
 |---|---|---|
@@ -2975,9 +3098,11 @@
 | `dpath_cong_term` | root | 函數 |
 | `dpath_cong_value` | root | 函數 |
 | `dpath_funext_value` | root | 函數 |
+| `dpath_left_unit3_value` | root | 函數 |
 | `dpath_prefix_value` | root | 函數 |
 | `dpath_refl_term` | root | 函數 |
 | `dpath_refl_value` | root | 函數 |
+| `dpath_right_unit3_value` | root | 函數 |
 | `dpath_segment_value` | root | 函數 |
 | `dpath_sym_term` | root | 函數 |
 | `dpath_sym_value` | root | 函數 |
@@ -3041,7 +3166,7 @@
 
 - 規範形式：BigInt 有理數；Q[x] 不可約因式與重數；Sturm 實根區間與不交 Rouché 複圓盤；逐次代數塔中的分裂根；去巢根式表達式；雙二次數以至多兩個無平方因子基底 d₁,d₂ 及基底 [1,√d₁,√d₂,√(d₁d₂)] 上的有理係數表示
 - 範疇化：Q[x] 唯一因式分解、代數閉包中的根多重集與有限分裂擴張；AlgPoly 是擴張係數多項式
-- 判定：因式分解先行自適應 mod-p 次數圖樣與有理根剪枝再行 Kronecker 列舉；Sturm 計數、Cauchy 正方形 Taylor 排除與 Rouché 細分；根式去巢在雙二次域內以共軛範數與代數數平方根判定（真正雙二次被開方數需另一雙二次或更高 multicubic 根者為明示界限）；證書皆以精確多項式重算
+- 判定：不可約性先以證書 fast path 判定（線性、低次無有理根、mod-p 不可約與 Eisenstein 及其平移，均可獨立重驗），因式分解再先行自適應 mod-p 次數圖樣與有理根剪枝後行 Kronecker 列舉；Sturm 計數、Cauchy 正方形 Taylor 排除與 Rouché 細分；根式判等以四層塔（一次二次、雙二次、純三次 Q(∛m)、三二次）逐層嘗試，雙二次開方在雙二次與三二次體中判定（更高塔與需一般代數數根者為明示界限）；證書皆以精確多項式重算
 
 | 符號 | 套件 | 類別 |
 |---|---|---|
@@ -3074,6 +3199,14 @@
 | `QPolyDegreePattern` | algebra | 結構 |
 | `QPolyDegreePattern.degrees` | algebra | 欄位 |
 | `QPolyDegreePattern.prime` | algebra | 欄位 |
+| `QPolyIrreducibilityCertificate` | algebra | 列舉 |
+| `QPolyIrreducibilityCertificate::CertEisenstein` | algebra | 構造子 |
+| `QPolyIrreducibilityCertificate::CertLinear` | algebra | 構造子 |
+| `QPolyIrreducibilityCertificate::CertLowDegreeNoRationalRoot` | algebra | 構造子 |
+| `QPolyIrreducibilityCertificate::CertModPrime` | algebra | 構造子 |
+| `QPolyIrreducibilityCertificate::equal` | algebra | 函數 |
+| `QPolyIrreducibilityCertificate::not_equal` | algebra | 函數 |
+| `QPolyIrreducibilityCertificate::to_repr` | algebra | 函數 |
 | `RadicalExpr` | algebra | 列舉 |
 | `RadicalExpr::RAdd` | algebra | 構造子 |
 | `RadicalExpr::RDiv` | algebra | 構造子 |
@@ -3165,6 +3298,8 @@
 | `radical_simplify` | algebra | 函數 |
 | `radical_sqrt` | algebra | 函數 |
 | `radical_to_biquad` | algebra | 函數 |
+| `radical_to_cubic` | algebra | 函數 |
+| `radical_to_triquad` | algebra | 函數 |
 | `real_root_isolation_refine` | algebra | 函數 |
 | `real_root_isolations_are_certified` | algebra | 函數 |
 | `splitting_field_is_certified` | algebra | 函數 |
@@ -3173,7 +3308,7 @@
 
 - 規範形式：DLevelDecl 的層級 binders 與實例化；透明算子展開後的正性函子；迭代編譯的非均勻巢狀族；聯合互歸納與同時 IR 規格
 - 範疇化：宇宙 scheme、參數迭代初始代數、向量函子聯合初始代數與同步歸納—遞迴結構
-- 判定：層級作用域、正性報告、生成 telescope 與依賴轉換；未實例化層級在覈心檢查拒絕
+- 判定：層級作用域、正性報告、生成 telescope 與依賴轉換；未實例化層級在覈心檢查拒絕；同時 IR 除 decode 位置編譯外，互賴函數塊在函數層級嚴格低於 base 家族層級時可編為同一 base 上的 eliminator 閉項（每項經一般脈絡強制套用逐 case 驗證；前向引用、非宇宙外來函數與巢狀/decoded 引數仍明示拒絕）
 
 | 符號 | 套件 | 類別 |
 |---|---|---|
@@ -3272,6 +3407,9 @@
 | `nested_iter_intro_term_at` | root | 函數 |
 | `nested_iter_type_term` | root | 函數 |
 | `simultaneous_ir_compile_decode` | root | 函數 |
+| `simultaneous_ir_compile_eliminator` | root | 函數 |
+| `simultaneous_ir_compile_eliminator_block` | root | 函數 |
+| `simultaneous_ir_eliminator_type` | root | 函數 |
 | `simultaneous_ir_function_universe_level` | root | 函數 |
 | `simultaneous_ir_uses_other_hypotheses` | root | 函數 |
 | `simultaneous_ir_validate` | root | 函數 |
@@ -3323,7 +3461,7 @@
 
 - 規範形式：Ωⁿ 的巢狀 Path；懸掛迭代的整數度數映射；極交換 S³ 的 HIT；C² 單位球上的 Hopf 映射與相位纖維；IntegerS 的 zero/posSucc/negSucc 唯一構造子範形與語義 succ/pred；π₃ 以 Ω³(Sphereₙ) 模命題截斷 Path 關係的 QuotientS 商呈現；SphereLoopExpr 的 generator 冪
 - 範疇化：懸掛函子、基點映射與 loop space 的代表元；Hopf S¹-纖維化及其連結數；π₃ 商型是 loop space 模存在路徑關係的商呈現
-- 判定：生成 meridian 轉換；三重迭代 suspension_unit 沿 transitivity-square cancellation 以 subst rebase 為懸掛的 loop；代表元運算的整數冪次以 end-to-end 檢查求值；Hopf 像/纖維代數檢查與立體投影後 Gauss 連結積分 |lk|=1。此層是代表元與典範冪，不宣稱一般合成 encode/decode 證明 π₃(S³)≅ℤ 或以 Hopf 不變量證明 π₃(S²)≅ℤ
+- 判定：生成 meridian 轉換；三重迭代 suspension_unit 沿 transitivity-square cancellation 以 subst rebase 為懸掛的 loop；代表元運算的整數冪次以 end-to-end 檢查求值；環路單位律以連接旋轉的 3-胞在代表元上逐面驗證（結合律/交換律 3-胞仍未建構）；Hopf 像/纖維除浮點代數檢查與 Gauss 連結積分 |lk|=1 外，於有理點與有理相位旋轉下以精確有理算術驗證落球、纖維不變與極點纖維恆等式。此層是代表元與典範冪，不宣稱一般合成 encode/decode 證明 π₃(S³)≅ℤ、以 Hopf 不變量證明 π₃(S²)≅ℤ 或內部 Hopf 映射
 
 | 符號 | 套件 | 類別 |
 |---|---|---|
@@ -3346,9 +3484,11 @@
 | `dpath_trans_sym_cancel_value` | root | 函數 |
 | `homotopy_group_type_term` | root | 函數 |
 | `hopf_linking_number_numeric` | root | 函數 |
+| `hopf_map_rat` | root | 函數 |
 | `hopf_map_s3_to_s2` | root | 函數 |
 | `hopf_north_fiber` | root | 函數 |
 | `hopf_phase_rotate` | root | 函數 |
+| `hopf_rotate_rat` | root | 函數 |
 | `hopf_south_fiber` | root | 函數 |
 | `integer_pred_value` | root | 函數 |
 | `integer_schema` | root | 函數 |
@@ -3391,12 +3531,48 @@
 
 ### 模組分離編譯與連結
 
-- 規範形式：CompiledModule 的展平已檢查 telescope、exports、依賴指紋與介面公共投影；抽象宣告 body=None；cache 以來源指紋索引；穩定二進位以 magic CHMODBIN＋版本 u16＋長度 u32＋校驗 u32＋payload（標籤位元組、固定寬度小端 i32、UTF-16LE 字串）表達，v2 在 v1 payload 後追加 producer 字串；CompiledModuleStore 保存模組 artifact 位元組並記錄命中/未命中
+- 規範形式：CompiledModule 的展平已檢查 telescope、exports、依賴指紋與介面公共投影；抽象宣告 body=None；cache 以來源指紋索引；穩定二進位以 magic CHMODBIN＋版本 u16＋長度 u32＋校驗 u32＋payload（標籤位元組、固定寬度小端 i32、UTF-16LE 字串）表達，v2 在 v1 payload 後追加 producer 字串，v3 與 CHREGBIN v2 共享 DAG 項 codec（節點數達門檻時以 tag 255 back-reference 引用先行子項，避免逐項展開）；BinaryVersionPolicy 宣告 current/supported/oldest_writable 並以 peer 協商選出最高共同可寫版本；CompiledModuleStore 保存模組 artifact 位元組並記錄命中/未命中；ArtifactRepository 在抽象位元組儲存（鍵→位元組）上提供命名 blobs、SHA 樣雙哈希 manifest、最後寫入 index 的原子提交與由 manifests 掃描復原（損壞 blob 在讀取時以哈希拒絕；抽象協議而非 OS 磁碟）
 - 範疇化：模組函子的已編譯物件與 synthetic import-free 連結定義；prefix 特化是部分函子套用；序列化是 compiled module 的穩定外表示
 - 判定：介面 hash 忽略 opaque body、實作 hash 覆蓋全部 entries；implementation 補足抽象 exports；cache 依來源與依賴介面指紋失效；解碼逐一拒絕 bad magic／版本／截斷／校驗／格式／尾隨位元組，並重跑 module 驗證與 fingerprint 一致性檢查；載入接受 v1/v2 並把 v1 遷移為缺省 producer，v2-only 節點（如 functor tag 8）於 v1 寫出時以 None 拒絕
 
 | 符號 | 套件 | 類別 |
 |---|---|---|
+| `ArtifactByteStore` | root | 結構 |
+| `ArtifactByteStore.list` | root | 欄位 |
+| `ArtifactByteStore.read` | root | 欄位 |
+| `ArtifactByteStore.remove` | root | 欄位 |
+| `ArtifactByteStore.write` | root | 欄位 |
+| `ArtifactRecord` | root | 結構 |
+| `ArtifactRecord.blob_key` | root | 欄位 |
+| `ArtifactRecord.byte_length` | root | 欄位 |
+| `ArtifactRecord.format_version` | root | 欄位 |
+| `ArtifactRecord.hash_a` | root | 欄位 |
+| `ArtifactRecord.hash_b` | root | 欄位 |
+| `ArtifactRecord.kind` | root | 欄位 |
+| `ArtifactRecord.name` | root | 欄位 |
+| `ArtifactRecord::equal` | root | 函數 |
+| `ArtifactRecord::not_equal` | root | 函數 |
+| `ArtifactRecord::to_repr` | root | 函數 |
+| `ArtifactRepository` | root | 結構 |
+| `ArtifactRepository.prefix` | root | 欄位 |
+| `ArtifactRepository.puts` | root | 欄位 |
+| `ArtifactRepository.recoveries` | root | 欄位 |
+| `ArtifactRepository.store` | root | 欄位 |
+| `ArtifactRepositoryStats` | root | 結構 |
+| `ArtifactRepositoryStats.puts` | root | 欄位 |
+| `ArtifactRepositoryStats.records` | root | 欄位 |
+| `ArtifactRepositoryStats.recoveries` | root | 欄位 |
+| `ArtifactRepositoryStats.total_bytes` | root | 欄位 |
+| `ArtifactRepositoryStats::equal` | root | 函數 |
+| `ArtifactRepositoryStats::not_equal` | root | 函數 |
+| `ArtifactRepositoryStats::to_repr` | root | 函數 |
+| `BinaryVersionPolicy` | root | 結構 |
+| `BinaryVersionPolicy.current` | root | 欄位 |
+| `BinaryVersionPolicy.oldest_writable` | root | 欄位 |
+| `BinaryVersionPolicy.supported` | root | 欄位 |
+| `BinaryVersionPolicy::equal` | root | 函數 |
+| `BinaryVersionPolicy::not_equal` | root | 函數 |
+| `BinaryVersionPolicy::to_repr` | root | 函數 |
 | `CompiledModule` | root | 結構 |
 | `CompiledModule.dependencies` | root | 欄位 |
 | `CompiledModule.entries` | root | 欄位 |
@@ -3465,14 +3641,34 @@
 | `ModuleDependencyFingerprint::not_equal` | root | 函數 |
 | `ModuleDependencyFingerprint::to_repr` | root | 函數 |
 | `abstract_point_module` | root | 函數 |
+| `artifact_byte_store_new` | root | 函數 |
+| `artifact_kind_compiled_module` | root | 函數 |
+| `artifact_kind_schema_registry` | root | 函數 |
+| `artifact_memory_byte_store_new` | root | 函數 |
+| `artifact_repository_get` | root | 函數 |
+| `artifact_repository_get_compiled_module` | root | 函數 |
+| `artifact_repository_get_registry_snapshot` | root | 函數 |
+| `artifact_repository_list` | root | 函數 |
+| `artifact_repository_new` | root | 函數 |
+| `artifact_repository_put` | root | 函數 |
+| `artifact_repository_put_compiled_module` | root | 函數 |
+| `artifact_repository_put_registry_snapshot` | root | 函數 |
+| `artifact_repository_record` | root | 函數 |
+| `artifact_repository_recover` | root | 函數 |
+| `artifact_repository_remove` | root | 函數 |
+| `artifact_repository_stats` | root | 函數 |
+| `artifact_repository_verify_all` | root | 函數 |
+| `binary_negotiate_version` | root | 函數 |
 | `check_module_binary_format` | root | 函數 |
 | `check_module_binary_versions_and_store` | root | 函數 |
 | `check_module_compilation` | root | 函數 |
 | `compiled_module_binary_format_version` | root | 函數 |
 | `compiled_module_binary_from_hex` | root | 函數 |
+| `compiled_module_binary_negotiate_version` | root | 函數 |
 | `compiled_module_binary_supported_versions` | root | 函數 |
 | `compiled_module_binary_to_hex` | root | 函數 |
 | `compiled_module_binary_version_of` | root | 函數 |
+| `compiled_module_binary_version_policy` | root | 函數 |
 | `compiled_module_env_add` | root | 函數 |
 | `compiled_module_env_find` | root | 函數 |
 | `compiled_module_env_new` | root | 函數 |
@@ -3492,7 +3688,9 @@
 | `compiled_module_store_put` | root | 函數 |
 | `compiled_module_store_stats` | root | 函數 |
 | `compiled_module_to_binary` | root | 函數 |
+| `compiled_module_to_binary_for_peer` | root | 函數 |
 | `compiled_module_to_binary_v1` | root | 函數 |
+| `compiled_module_to_binary_version` | root | 函數 |
 | `compiled_module_to_module_def` | root | 函數 |
 | `compiled_module_validate` | root | 函數 |
 | `module_compile` | root | 函數 |
@@ -3534,9 +3732,21 @@
 | `all_checks_pass` | root | 函數 |
 | `check_Jacobi_arbitrary_precision` | algebra | 函數 |
 | `check_Jacobi_interval` | algebra | 函數 |
+| `check_artifact_repository_and_dag_codec` | root | 函數 |
+| `check_case_split_conversion_and_path_comp` | root | 函數 |
+| `check_cdcl_proof_and_reduction` | root | 函數 |
 | `check_constructor_constraints` | root | 函數 |
+| `check_dcube_stratified_extensionality` | root | 函數（差分測試 oracle，非判定路徑） |
+| `check_hopf_exact_rational` | root | 函數 |
+| `check_hou_pattern_mgu_and_residuals` | root | 函數 |
+| `check_loop_unit_3cells_and_hopf_exact` | root | 函數 |
 | `check_mutual_inductives` | root | 函數 |
+| `check_positivity_declarations` | root | 函數 |
+| `check_qpoly_irreducibility_certificates` | algebra | 函數 |
 | `check_quotient_schema` | root | 函數 |
+| `check_self_family_and_gather_shapes` | root | 函數 |
+| `check_simultaneous_ir_eliminator_compilation` | root | 函數 |
+| `check_tower_fields` | algebra | 函數 |
 | `check_universe_schemes` | root | 函數 |
 | `example_projector` | root | 函數 |
 | `example_unit` | root | 函數 |
@@ -3580,7 +3790,7 @@
 
 - 規範形式：覆疊纖維在 base 是 IntegerS 規範整數、在 loop 點是 ua 線的 GlueEquiv 型別；環路代表元為 schema 圓的 DVHitCell 路徑，繞數為規範整數值
 - 範疇化：helix 是圓到宇宙的纖維化族；encode 是沿環路在覆疊中的 subst 提升端點，decode 是整數消去給出的環路冪
-- 判定：base 纖維以宇宙層轉換等於 ℤ；生成元/逆/refl 的 subst 直接計算，複合環路以 transport 函子性細分（單次 subst 越過 trans 點時經宇宙 comp 的 Glue 線不串接等價，為已記錄的內涵邊界）；兩向往返在代表元上以轉換檢查
+- 判定：base 纖維以宇宙層轉換等於 ℤ；生成元/逆/refl 的 subst 直接計算；單次 subst 越過複合環路的 trans 點現經端點 Glue 線合成串接等價而正確累積繞數（loop²↦2、loop³↦3、loop⁻²↦−2、抵消↦0 以轉換檢查），transport 函子性細分仍作為對照路徑保留；兩向往返在代表元上以轉換檢查（任意中性環路的完整 π₁(S¹)≃ℤ 內部證明仍未完成）
 
 | 符號 | 套件 | 類別 |
 |---|---|---|
@@ -3597,7 +3807,7 @@
 
 - 規範形式：立方是宿主函數（維度列→語義值／有理多項式座標）；開盒為缺一面的邊界資料，帽是填充在缺面的限制
 - 範疇化：□ 上外部立方資料與 Kan 填充條件的宿主實作；多項式立方是精確有理座標系中的立方映射，迭代開盒填充以 F += w·(S − F|face) 逐面修正
-- 判定：邊界完整性與重疊相容以型別轉換／規範多項式相等逐面驗證；不相容或不完整給出失敗計數與拒絕
+- 判定：邊界完整性與重疊相容以型別轉換／規範多項式相等逐面驗證；除一般點探針外，分層外延檢查於面內部、對角（共享/環境維度）與連接（¬、∧、∨）三層有限探針上比較宿主立方函數，分層開盒驗證與填充隨之提供（超出探針預算的層以 complete=false 明示）；不相容或不完整給出失敗計數與拒絕
 
 | 符號 | 套件 | 類別 |
 |---|---|---|
@@ -3617,6 +3827,11 @@
 | `DCubeOpenBox.arity` | root | 欄位 |
 | `DCubeOpenBox.faces` | root | 欄位 |
 | `DCubeOpenBox.ty` | root | 欄位 |
+| `DCubeStratifiedReport` | root | 結構 |
+| `DCubeStratifiedReport.complete` | root | 欄位 |
+| `DCubeStratifiedReport.equal` | root | 欄位 |
+| `DCubeStratifiedReport.failed` | root | 欄位 |
+| `DCubeStratifiedReport.probes` | root | 欄位 |
 | `PolyBoxFace` | algebra | 結構 |
 | `PolyBoxFace.axis` | algebra | 欄位 |
 | `PolyBoxFace.cube` | algebra | 欄位 |
@@ -3636,12 +3851,17 @@
 | `dcube_box_face_of` | root | 函數 |
 | `dcube_box_fill` | root | 函數 |
 | `dcube_box_fill_verified` | root | 函數 |
+| `dcube_box_fill_verified_stratified` | root | 函數 |
 | `dcube_box_validate` | root | 函數 |
+| `dcube_box_validate_stratified` | root | 函數 |
 | `dcube_constant` | root | 函數 |
 | `dcube_cubes_conv` | root | 函數 |
+| `dcube_cubes_conv_stratified` | root | 函數 |
+| `dcube_cubes_conv_stratified_report` | root | 函數 |
 | `dcube_degenerate` | root | 函數 |
 | `dcube_face` | root | 函數 |
 | `dcube_filler_faces_ok` | root | 函數 |
+| `dcube_filler_faces_ok_stratified` | root | 函數 |
 | `dcube_function` | root | 函數 |
 | `dcube_generic_dims` | root | 函數 |
 | `dcube_of_path` | root | 函數 |
