@@ -475,3 +475,80 @@ pub fn check_hou_pattern_mgu_and_residuals() -> Bool {
   )
   clash.status == HouMguNoUnifier
 }
+
+///|
+/// Agreement walks split only on dimensions occurring in the
+/// quoted terms, and repair can supplement a system from a
+/// candidate pool under the full compatibility audit.
+pub fn check_dsystem_structural_agreement_and_supplementation() -> Bool {
+  if dterm_dim_vars(DAppDim(DCircleLoop, DAnd(DVar(3), DNeg(DVar(1))))) !=
+    [1, 3] {
+    return false
+  }
+  let var_bdd = bdd_of_face(FAnd(FEq1(DVar(0)), FEq0(DVar(1))), 2)
+  if bdd_tree_cofactor(var_bdd, 0, true) != BddNode(1, BddOne, BddZero) {
+    return false
+  }
+  if bdd_tree_cofactor(var_bdd, 0, false) != BddZero {
+    return false
+  }
+  // The same endpoint agreement as the Phase 11 law, now in a
+  // twelve-dimensional ambient context whose extra dimensions
+  // occur nowhere in the values: the walk splits only on the
+  // one relevant dimension.
+  let a = circle_point(DVar(0))
+  let b = DVCirclePoint(DZero)
+  let agreement = face_agreement_face(0, 12, FTop, DVCircleTy, a, b)
+  if agreement == FTop || agreement == FBot {
+    return false
+  }
+  if !face_holds(agreement, [false]) || !face_holds(agreement, [true]) {
+    return false
+  }
+  let region = face_agreement_region(0, 12, FTop, DVCircleTy, a, b)
+  if region != BddNode(0, BddOne, BddZero) {
+    return false
+  }
+  // Supplementation: one original branch is dropped, one is
+  // kept, one candidate fills the other endpoint face, and two
+  // candidates are rejected (base disagreement and pairwise
+  // incompatibility respectively).
+  let line = (_ : Dim) => DVNatTy
+  let zero_path = (_ : Dim) => DVZeroNat
+  let system = dsystem_of([
+    tube_branch(FTop, _ => dv_nat_lit(1)),
+    tube_branch(FEq0(DVar(0)), zero_path),
+  ])
+  let candidates : Array[DTubeBranch] = [
+    tube_branch(FEq1(DVar(0)), zero_path),
+    tube_branch(FTop, _ => dv_nat_lit(1)),
+    tube_branch(FEq1(DVar(0)), j => {
+      if dim_is_zero(j) {
+        DVZeroNat
+      } else {
+        dv_nat_lit(1)
+      }
+    }),
+  ]
+  let repaired = dsystem_repair_with_candidates(
+    0,
+    1,
+    line,
+    system,
+    DVZeroNat,
+    candidates,
+  )
+  if !repaired.compatible {
+    return false
+  }
+  if repaired.system.branches.length() != 2 {
+    return false
+  }
+  if repaired.added_branches != 1 || repaired.rejected_candidates != 2 {
+    return false
+  }
+  if repaired.repaired_branches < 1 {
+    return false
+  }
+  dsystem_compatible_with_base(0, 1, line, repaired.system, DVZeroNat)
+}

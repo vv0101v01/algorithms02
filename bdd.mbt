@@ -276,6 +276,31 @@ pub fn bdd_or(a : Bdd, b : Bdd) -> Bdd {
 }
 
 ///|
+/// Cofactor by one variable assignment, preserving the ordered
+/// reduced form.
+pub fn bdd_tree_cofactor(b : Bdd, variable : Int32, value : Bool) -> Bdd {
+  match b {
+    BddZero | BddOne => b
+    BddNode(v, lo, hi) =>
+      if v == variable {
+        if value {
+          hi
+        } else {
+          lo
+        }
+      } else if v > variable {
+        b
+      } else {
+        bdd_node(
+          v,
+          bdd_tree_cofactor(lo, variable, value),
+          bdd_tree_cofactor(hi, variable, value),
+        )
+      }
+  }
+}
+
+///|
 /// Symbolic satisfiability.
 pub fn bdd_sat_face(f : Face, n : Int32) -> Bool {
   bdd_dag_sat_face(f, n)

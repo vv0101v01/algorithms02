@@ -644,9 +644,48 @@ pub fn dsystem_first_match_eq(
 // ---------------------------------------------------------------------------
 
 ///|
+/// Dimension variables below `dl` on which conversion of the
+/// quoted terms can depend: exactly those occurring in dimension
+/// or face positions of the type and the two values.  The
+/// agreement walks split only on these variables -- splitting a
+/// dimension that occurs nowhere cannot change the conversion
+/// outcome -- so their cost is exponential only in the number
+/// of *relevant* dimensions (times the region traversal), not
+/// in the ambient context size.
+fn agreement_relevant_vars(
+  ty_term : DTerm,
+  a_term : DTerm,
+  b_term : DTerm,
+  dl : Int32,
+) -> Array[Int32] {
+  let acc : Array[Int32] = []
+  let sources = [
+    dterm_dim_vars(ty_term),
+    dterm_dim_vars(a_term),
+    dterm_dim_vars(b_term),
+  ]
+  for src in sources {
+    for i in 0..<src.length() {
+      // Quoted terms use de Bruijn dimension indices; face and
+      // BDD variables (and hence assignments) use semantic
+      // levels.  The two are related by `level = dl - 1 - index`
+      // (see `dim_quote` / `cube_dim_env`).
+      if src[i] >= 0 && src[i] < dl {
+        let level = dl - 1 - src[i]
+        if !contains_int(acc, level) {
+          acc.push(level)
+        }
+      }
+    }
+  }
+  sort_ints(acc)
+}
+
+///|
 fn agreement_bdd_walk(
   region : Bdd,
-  variable : Int32,
+  rel_index : Int32,
+  relevant : Array[Int32],
   assignment : Array[Int32],
   level : Int32,
   dl : Int32,
@@ -662,24 +701,19 @@ fn agreement_bdd_walk(
           level, dl, ty_term, a_term, b_term, term_env, assignment,
         ) {
         region
-      } else if variable >= dl {
+      } else if rel_index >= relevant.length() {
+        // Every dimension the terms mention is assigned, and
+        // the open check still fails: no assignment of the
+        // remaining (unmentioned) dimensions can change it.
         BddZero
       } else {
-        let (lo, hi) = match region {
-          BddOne => (BddOne, BddOne)
-          BddNode(v, l, h) =>
-            if v == variable {
-              (l, h)
-            } else if v > variable {
-              (region, region)
-            } else {
-              (BddZero, BddZero)
-            }
-          BddZero => (BddZero, BddZero)
-        }
+        let variable = relevant[rel_index]
+        let lo = bdd_tree_cofactor(region, variable, false)
+        let hi = bdd_tree_cofactor(region, variable, true)
         let kept_lo = agreement_bdd_walk(
           lo,
-          variable + 1,
+          rel_index + 1,
+          relevant,
           assignment_with(assignment, variable, 0),
           level,
           dl,
@@ -690,7 +724,8 @@ fn agreement_bdd_walk(
         )
         let kept_hi = agreement_bdd_walk(
           hi,
-          variable + 1,
+          rel_index + 1,
+          relevant,
           assignment_with(assignment, variable, 1),
           level,
           dl,
@@ -699,6 +734,10 @@ fn agreement_bdd_walk(
           b_term,
           term_env,
         )
+        // Reassemble with BDD apply so the result stays ordered
+        // even though irrelevant variables were never split.
+        let var0 = BddNode(variable, BddOne, BddZero)
+        let var1 = BddNode(variable, BddZero, BddOne)
         if kept_lo == BddZero && kept_hi == BddZero {
           BddZero
         } else if kept_lo == kept_hi {
@@ -706,9 +745,9 @@ fn agreement_bdd_walk(
           // imply agreement in its interior, and a reduced BDD
           // cannot express the endpoint disjunction without
           // collapsing it to top.  Retain the 0-endpoint part.
-          BddNode(variable, kept_lo, BddZero)
+          bdd_and(var0, kept_lo)
         } else {
-          BddNode(variable, kept_lo, kept_hi)
+          bdd_or(bdd_and(var0, kept_lo), bdd_and(var1, kept_hi))
         }
       }
   }
@@ -745,15 +784,19 @@ pub fn face_agreement_region(
   for _i in 0..<dl {
     assignment.push(-1)
   }
+  let ty_term = quote_ty(level, dl, ty)
+  let a_term = quote_at(level, dl, ty, a)
+  let b_term = quote_at(level, dl, ty, b)
   agreement_bdd_walk(
     region,
     0,
+    agreement_relevant_vars(ty_term, a_term, b_term, dl),
     assignment,
     level,
     dl,
-    quote_ty(level, dl, ty),
-    quote_at(level, dl, ty, a),
-    quote_at(level, dl, ty, b),
+    ty_term,
+    a_term,
+    b_term,
     fresh_term_env(level),
   )
 }
@@ -829,7 +872,8 @@ pub fn dsystem_repair_to_base(
 ///|
 fn agreement_face_walk(
   region : Bdd,
-  variable : Int32,
+  rel_index : Int32,
+  relevant : Array[Int32],
   assignment : Array[Int32],
   level : Int32,
   dl : Int32,
@@ -848,24 +892,16 @@ fn agreement_face_walk(
         // assignment: agreement holds on the whole remaining
         // subcube, interiors included.
         face_of_bdd(region)
-      } else if variable >= dl {
+      } else if rel_index >= relevant.length() {
         FBot
       } else {
-        let (lo, hi) = match region {
-          BddOne => (BddOne, BddOne)
-          BddNode(v, l, h) =>
-            if v == variable {
-              (l, h)
-            } else if v > variable {
-              (region, region)
-            } else {
-              (BddZero, BddZero)
-            }
-          BddZero => (BddZero, BddZero)
-        }
+        let variable = relevant[rel_index]
+        let lo = bdd_tree_cofactor(region, variable, false)
+        let hi = bdd_tree_cofactor(region, variable, true)
         let kept_lo = agreement_face_walk(
           lo,
-          variable + 1,
+          rel_index + 1,
+          relevant,
           assignment_with(assignment, variable, 0),
           level,
           dl,
@@ -876,7 +912,8 @@ fn agreement_face_walk(
         )
         let kept_hi = agreement_face_walk(
           hi,
-          variable + 1,
+          rel_index + 1,
+          relevant,
           assignment_with(assignment, variable, 1),
           level,
           dl,
@@ -937,15 +974,19 @@ pub fn face_agreement_face(
   for _i in 0..<dl {
     assignment.push(-1)
   }
+  let ty_term = quote_ty(level, dl, ty)
+  let a_term = quote_at(level, dl, ty, a)
+  let b_term = quote_at(level, dl, ty, b)
   agreement_face_walk(
     region,
     0,
+    agreement_relevant_vars(ty_term, a_term, b_term, dl),
     assignment,
     level,
     dl,
-    quote_ty(level, dl, ty),
-    quote_at(level, dl, ty, a),
-    quote_at(level, dl, ty, b),
+    ty_term,
+    a_term,
+    b_term,
     fresh_term_env(level),
   )
 }
@@ -1066,6 +1107,147 @@ pub fn dsystem_repair_to_base_exact(
     repaired_branches: repaired,
     compatible: dsystem_compatible_with_base(
       level, dlevel, line, restricted_system, base,
+    ),
+  }
+}
+
+///|
+pub struct DSystemRepairSupplemented {
+  system : DSystem
+  base_removed_region : Bdd
+  repaired_branches : Int32
+  added_branches : Int32
+  rejected_candidates : Int32
+  compatible : Bool
+}
+
+///|
+fn dsystem_try_accept(
+  level : Int32,
+  dlevel : Int32,
+  line : (Dim) -> DValue,
+  accepted : Array[DTubeBranch],
+  branch : DTubeBranch,
+  base : DValue,
+) -> Bool {
+  let tentative : Array[DTubeBranch] = []
+  for i in 0..<accepted.length() {
+    tentative.push(accepted[i])
+  }
+  tentative.push(branch)
+  dsystem_compatible_with_base(level, dlevel, line, dsystem_of(tentative), base)
+}
+
+///|
+/// Repair with supplementation.  Original branches are first
+/// restricted to their exact base-agreement faces and then
+/// greedily accepted, in order, whenever the tentative system
+/// remains fully compatible (base agreement at dimension 0 and
+/// pairwise agreement on overlaps); candidate branches are then
+/// offered under exactly the same verifiable condition and are
+/// added only when the whole tentative system checks.  The
+/// result is an order-dependent maximal compatible subsystem of
+/// the restricted originals plus accepted candidates -- not a
+/// maximum one -- and every rejection is counted.  This
+/// complements the deletion-only repairs above: branches removed
+/// or never present can be restored from a candidate pool, but
+/// only through the same compatibility audit as everything else.
+pub fn dsystem_repair_with_candidates(
+  level : Int32,
+  dlevel : Int32,
+  line : (Dim) -> DValue,
+  system : DSystem,
+  base : DValue,
+  candidates : Array[DTubeBranch],
+) -> DSystemRepairSupplemented {
+  let mut nvars = dsystem_nvars(system, dlevel)
+  for i in 0..<candidates.length() {
+    let m = face_nvars_sem(candidates[i].face)
+    if m > nvars {
+      nvars = m
+    }
+  }
+  let accepted : Array[DTubeBranch] = []
+  let mut removed = BddZero
+  let mut repaired = 0
+  let mut added = 0
+  let mut rejected = 0
+  for i in 0..<system.branches.length() {
+    let br = system.branches[i]
+    if face_is_bot_sem(br.face) {
+      continue
+    }
+    let region = bdd_of_face(br.face, nvars)
+    let agreement = face_agreement_face(
+      level,
+      dlevel,
+      br.face,
+      line(DZero),
+      (br.path)(DZero),
+      base,
+    )
+    let agreement_bdd = bdd_of_face(agreement, nvars)
+    let mut counted = false
+    if agreement_bdd != region {
+      repaired = repaired + 1
+      counted = true
+      removed = bdd_or(removed, bdd_and(region, bdd_not(agreement_bdd)))
+    }
+    if agreement == FBot {
+      continue
+    }
+    let restricted_branch = tube_branch(agreement, br.path)
+    if dsystem_try_accept(
+        level, dlevel, line, accepted, restricted_branch, base,
+      ) {
+      accepted.push(restricted_branch)
+    } else {
+      // Dropped for pairwise incompatibility with an earlier
+      // accepted branch: its whole retained region leaves the
+      // repaired system's domain.
+      if !counted {
+        repaired = repaired + 1
+      }
+      removed = bdd_or(removed, agreement_bdd)
+    }
+  }
+  for i in 0..<candidates.length() {
+    let br = candidates[i]
+    if face_is_bot_sem(br.face) {
+      rejected = rejected + 1
+      continue
+    }
+    let agreement = face_agreement_face(
+      level,
+      dlevel,
+      br.face,
+      line(DZero),
+      (br.path)(DZero),
+      base,
+    )
+    if agreement == FBot {
+      rejected = rejected + 1
+      continue
+    }
+    let restricted_branch = tube_branch(agreement, br.path)
+    if dsystem_try_accept(
+        level, dlevel, line, accepted, restricted_branch, base,
+      ) {
+      accepted.push(restricted_branch)
+      added = added + 1
+    } else {
+      rejected = rejected + 1
+    }
+  }
+  let repaired_system = dsystem_of(accepted)
+  DSystemRepairSupplemented::{
+    system: repaired_system,
+    base_removed_region: removed,
+    repaired_branches: repaired,
+    added_branches: added,
+    rejected_candidates: rejected,
+    compatible: dsystem_compatible_with_base(
+      level, dlevel, line, repaired_system, base,
     ),
   }
 }

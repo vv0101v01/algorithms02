@@ -369,3 +369,52 @@ pub fn dterm_children(t : DTerm) -> Array[DTerm] {
     _ => []
   }
 }
+
+///|
+fn dterm_dim_vars_into(t : DTerm, acc : Array[Int32]) -> Unit {
+  match t {
+    DPartial(branches) =>
+      for i in 0..<branches.length() {
+        face_vars_into(branches[i].face, acc)
+      }
+    DAppDim(_, d) => dim_vars_into(d, acc)
+    DCoe(_, r, s2, _) => {
+      dim_vars_into(r, acc)
+      dim_vars_into(s2, acc)
+    }
+    DComp(_, tubes, _) | DHComp(_, tubes, _) =>
+      for i in 0..<tubes.length() {
+        face_vars_into(tubes[i].face, acc)
+      }
+    DHFill(_, tubes, _, d) => {
+      for i in 0..<tubes.length() {
+        face_vars_into(tubes[i].face, acc)
+      }
+      dim_vars_into(d, acc)
+    }
+    DHitIntro(_, _, _, _, dims) =>
+      for i in 0..<dims.length() {
+        dim_vars_into(dims[i], acc)
+      }
+    DGlueEquiv(_, branches) =>
+      for i in 0..<branches.length() {
+        face_vars_into(branches[i].face, acc)
+      }
+    _ => ()
+  }
+  let children = dterm_children(t)
+  for i in 0..<children.length() {
+    dterm_dim_vars_into(children[i], acc)
+  }
+}
+
+///|
+/// Dimension variables occurring in dimension and face positions
+/// of a term, sorted increasingly.  Embedded schema descriptors
+/// are not expanded (their internal dimensions are schema-local,
+/// as in `dterm_children`).
+pub fn dterm_dim_vars(t : DTerm) -> Array[Int32] {
+  let acc : Array[Int32] = []
+  dterm_dim_vars_into(t, acc)
+  sort_ints(acc)
+}

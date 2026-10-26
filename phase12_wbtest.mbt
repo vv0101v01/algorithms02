@@ -20,3 +20,11 @@ test "phase12: self-family Bush recursion, gather shapes and dependent Self para
 test "phase12: HOU pattern MGU, flex-flex intersection, pruning and residuals" {
   inspect(check_hou_pattern_mgu_and_residuals(), content="true")
 }
+
+///|
+test "phase12: structural agreement regions and candidate-supplemented repair" {
+  inspect(
+    check_dsystem_structural_agreement_and_supplementation(),
+    content="true",
+  )
+}
