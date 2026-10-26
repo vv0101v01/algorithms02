@@ -4,7 +4,7 @@
 // File layout (all integers little-endian):
 //
 //   bytes  0..8   magic `CHMODBIN`
-//          8..10  binary format version (u16, currently 1)
+//          8..10  binary format version (u16; see version policy)
 //         10..12  flags (u16, currently 0)
 //         12..16  payload length (i32 bit pattern, nonnegative)
 //         16..20  DJB2-xor checksum of the payload (i32 bit pattern)
@@ -51,16 +51,72 @@ pub extend ModuleBinaryLoad with Eq::{not_equal, equal}
 ///|
 /// The binary layout version written by this build.  Version 2
 /// payloads extend the version 1 payload with a producer string
-/// and admit tag-8 schema functor nodes (`DFunctorFamily`); the
-/// loader accepts both versions.
+/// and admit tag-8 schema functor nodes (`DFunctorFamily`).
+/// Version 3 admits tag-9 self-family functor nodes and encodes
+/// repeated `DTerm` subterms by back-reference into a shared
+/// per-payload term table (a DAG codec): a subterm of at least
+/// `module_binary_dag_min_nodes` nodes is written in full once,
+/// and later occurrences are a one-byte reference tag with the
+/// table index.  The loader accepts all three versions.
 pub fn compiled_module_binary_format_version() -> Int32 {
-  2
+  3
 }
 
 ///|
 /// All binary layout versions this loader can read.
 pub fn compiled_module_binary_supported_versions() -> Array[Int32] {
-  [1, 2]
+  [1, 2, 3]
+}
+
+///|
+/// Machine-readable version policy for the compiled-module
+/// format: the current written version, every readable version,
+/// and the oldest version this build can still write on request.
+pub struct BinaryVersionPolicy {
+  current : Int32
+  supported : Array[Int32]
+  oldest_writable : Int32
+} derive(Debug, Eq)
+
+///|
+pub extend BinaryVersionPolicy with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend BinaryVersionPolicy with Eq::{not_equal, equal}
+
+///|
+pub fn compiled_module_binary_version_policy() -> BinaryVersionPolicy {
+  BinaryVersionPolicy::{
+    current: compiled_module_binary_format_version(),
+    supported: compiled_module_binary_supported_versions(),
+    oldest_writable: 1,
+  }
+}
+
+///|
+/// Highest version present in both lists, or -1 when the two
+/// sides share no version.
+pub fn binary_negotiate_version(
+  supported : Array[Int32],
+  peer_versions : Array[Int32],
+) -> Int32 {
+  let mut best = -1
+  for i in 0..<supported.length() {
+    if supported[i] > best && contains_int(peer_versions, supported[i]) {
+      best = supported[i]
+    }
+  }
+  best
+}
+
+///|
+pub fn compiled_module_binary_negotiate_version(
+  peer_versions : Array[Int32],
+) -> Int32 {
+  binary_negotiate_version(
+    compiled_module_binary_supported_versions(),
+    peer_versions,
+  )
 }
 
 ///|
@@ -82,6 +138,10 @@ pub fn compiled_module_binary_version_of(bytes : Array[Int32]) -> Int32 {
 ///|
 priv struct ModuleBinWriter {
   bytes : Array[Int32]
+  version : Int32
+  /// Completed large subterms already written in this payload,
+  /// keyed by cache key, for the v3 DAG term codec.
+  term_table : Array[(String, DTerm)]
 }
 
 ///|
@@ -90,19 +150,21 @@ priv struct ModuleBinReader {
   mut pos : Int32
   mut status : ModuleBinaryStatus
   /// Binary layout version being read; version-gated payload
-  /// nodes (tag-8 functors, the v2 producer extension) consult
-  /// this field.
+  /// nodes (tag-8/9 functors, the v2 producer extension, the v3
+  /// DAG term references) consult this field.
   version : Int32
+  /// Completed large subterms, in writer registration order.
+  term_table : Array[DTerm]
 }
 
 ///|
 fn module_bin_writer_new() -> ModuleBinWriter {
-  { bytes: [], }
+  { bytes: [], version: 2, term_table: [], }
 }
 
 ///|
-fn module_bin_reader_new(bytes : Array[Int32]) -> ModuleBinReader {
-  { bytes, pos: 0, status: ModuleBinaryOk, version: 2, }
+fn module_bin_writer_new_versioned(version : Int32) -> ModuleBinWriter {
+  { bytes: [], version, term_table: [], }
 }
 
 ///|
@@ -110,7 +172,7 @@ fn module_bin_reader_new_versioned(
   bytes : Array[Int32],
   version : Int32,
 ) -> ModuleBinReader {
-  { bytes, pos: 0, status: ModuleBinaryOk, version, }
+  { bytes, pos: 0, status: ModuleBinaryOk, version, term_table: [], }
 }
 
 ///|
@@ -454,7 +516,33 @@ fn br_level_expr(r : ModuleBinReader, depth : Int32) -> DLevelExpr? {
 }
 
 ///|
+/// Minimum tree size for a subterm to enter the v3 shared term
+/// table; below this a back-reference would not pay for itself.
+fn module_binary_dag_min_nodes() -> Int32 {
+  6
+}
+
+///|
 fn bw_term(w : ModuleBinWriter, value : DTerm) -> Unit {
+  if w.version >= 3 &&
+    dterm_tree_node_count(value) >= module_binary_dag_min_nodes() {
+    let key = dterm_cache_key(value)
+    for i in 0..<w.term_table.length() {
+      if w.term_table[i].0 == key && w.term_table[i].1 == value {
+        bw_u8(w, 255)
+        bw_i32(w, i)
+        return
+      }
+    }
+    bw_term_node(w, value)
+    w.term_table.push((key, value))
+  } else {
+    bw_term_node(w, value)
+  }
+}
+
+///|
+fn bw_term_node(w : ModuleBinWriter, value : DTerm) -> Unit {
   match value {
     DTVar(a) => {
       bw_u8(w, 0)
@@ -719,7 +807,38 @@ fn br_term(r : ModuleBinReader, depth : Int32) -> DTerm? {
   if br_depth_failed(r, depth) {
     return None
   }
-  match br_u8(r) {
+  let tag = br_u8(r)
+  if tag == 255 {
+    if r.version < 3 {
+      if r.status == ModuleBinaryOk {
+        r.status = ModuleBinaryUnsupportedVersion
+      }
+      return None
+    }
+    let id = br_i32(r)
+    if !br_require_ok(r) || id < 0 || id >= r.term_table.length() {
+      if r.status == ModuleBinaryOk {
+        r.status = ModuleBinaryMalformed
+      }
+      return None
+    }
+    return Some(r.term_table[id])
+  }
+  let result = br_term_from_tag(r, depth, tag)
+  match result {
+    Some(term) =>
+      if r.version >= 3 &&
+        dterm_tree_node_count(term) >= module_binary_dag_min_nodes() {
+        r.term_table.push(term)
+      }
+    None => ()
+  }
+  result
+}
+
+///|
+fn br_term_from_tag(r : ModuleBinReader, depth : Int32, tag : Int32) -> DTerm? {
+  match tag {
     0 => {
       let a = br_i32(r)
       if !br_require_ok(r) {
@@ -1580,7 +1699,7 @@ fn bw_positive_functor(w : ModuleBinWriter, value : DPositiveFunctor) -> Unit {
       bw_terms(w, index)
     }
     DFunctorSelfFamily(pargs, index) => {
-      // Tag 9, layout version 2 and above: parameter arguments
+      // Tag 9, layout version 3 and above: parameter arguments
       // and indices, with no target spec (the enclosing
       // declaration is the target).
       bw_u8(w, 9)
@@ -1724,7 +1843,7 @@ fn br_positive_functor(r : ModuleBinReader, depth : Int32) -> DPositiveFunctor? 
       Some(DFunctorFamily(spec, pargs, index))
     }
     9 => {
-      if r.version < 2 {
+      if r.version < 3 {
         if r.status == ModuleBinaryOk {
           r.status = ModuleBinaryUnsupportedVersion
         }
@@ -2348,7 +2467,7 @@ fn compiled_module_to_binary_versioned(
   compiled : CompiledModule,
   version : Int32,
 ) -> Array[Int32] {
-  let payload_writer = module_bin_writer_new()
+  let payload_writer = module_bin_writer_new_versioned(version)
   bw_compiled_payload_versioned(payload_writer, compiled, version)
   let payload = payload_writer.bytes
   let writer = module_bin_writer_new()
@@ -2376,13 +2495,22 @@ pub fn compiled_module_to_binary(compiled : CompiledModule) -> Array[Int32] {
 }
 
 ///|
-/// Serialize in the legacy version 1 layout.  Returns `None` when
-/// the module uses v2-only payload features (for example a
-/// `DFunctorFamily` schema node): the candidate bytes are parsed
-/// back under v1 rules and must reproduce the module's interface
-/// encoding and entry encodings exactly.
-pub fn compiled_module_to_binary_v1(compiled : CompiledModule) -> Array[Int32]? {
-  let bytes = compiled_module_to_binary_versioned(compiled, 1)
+/// Serialize at a requested supported layout version.  Returns
+/// `None` when the module uses features the requested version
+/// cannot express (for example a tag-9 self-family functor node
+/// below version 3, or a tag-8 family node below version 2):
+/// the candidate bytes are parsed back under that version's
+/// rules and must reproduce the module's interface encoding and
+/// entry encodings exactly (the producer stamp, absent in v1,
+/// is the one field not compared).
+pub fn compiled_module_to_binary_version(
+  compiled : CompiledModule,
+  version : Int32,
+) -> Array[Int32]? {
+  if !contains_int(compiled_module_binary_supported_versions(), version) {
+    return None
+  }
+  let bytes = compiled_module_to_binary_versioned(compiled, version)
   match compiled_module_from_binary(bytes) {
     Some(back) =>
       if back.module_path == compiled.module_path &&
@@ -2399,6 +2527,37 @@ pub fn compiled_module_to_binary_v1(compiled : CompiledModule) -> Array[Int32]? 
       }
     None => None
   }
+}
+
+///|
+/// Serialize in the legacy version 1 layout.
+pub fn compiled_module_to_binary_v1(compiled : CompiledModule) -> Array[Int32]? {
+  compiled_module_to_binary_version(compiled, 1)
+}
+
+///|
+/// Serialize for a peer advertising `peer_versions`: the highest
+/// mutually supported version that can express this module is
+/// used, trying lower common versions when a higher one cannot
+/// (which in practice means the negotiated version already
+/// decides).  `None` when no common version can express it.
+pub fn compiled_module_to_binary_for_peer(
+  compiled : CompiledModule,
+  peer_versions : Array[Int32],
+) -> Array[Int32]? {
+  let supported = compiled_module_binary_supported_versions()
+  let mut index = supported.length() - 1
+  while index >= 0 {
+    let version = supported[index]
+    if contains_int(peer_versions, version) {
+      match compiled_module_to_binary_version(compiled, version) {
+        Some(bytes) => return Some(bytes)
+        None => ()
+      }
+    }
+    index = index - 1
+  }
+  None
 }
 
 ///|
@@ -2460,7 +2619,7 @@ pub fn compiled_module_load_binary_report(
     }
   }
   let header_version = module_binary_u16_at(bytes, 8)
-  if (header_version != 1 && header_version != 2) ||
+  if (header_version != 1 && header_version != 2 && header_version != 3) ||
     module_binary_u16_at(bytes, 10) != 0 {
     return module_binary_failure(ModuleBinaryUnsupportedVersion)
   }
@@ -2760,12 +2919,12 @@ pub fn check_module_binary_versions_and_store() -> Bool {
     None => return false
   }
   if compiled.producer != compiled_module_producer_default() ||
-    compiled_module_binary_format_version() != 2 ||
-    compiled_module_binary_supported_versions() != [1, 2] {
+    compiled_module_binary_format_version() != 3 ||
+    compiled_module_binary_supported_versions() != [1, 2, 3] {
     return false
   }
   let bytes = compiled_module_to_binary(compiled)
-  if compiled_module_binary_version_of(bytes) != 2 ||
+  if compiled_module_binary_version_of(bytes) != 3 ||
     compiled_module_binary_version_of([]) != -1 ||
     compiled_module_binary_version_of([1, 2, 3]) != -1 {
     return false
@@ -2795,7 +2954,7 @@ pub fn check_module_binary_versions_and_store() -> Bool {
     Some(b) => b
     None => return false
   }
-  if compiled_module_binary_version_of(migrated) != 2 {
+  if compiled_module_binary_version_of(migrated) != 3 {
     return false
   }
   match compiled_module_load_binary(migrated) {
@@ -2812,7 +2971,7 @@ pub fn check_module_binary_versions_and_store() -> Bool {
   for i in 0..<bytes.length() {
     futuristic.push(bytes[i])
   }
-  futuristic[8] = 3
+  futuristic[8] = 4
   if compiled_module_load_binary_report(futuristic).status !=
     ModuleBinaryUnsupportedVersion ||
     compiled_module_migrate_binary(futuristic) != None {

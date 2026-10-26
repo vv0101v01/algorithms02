@@ -80,6 +80,40 @@ pub fn algc_zero(@algebra.QPoly) -> AlgC
 
 pub fn all_checks_pass() -> Bool
 
+pub fn artifact_byte_store_new(read~ : (String) -> Array[Int32]?, write~ : (String, Array[Int32]) -> Bool, remove~ : (String) -> Bool, list~ : () -> Array[String]) -> ArtifactByteStore
+
+pub fn artifact_kind_compiled_module() -> String
+
+pub fn artifact_kind_schema_registry() -> String
+
+pub fn artifact_memory_byte_store_new() -> ArtifactByteStore
+
+pub fn artifact_repository_get(ArtifactRepository, String, String) -> Array[Int32]?
+
+pub fn artifact_repository_get_compiled_module(ArtifactRepository, String) -> CompiledModule?
+
+pub fn artifact_repository_get_registry_snapshot(ArtifactRepository, String) -> DSchemaRegistrySnapshot?
+
+pub fn artifact_repository_list(ArtifactRepository) -> Array[ArtifactRecord]
+
+pub fn artifact_repository_new(ArtifactByteStore, prefix? : String) -> ArtifactRepository
+
+pub fn artifact_repository_put(ArtifactRepository, String, String, Array[Int32], format_version? : Int32) -> ArtifactRecord?
+
+pub fn artifact_repository_put_compiled_module(ArtifactRepository, CompiledModule, peer_versions? : Array[Int32]) -> ArtifactRecord?
+
+pub fn artifact_repository_put_registry_snapshot(ArtifactRepository, String, DSchemaRegistrySnapshot, peer_versions? : Array[Int32]) -> ArtifactRecord?
+
+pub fn artifact_repository_record(ArtifactRepository, String, String) -> ArtifactRecord?
+
+pub fn artifact_repository_recover(ArtifactRepository) -> Int32
+
+pub fn artifact_repository_remove(ArtifactRepository, String, String) -> Bool
+
+pub fn artifact_repository_stats(ArtifactRepository) -> ArtifactRepositoryStats
+
+pub fn artifact_repository_verify_all(ArtifactRepository) -> Bool
+
 pub fn as_equiv_type(DValue) -> DEquivTypeParts?
 
 pub fn as_glue(DValue) -> DGlueParts?
@@ -181,6 +215,8 @@ pub fn bdd_tree_of_dag(BddManager, Int32) -> Bdd
 pub fn bdd_var_order_candidates(Face, Int32) -> Array[Array[Int32]]
 
 pub fn bdd_worst_case_nodes(Int32) -> Int32
+
+pub fn binary_negotiate_version(Array[Int32], Array[Int32]) -> Int32
 
 pub fn bool_not_equiv_term() -> DTerm
 
@@ -304,6 +340,8 @@ pub fn certify_projector(CertMat) -> ProjectorCertificate
 
 pub fn check_adjoint_equivalence_and_fibers() -> Bool
 
+pub fn check_artifact_repository_and_dag_codec() -> Bool
+
 pub fn check_ast_bool_elim() -> Bool
 
 pub fn check_ast_coe_terms() -> Bool
@@ -393,6 +431,8 @@ pub fn check_dsystem_compatibility() -> Bool
 pub fn check_dsystem_first_match_nf() -> Bool
 
 pub fn check_dsystem_repair_phase9() -> Bool
+
+pub fn check_dsystem_structural_agreement_and_supplementation() -> Bool
 
 pub fn check_dterm_hash_consing() -> Bool
 
@@ -714,11 +754,15 @@ pub fn compiled_module_binary_format_version() -> Int32
 
 pub fn compiled_module_binary_from_hex(String) -> Array[Int32]?
 
+pub fn compiled_module_binary_negotiate_version(Array[Int32]) -> Int32
+
 pub fn compiled_module_binary_supported_versions() -> Array[Int32]
 
 pub fn compiled_module_binary_to_hex(Array[Int32]) -> String
 
 pub fn compiled_module_binary_version_of(Array[Int32]) -> Int32
+
+pub fn compiled_module_binary_version_policy() -> BinaryVersionPolicy
 
 pub fn compiled_module_env_add(CompiledModuleEnv, CompiledModule) -> Bool
 
@@ -758,7 +802,11 @@ pub fn compiled_module_store_stats(CompiledModuleStore) -> CompiledModuleStoreSt
 
 pub fn compiled_module_to_binary(CompiledModule) -> Array[Int32]
 
+pub fn compiled_module_to_binary_for_peer(CompiledModule, Array[Int32]) -> Array[Int32]?
+
 pub fn compiled_module_to_binary_v1(CompiledModule) -> Array[Int32]?
+
+pub fn compiled_module_to_binary_version(CompiledModule, Int32) -> Array[Int32]?
 
 pub fn compiled_module_to_module_def(CompiledModule) -> ModuleDef
 
@@ -2188,7 +2236,13 @@ pub fn schema_registry_binary_from_hex(String) -> Array[Int32]?
 
 pub fn schema_registry_binary_roundtrip_ok(DSchemaRegistry) -> Bool
 
+pub fn schema_registry_binary_supported_versions() -> Array[Int32]
+
 pub fn schema_registry_binary_to_hex(Array[Int32]) -> String
+
+pub fn schema_registry_binary_version_of(Array[Int32]) -> Int32
+
+pub fn schema_registry_binary_version_policy() -> BinaryVersionPolicy
 
 pub fn schema_registry_from_binary(Array[Int32]) -> DSchemaRegistry?
 
@@ -2225,6 +2279,10 @@ pub fn schema_registry_snapshot_from_binary(Array[Int32]) -> DSchemaRegistrySnap
 pub fn schema_registry_snapshot_load_binary_report(Array[Int32]) -> DSchemaRegistryBinaryLoad
 
 pub fn schema_registry_snapshot_to_binary(DSchemaRegistrySnapshot) -> Array[Int32]
+
+pub fn schema_registry_snapshot_to_binary_for_peer(DSchemaRegistrySnapshot, Array[Int32]) -> Array[Int32]?
+
+pub fn schema_registry_snapshot_to_binary_version(DSchemaRegistrySnapshot, Int32) -> Array[Int32]?
 
 pub fn schema_registry_stats(DSchemaRegistry) -> (Int32, Int32, Int32, Int32, Int32, Int32, Int32)
 
@@ -2603,6 +2661,43 @@ pub struct AlgCertSquare {
   coeffs : Array[Array[Array[AlgC]]]
 }
 
+pub struct ArtifactByteStore {
+  read : (String) -> Array[Int32]?
+  write : (String, Array[Int32]) -> Bool
+  remove : (String) -> Bool
+  list : () -> Array[String]
+}
+
+pub struct ArtifactRecord {
+  kind : String
+  name : String
+  blob_key : String
+  byte_length : Int32
+  hash_a : Int32
+  hash_b : Int32
+  format_version : Int32
+} derive(Eq, @debug.Debug)
+pub fn ArtifactRecord::equal(Self, Self) -> Bool
+pub fn ArtifactRecord::not_equal(Self, Self) -> Bool
+pub fn ArtifactRecord::to_repr(Self) -> @debug.Repr
+
+pub struct ArtifactRepository {
+  store : ArtifactByteStore
+  prefix : String
+  mut puts : Int32
+  mut recoveries : Int32
+}
+
+pub struct ArtifactRepositoryStats {
+  records : Int32
+  total_bytes : Int32
+  puts : Int32
+  recoveries : Int32
+} derive(Eq, @debug.Debug)
+pub fn ArtifactRepositoryStats::equal(Self, Self) -> Bool
+pub fn ArtifactRepositoryStats::not_equal(Self, Self) -> Bool
+pub fn ArtifactRepositoryStats::to_repr(Self) -> @debug.Repr
+
 pub enum Bdd {
   BddZero
   BddOne
@@ -2666,6 +2761,15 @@ pub struct BddOptimizedBuild {
   attempts : Int32
   improved : Bool
 }
+
+pub struct BinaryVersionPolicy {
+  current : Int32
+  supported : Array[Int32]
+  oldest_writable : Int32
+} derive(Eq, @debug.Debug)
+pub fn BinaryVersionPolicy::equal(Self, Self) -> Bool
+pub fn BinaryVersionPolicy::not_equal(Self, Self) -> Bool
+pub fn BinaryVersionPolicy::to_repr(Self) -> @debug.Repr
 
 pub struct CMat {
   n : Int32

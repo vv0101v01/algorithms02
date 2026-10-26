@@ -455,7 +455,7 @@ pub fn check_family_functor_persistence() -> Bool {
     None => return false
   }
   let bytes = compiled_module_to_binary(compiled)
-  if compiled_module_binary_version_of(bytes) != 2 {
+  if compiled_module_binary_version_of(bytes) != 3 {
     return false
   }
   match compiled_module_load_binary(bytes) {

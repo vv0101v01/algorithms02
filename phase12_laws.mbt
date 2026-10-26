@@ -552,3 +552,174 @@ pub fn check_dsystem_structural_agreement_and_supplementation() -> Bool {
   }
   dsystem_compatible_with_base(0, 1, line, repaired.system, DVZeroNat)
 }
+
+///|
+/// Phase 12: shared DAG term codec, version negotiation, and
+/// the durable artifact repository.  A registry snapshot whose
+/// constructors repeat one large external type is strictly
+/// smaller under the v3-codec registry layout than under the
+/// v2-codec layout, and both parse back exactly.  A module with
+/// a tag-8 family functor negotiates to v2 for a v1+v2 peer, is
+/// refused for a v1-only peer, and uses v3 for a v3 peer.  The
+/// repository round-trips a compiled module and a registry
+/// snapshot, refuses a corrupted blob, repairs it on re-put,
+/// and rebuilds a destroyed index from commit manifests.
+pub fn check_artifact_repository_and_dag_codec() -> Bool {
+  if compiled_module_binary_version_policy() !=
+    BinaryVersionPolicy::{
+      current: 3,
+      supported: [1, 2, 3],
+      oldest_writable: 1,
+    } ||
+    schema_registry_binary_version_policy() !=
+    BinaryVersionPolicy::{ current: 2, supported: [1, 2], oldest_writable: 1, } ||
+    compiled_module_binary_negotiate_version([1, 2]) != 2 ||
+    compiled_module_binary_negotiate_version([9]) != -1 {
+    return false
+  }
+  // DAG codec: one large type repeated across constructors.
+  let big = DPi(DNatTy, DPi(DNatTy, DPi(DNatTy, DNatTy)))
+  let ctors : Array[DConstructorSpec] = []
+  for i in 0..<8 {
+    ctors.push(
+      dconstructor_spec("c" + i.to_string(), [darg_external("f", big)]),
+    )
+  }
+  let dag_spec = dinductive_spec("DagShareS", 0, [], [], ctors)
+  let dag_registry = schema_registry_new()
+  ignore(schema_registry_register_inductive(dag_registry, dag_spec))
+  let dag_snapshot = schema_registry_snapshot(dag_registry)
+  let plain = match
+    schema_registry_snapshot_to_binary_version(dag_snapshot, 1) {
+    Some(v) => v
+    None => return false
+  }
+  let shared = match
+    schema_registry_snapshot_to_binary_version(dag_snapshot, 2) {
+    Some(v) => v
+    None => return false
+  }
+  if shared.length() >= plain.length() ||
+    schema_registry_binary_version_of(shared) != 2 ||
+    schema_registry_binary_version_of(plain) != 1 {
+    return false
+  }
+  match schema_registry_snapshot_from_binary(shared) {
+    Some(back) =>
+      if back.inductive_specs != dag_snapshot.inductive_specs {
+        return false
+      }
+    None => return false
+  }
+  // Negotiation against a tag-8 family module.
+  let rose = dinductive_spec(
+    "NegRoseS",
+    0,
+    [dtelescope_entry("A", DUniv(0))],
+    [],
+    [
+      dconstructor_spec("leaf", [darg_external("label", DTVar(0))]),
+      dconstructor_spec("node", [
+        darg_nested(
+          "children",
+          dfunctor_family(list_schema(), params=[dfunctor_param_self()]),
+        ),
+      ]),
+    ],
+  )
+  let rose_module = module_def("Demo.NegRose", decls=[
+    module_decl("RoseBool", DUniv(0), DInductive(rose, [DBoolTy])),
+  ])
+  let rose_compiled = match module_compile(module_env_new(), rose_module, []) {
+    Some(v) => v
+    None => return false
+  }
+  if compiled_module_to_binary_for_peer(rose_compiled, [1]) != None {
+    return false
+  }
+  match compiled_module_to_binary_for_peer(rose_compiled, [1, 2]) {
+    Some(bytes) =>
+      if compiled_module_binary_version_of(bytes) != 2 {
+        return false
+      }
+    None => return false
+  }
+  match compiled_module_to_binary_for_peer(rose_compiled, [2, 3]) {
+    Some(bytes) =>
+      if compiled_module_binary_version_of(bytes) != 3 {
+        return false
+      }
+    None => return false
+  }
+  // Repository behaviour over the in-memory byte store.
+  let compiled = match module_compile(module_env_new(), bool_ops_module(), []) {
+    Some(v) => v
+    None => return false
+  }
+  let store = artifact_memory_byte_store_new()
+  let repo = artifact_repository_new(store)
+  let module_record = match
+    artifact_repository_put_compiled_module(repo, compiled) {
+    Some(v) => v
+    None => return false
+  }
+  if module_record.format_version != 3 {
+    return false
+  }
+  match artifact_repository_get_compiled_module(repo, compiled.module_path) {
+    Some(back) => if back != compiled { return false }
+    None => return false
+  }
+  match artifact_repository_put_registry_snapshot(repo, "dag", dag_snapshot) {
+    Some(_) => ()
+    None => return false
+  }
+  match artifact_repository_get_registry_snapshot(repo, "dag") {
+    Some(back) =>
+      if back.inductive_specs != dag_snapshot.inductive_specs {
+        return false
+      }
+    None => return false
+  }
+  if artifact_repository_stats(repo).records != 2 ||
+    !artifact_repository_verify_all(repo) {
+    return false
+  }
+  // A corrupted blob is refused, then repaired by re-putting.
+  let blob = match (store.read)(module_record.blob_key) {
+    Some(v) => v
+    None => return false
+  }
+  blob[blob.length() - 1] = (blob[blob.length() - 1] + 1) & 255
+  ignore((store.write)(module_record.blob_key, blob))
+  if artifact_repository_get_compiled_module(repo, compiled.module_path) != None {
+    return false
+  }
+  match artifact_repository_put_compiled_module(repo, compiled) {
+    Some(_) => ()
+    None => return false
+  }
+  match artifact_repository_get_compiled_module(repo, compiled.module_path) {
+    Some(back) => if back != compiled { return false }
+    None => return false
+  }
+  // A destroyed index is rebuilt from the commit manifests.
+  ignore((store.write)("artifacts/index.bin", [1, 2, 3]))
+  if artifact_repository_get_compiled_module(repo, compiled.module_path) != None ||
+    artifact_repository_recover(repo) != 2 {
+    return false
+  }
+  match artifact_repository_get_compiled_module(repo, compiled.module_path) {
+    Some(back) => if back != compiled { return false }
+    None => return false
+  }
+  if !artifact_repository_remove(repo, artifact_kind_schema_registry(), "dag") ||
+    artifact_repository_stats(repo).records != 1 {
+    return false
+  }
+  match artifact_repository_get_registry_snapshot(repo, "dag") {
+    Some(_) => return false
+    None => ()
+  }
+  artifact_repository_verify_all(repo)
+}

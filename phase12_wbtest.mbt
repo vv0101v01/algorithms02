@@ -28,3 +28,8 @@ test "phase12: structural agreement regions and candidate-supplemented repair" {
     content="true",
   )
 }
+
+///|
+test "phase12: artifact repository, DAG codec, version negotiation" {
+  inspect(check_artifact_repository_and_dag_codec(), content="true")
+}

@@ -7,7 +7,8 @@
 /// little-endian, one byte 0--255 per `Array[Int32]` element):
 ///
 ///   bytes  0..8   magic `CHREGBIN`
-///          8..10  format version (u16) = 1
+///          8..10  format version (u16); version 2 is written,
+///                 version 1 remains readable
 ///         10..12  reserved, must be 0
 ///         12..16  payload length (i32)
 ///         16..20  DJB2-xor checksum of the payload
@@ -21,8 +22,54 @@
 /// exactly like `schema_registry_restore`.
 
 ///|
+/// The registry layout version written by this build.  Version
+/// 2 payloads use the version-3 shared codec features (tag-9
+/// self-family functor nodes and the DAG term table); version 1
+/// payloads use the version-2 codec features and remain
+/// readable.
 pub fn schema_registry_binary_format_version() -> Int32 {
-  1
+  2
+}
+
+///|
+/// The registry layout version declared by a blob's header, or
+/// -1 when the header is too short or its magic disagrees.
+pub fn schema_registry_binary_version_of(bytes : Array[Int32]) -> Int32 {
+  if bytes.length() < 10 {
+    return -1
+  }
+  let magic = registry_binary_magic()
+  for i in 0..<8 {
+    if bytes[i] != magic[i] {
+      return -1
+    }
+  }
+  module_binary_u16_at(bytes, 8)
+}
+
+///|
+pub fn schema_registry_binary_supported_versions() -> Array[Int32] {
+  [1, 2]
+}
+
+///|
+pub fn schema_registry_binary_version_policy() -> BinaryVersionPolicy {
+  BinaryVersionPolicy::{
+    current: schema_registry_binary_format_version(),
+    supported: schema_registry_binary_supported_versions(),
+    oldest_writable: 1,
+  }
+}
+
+///|
+/// The shared-codec version used inside a registry payload of
+/// the given registry layout version.
+fn registry_codec_version(layout_version : Int32) -> Int32 {
+  if layout_version >= 2 {
+    3
+  } else {
+    2
+  }
 }
 
 ///|
@@ -68,10 +115,13 @@ fn bw_registry_snapshot_payload(
 }
 
 ///|
-pub fn schema_registry_snapshot_to_binary(
+fn schema_registry_snapshot_to_binary_versioned(
   snapshot : DSchemaRegistrySnapshot,
+  layout_version : Int32,
 ) -> Array[Int32] {
-  let payload_writer = module_bin_writer_new()
+  let payload_writer = module_bin_writer_new_versioned(
+    registry_codec_version(layout_version),
+  )
   bw_registry_snapshot_payload(payload_writer, snapshot)
   let payload = payload_writer.bytes
   let writer = module_bin_writer_new()
@@ -79,8 +129,8 @@ pub fn schema_registry_snapshot_to_binary(
   for i in 0..<magic.length() {
     bw_u8(writer, magic[i])
   }
-  bw_u8(writer, schema_registry_binary_format_version())
-  bw_u8(writer, schema_registry_binary_format_version() >> 8)
+  bw_u8(writer, layout_version)
+  bw_u8(writer, layout_version >> 8)
   bw_u8(writer, 0)
   bw_u8(writer, 0)
   bw_i32(writer, payload.length())
@@ -89,6 +139,65 @@ pub fn schema_registry_snapshot_to_binary(
     bw_u8(writer, payload[i])
   }
   writer.bytes
+}
+
+///|
+pub fn schema_registry_snapshot_to_binary(
+  snapshot : DSchemaRegistrySnapshot,
+) -> Array[Int32] {
+  schema_registry_snapshot_to_binary_versioned(
+    snapshot,
+    schema_registry_binary_format_version(),
+  )
+}
+
+///|
+/// Serialize a snapshot at a requested supported registry
+/// layout version, or `None` when that layout cannot express
+/// it (checked by exact re-parse, as for compiled modules).
+pub fn schema_registry_snapshot_to_binary_version(
+  snapshot : DSchemaRegistrySnapshot,
+  version : Int32,
+) -> Array[Int32]? {
+  if !contains_int(schema_registry_binary_supported_versions(), version) {
+    return None
+  }
+  let bytes = schema_registry_snapshot_to_binary_versioned(snapshot, version)
+  match schema_registry_snapshot_from_binary(bytes) {
+    Some(back) =>
+      if back.inductive_specs == snapshot.inductive_specs &&
+        back.inductive_valid == snapshot.inductive_valid &&
+        back.hit_specs == snapshot.hit_specs &&
+        back.hit_valid == snapshot.hit_valid {
+        Some(bytes)
+      } else {
+        None
+      }
+    None => None
+  }
+}
+
+///|
+/// Serialize a snapshot for a peer advertising registry
+/// layout `peer_versions`, at the highest common version that
+/// can express it.
+pub fn schema_registry_snapshot_to_binary_for_peer(
+  snapshot : DSchemaRegistrySnapshot,
+  peer_versions : Array[Int32],
+) -> Array[Int32]? {
+  let supported = schema_registry_binary_supported_versions()
+  let mut index = supported.length() - 1
+  while index >= 0 {
+    let version = supported[index]
+    if contains_int(peer_versions, version) {
+      match schema_registry_snapshot_to_binary_version(snapshot, version) {
+        Some(bytes) => return Some(bytes)
+        None => ()
+      }
+    }
+    index = index - 1
+  }
+  None
 }
 
 ///|
@@ -165,7 +274,8 @@ pub fn schema_registry_snapshot_load_binary_report(
       return registry_binary_failure(ModuleBinaryBadMagic)
     }
   }
-  if module_binary_u16_at(bytes, 8) != schema_registry_binary_format_version() ||
+  let layout_version = module_binary_u16_at(bytes, 8)
+  if !contains_int(schema_registry_binary_supported_versions(), layout_version) ||
     module_binary_u16_at(bytes, 10) != 0 {
     return registry_binary_failure(ModuleBinaryUnsupportedVersion)
   }
@@ -186,7 +296,10 @@ pub fn schema_registry_snapshot_load_binary_report(
   if module_binary_checksum(payload) != module_binary_i32_at(bytes, 16) {
     return registry_binary_failure(ModuleBinaryChecksumMismatch)
   }
-  let reader = module_bin_reader_new(payload)
+  let reader = module_bin_reader_new_versioned(
+    payload,
+    registry_codec_version(layout_version),
+  )
   let snapshot = match br_registry_snapshot_payload(reader) {
     Some(value) => value
     None => return registry_binary_failure(reader.status)
