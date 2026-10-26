@@ -821,3 +821,251 @@ pub fn dsystem_repair_to_base(
     ),
   }
 }
+
+// ---------------------------------------------------------------------------
+// Phase 11: exact (Face-valued) agreement regions and repair
+// ---------------------------------------------------------------------------
+
+///|
+fn agreement_face_walk(
+  region : Bdd,
+  variable : Int32,
+  assignment : Array[Int32],
+  level : Int32,
+  dl : Int32,
+  ty_term : DTerm,
+  a_term : DTerm,
+  b_term : DTerm,
+  term_env : DEnv,
+) -> Face {
+  match region {
+    BddZero => FBot
+    _ =>
+      if restricted_terms_conv(
+          level, dl, ty_term, a_term, b_term, term_env, assignment,
+        ) {
+        // Convertible as open terms under the current partial
+        // assignment: agreement holds on the whole remaining
+        // subcube, interiors included.
+        face_of_bdd(region)
+      } else if variable >= dl {
+        FBot
+      } else {
+        let (lo, hi) = match region {
+          BddOne => (BddOne, BddOne)
+          BddNode(v, l, h) =>
+            if v == variable {
+              (l, h)
+            } else if v > variable {
+              (region, region)
+            } else {
+              (BddZero, BddZero)
+            }
+          BddZero => (BddZero, BddZero)
+        }
+        let kept_lo = agreement_face_walk(
+          lo,
+          variable + 1,
+          assignment_with(assignment, variable, 0),
+          level,
+          dl,
+          ty_term,
+          a_term,
+          b_term,
+          term_env,
+        )
+        let kept_hi = agreement_face_walk(
+          hi,
+          variable + 1,
+          assignment_with(assignment, variable, 1),
+          level,
+          dl,
+          ty_term,
+          a_term,
+          b_term,
+          term_env,
+        )
+        let var_dim = DVar(variable)
+        if kept_lo == FBot && kept_hi == FBot {
+          FBot
+        } else if kept_lo == FBot {
+          face_simplify(FAnd(FEq1(var_dim), kept_hi))
+        } else if kept_hi == FBot {
+          face_simplify(FAnd(FEq0(var_dim), kept_lo))
+        } else if kept_lo == kept_hi {
+          // Both endpoints agree but the open check above failed,
+          // so the interior is *not* claimed: the endpoint
+          // disjunction `(i = 0) or (i = 1)` is retained exactly.
+          // A reduced BDD cannot express this without collapsing
+          // it to top, which is why the region is Face-valued.
+          face_simplify(FAnd(FOr(FEq0(var_dim), FEq1(var_dim)), kept_lo))
+        } else {
+          face_simplify(
+            FOr(FAnd(FEq0(var_dim), kept_lo), FAnd(FEq1(var_dim), kept_hi)),
+          )
+        }
+      }
+  }
+}
+
+///|
+/// The exact agreement subregion of `face` on which `a` and `b`
+/// are convertible, as a `Face` formula.  Where
+/// `face_agreement_region` (BDD-valued) must drop the 1-endpoint
+/// of a dimension whose two endpoints agree but whose interior
+/// does not, this version retains the endpoint disjunction
+/// `(i = 0) or (i = 1)`, so no agreeing part is lost.  Maximality
+/// is along every restriction path, as with the BDD version.
+pub fn face_agreement_face(
+  level : Int32,
+  dlevel : Int32,
+  face : Face,
+  ty : DValue,
+  a : DValue,
+  b : DValue,
+) -> Face {
+  let face_vars = face_nvars_sem(face)
+  let dl = if dlevel > face_vars { dlevel } else { face_vars }
+  let region = bdd_of_face(face, dl)
+  if region == BddZero {
+    return FBot
+  }
+  if conv_at(level, dlevel, ty, a, b) {
+    return face
+  }
+  let assignment : Array[Int32] = []
+  for _i in 0..<dl {
+    assignment.push(-1)
+  }
+  agreement_face_walk(
+    region,
+    0,
+    assignment,
+    level,
+    dl,
+    quote_ty(level, dl, ty),
+    quote_at(level, dl, ty, a),
+    quote_at(level, dl, ty, b),
+    fresh_term_env(level),
+  )
+}
+
+///|
+/// Independent soundness audit of an agreement face: the Boolean
+/// region of `agreement` must be contained in that of `face`, and
+/// at every vertex of the bounded dimension context where the
+/// agreement face holds, the fully restricted values must be
+/// convertible.  (Interior agreement is guaranteed constructively
+/// by the open-conversion pruning inside the walk; this audit
+/// re-checks the endpoint content exhaustively.)  Returns false
+/// if the context is too large to enumerate (more than 20 dims).
+pub fn face_agreement_face_sound(
+  level : Int32,
+  dlevel : Int32,
+  face : Face,
+  agreement : Face,
+  ty : DValue,
+  a : DValue,
+  b : DValue,
+) -> Bool {
+  let face_vars = face_nvars_sem(face)
+  let ag_vars = face_nvars_sem(agreement)
+  let mut dl = dlevel
+  if face_vars > dl {
+    dl = face_vars
+  }
+  if ag_vars > dl {
+    dl = ag_vars
+  }
+  if dl > 20 {
+    return false
+  }
+  let face_bdd = bdd_of_face(face, dl)
+  let ag_bdd = bdd_of_face(agreement, dl)
+  if bdd_and(ag_bdd, bdd_not(face_bdd)) != BddZero {
+    return false
+  }
+  let ty_term = quote_ty(level, dl, ty)
+  let a_term = quote_at(level, dl, ty, a)
+  let b_term = quote_at(level, dl, ty, b)
+  let term_env = fresh_term_env(level)
+  let total = pow2(dl)
+  for mask in 0..<total {
+    let assignment : Array[Int32] = []
+    let env : Array[Bool] = []
+    for i in 0..<dl {
+      let bit = (mask >> i) & 1
+      assignment.push(bit)
+      env.push(bit == 1)
+    }
+    if face_holds(agreement, env) &&
+      !restricted_terms_conv(
+        level, dl, ty_term, a_term, b_term, term_env, assignment,
+      ) {
+      return false
+    }
+  }
+  true
+}
+
+///|
+pub struct DSystemRepairExact {
+  system : DSystem
+  base_removed_region : Bdd
+  repaired_branches : Int32
+  compatible : Bool
+}
+
+///|
+/// Repair against a composition base using *exact* Face-valued
+/// agreement regions.  Unlike `dsystem_repair_to_base`, a branch
+/// whose value agrees with the base at both endpoints of a
+/// dimension (but not in its interior) keeps both endpoints
+/// through the face `(i = 0) or (i = 1)` instead of losing the
+/// 1-endpoint to BDD collapse.  The reported removed region is
+/// the Boolean (vertex-level) part removed; the retained faces
+/// themselves carry the finer interior information.
+pub fn dsystem_repair_to_base_exact(
+  level : Int32,
+  dlevel : Int32,
+  line : (Dim) -> DValue,
+  system : DSystem,
+  base : DValue,
+) -> DSystemRepairExact {
+  let nvars = dsystem_nvars(system, dlevel)
+  let restricted : Array[DTubeBranch] = []
+  let mut removed = BddZero
+  let mut repaired = 0
+  for i in 0..<system.branches.length() {
+    let br = system.branches[i]
+    if face_is_bot_sem(br.face) {
+      continue
+    }
+    let region = bdd_of_face(br.face, nvars)
+    let agreement = face_agreement_face(
+      level,
+      dlevel,
+      br.face,
+      line(DZero),
+      (br.path)(DZero),
+      base,
+    )
+    let agreement_bdd = bdd_of_face(agreement, nvars)
+    if agreement_bdd != region {
+      repaired = repaired + 1
+      removed = bdd_or(removed, bdd_and(region, bdd_not(agreement_bdd)))
+    }
+    if agreement != FBot {
+      restricted.push(tube_branch(agreement, br.path))
+    }
+  }
+  let restricted_system = dsystem_of(restricted)
+  DSystemRepairExact::{
+    system: restricted_system,
+    base_removed_region: removed,
+    repaired_branches: repaired,
+    compatible: dsystem_compatible_with_base(
+      level, dlevel, line, restricted_system, base,
+    ),
+  }
+}

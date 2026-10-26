@@ -126,6 +126,8 @@ pub fn bdd_dag_of_face(Face, Int32, max_nodes? : Int32) -> BddDagFace
 
 pub fn bdd_dag_of_face_best(Face, Int32, max_nodes? : Int32) -> BddBestBuild
 
+pub fn bdd_dag_of_face_optimal(Face, Int32, exact_max_vars? : Int32, max_nodes? : Int32) -> BddOptimalBuild
+
 pub fn bdd_dag_of_face_optimized(Face, Int32, max_nodes? : Int32, max_attempts? : Int32) -> BddOptimizedBuild
 
 pub fn bdd_dag_or(BddManager, Int32, Int32) -> Int32
@@ -431,6 +433,8 @@ pub fn check_hou_bounded_search() -> Bool
 pub fn check_hou_elaborator() -> Bool
 
 pub fn check_hou_phase9_extensions() -> Bool
+
+pub fn check_hou_search_extensions() -> Bool
 
 pub fn check_interval_faces() -> Bool
 
@@ -808,6 +812,42 @@ pub fn dconstructor_spec(String, Array[DConstructorArg], result_index? : Array[D
 
 pub fn dconstructor_spec_constrained(String, Array[DConstructorArg], Array[DConstructorConstraint], result_index? : Array[DTerm]) -> DConstructorSpec
 
+pub fn dcube_at(DCubeFunction, Array[Dim]) -> DValue
+
+pub fn dcube_box_cap(DCubeOpenBox) -> DCubeFunction?
+
+pub fn dcube_box_complete(DCubeOpenBox) -> Bool
+
+pub fn dcube_box_face(Int32, Bool, DCubeFunction) -> DCubeBoxFace
+
+pub fn dcube_box_face_of(DCubeOpenBox, Int32, Bool) -> DCubeFunction?
+
+pub fn dcube_box_fill(DCubeOpenBox) -> DCubeFunction?
+
+pub fn dcube_box_fill_verified(DCubeOpenBox, Int32) -> DCubeFunction?
+
+pub fn dcube_box_validate(DCubeOpenBox, Int32) -> DCubeBoxReport
+
+pub fn dcube_constant(Int32, DValue) -> DCubeFunction
+
+pub fn dcube_cubes_conv(Int32, Int32, DValue, DCubeFunction, DCubeFunction) -> Bool
+
+pub fn dcube_degenerate(DCubeFunction, Int32) -> DCubeFunction
+
+pub fn dcube_face(DCubeFunction, Int32, Dim) -> DCubeFunction
+
+pub fn dcube_filler_faces_ok(DCubeOpenBox, DCubeFunction, Int32) -> Bool
+
+pub fn dcube_function(Int32, (Array[Dim]) -> DValue) -> DCubeFunction
+
+pub fn dcube_generic_dims(Int32, Int32) -> Array[Dim]
+
+pub fn dcube_of_path((Dim) -> DValue) -> DCubeFunction
+
+pub fn dcube_of_point(DValue) -> DCubeFunction
+
+pub fn dcube_open_box(DValue, Int32, Int32, Array[DCubeBoxFace]) -> DCubeOpenBox
+
 pub fn ddim_at(DDimEnv, Int32) -> Dim?
 
 pub fn ddim_cons(Dim, DDimEnv) -> DDimEnv
@@ -909,6 +949,8 @@ pub fn dim_cache_key(Dim) -> String
 pub fn dim_eq_sem(Dim, Dim) -> Bool
 
 pub fn dim_nvars_sem(Dim) -> Int32
+
+pub fn dim_of_face(Face) -> Dim
 
 pub fn dim_quote(Dim, Int32) -> Dim
 
@@ -1068,6 +1110,8 @@ pub fn dsystem_pairwise_compatible(Int32, Int32, (Dim) -> DValue, DSystem) -> Bo
 
 pub fn dsystem_repair_to_base(Int32, Int32, (Dim) -> DValue, DSystem, DValue) -> DSystemRepair
 
+pub fn dsystem_repair_to_base_exact(Int32, Int32, (Dim) -> DValue, DSystem, DValue) -> DSystemRepairExact
+
 pub fn dsystem_singleton(Face, (Dim) -> DValue) -> DSystem
 
 pub fn dtelescope_entry(String, DTerm) -> DTelescopeEntry
@@ -1075,6 +1119,8 @@ pub fn dtelescope_entry(String, DTerm) -> DTelescopeEntry
 pub fn dterm_cache_key(DTerm) -> String
 
 pub fn dterm_children(DTerm) -> Array[DTerm]
+
+pub fn dterm_distinct_subterm_count(DTerm) -> Int32
 
 pub fn dterm_family_occurs(DTerm, String) -> Bool
 
@@ -1084,11 +1130,29 @@ pub fn dterm_family_strictly_positive(DTerm, String) -> Bool
 
 pub fn dterm_instantiate_levels(DTerm, Array[Int32]) -> DTerm?
 
+pub fn dterm_intern(DTermInternTable, DTerm) -> DTerm
+
+pub fn dterm_intern_all(DTermInternTable, Array[DTerm]) -> Array[DTerm]
+
+pub fn dterm_intern_id(DTermInternTable, DTerm) -> (DTerm, Int32)
+
+pub fn dterm_intern_table_new() -> DTermInternTable
+
+pub fn dterm_intern_table_size(DTermInternTable) -> Int32
+
 pub fn dterm_levels_in_scope(DTerm, Int32) -> Bool
+
+pub fn dterm_local_stamp(DTerm) -> String
+
+pub fn dterm_rebuild(DTerm, Array[DTerm]) -> DTerm
+
+pub fn dterm_sharing_ratio(DTerm) -> (Int32, Int32)
 
 pub fn dterm_shift(DTerm, Int32, Int32) -> DTerm
 
 pub fn dterm_substitute(DTerm, Int32, DTerm) -> DTerm
+
+pub fn dterm_tree_node_count(DTerm) -> Int32
 
 pub fn dtransport_back_term(DTerm, DTerm) -> DTerm
 
@@ -1259,6 +1323,10 @@ pub fn example_projector() -> CMat
 pub fn example_unit() -> Array[Complex]
 
 pub fn extract_positive_functor(DTerm, String, Array[DTerm], operators? : Array[DTypeOperatorDecl]) -> DPositiveFunctor?
+
+pub fn face_agreement_face(Int32, Int32, Face, DValue, DValue, DValue) -> Face
+
+pub fn face_agreement_face_sound(Int32, Int32, Face, Face, DValue, DValue, DValue) -> Bool
 
 pub fn face_agreement_region(Int32, Int32, Face, DValue, DValue, DValue) -> Bdd
 
@@ -1462,9 +1530,13 @@ pub fn hopf_south_fiber(Double) -> Array[Double]
 
 pub fn hou_fresh_meta(Unifier, Int32) -> UTerm
 
-pub fn hou_search_unify(UTerm, UTerm, Int32, Unifier, max_nodes? : Int32, max_depth? : Int32) -> HouSearchReport
+pub fn hou_search_unify(UTerm, UTerm, Int32, Unifier, max_nodes? : Int32, max_depth? : Int32, max_projection_args? : Int32) -> HouSearchReport
 
 pub fn hou_search_unify_bool(UTerm, UTerm, Int32, Unifier, max_nodes? : Int32, max_depth? : Int32) -> Bool
+
+pub fn hou_search_unify_iterative(UTerm, UTerm, Int32, Unifier, max_nodes_per_round? : Int32, depth_cap? : Int32, max_projection_args? : Int32) -> HouIterativeReport
+
+pub fn hou_search_unify_iterative_bool(UTerm, UTerm, Int32, Unifier, max_nodes_per_round? : Int32, depth_cap? : Int32, max_projection_args? : Int32) -> Bool
 
 pub fn hou_semantic_optimize(UTerm, Unifier) -> UTerm
 
@@ -2010,6 +2082,16 @@ pub fn schema_intro_term(DInductiveSpec, Int32, Array[DTerm], Array[DTerm]) -> D
 
 pub fn schema_motives_conv(Int32, Int32, Array[DTelescopeEntry], Array[DValue], Array[DValue], (Array[DValue]) -> DValue, (Array[DValue], DValue) -> DValue, (Array[DValue], DValue) -> DValue) -> Bool
 
+pub fn schema_registry_binary_format_version() -> Int32
+
+pub fn schema_registry_binary_from_hex(String) -> Array[Int32]?
+
+pub fn schema_registry_binary_roundtrip_ok(DSchemaRegistry) -> Bool
+
+pub fn schema_registry_binary_to_hex(Array[Int32]) -> String
+
+pub fn schema_registry_from_binary(Array[Int32]) -> DSchemaRegistry?
+
 pub fn schema_registry_hit_by_id(DSchemaRegistry, Int32) -> DHitPlan?
 
 pub fn schema_registry_hit_by_name(DSchemaRegistry, String) -> DHitPlan?
@@ -2038,7 +2120,15 @@ pub fn schema_registry_restore(DSchemaRegistrySnapshot) -> DSchemaRegistry
 
 pub fn schema_registry_snapshot(DSchemaRegistry) -> DSchemaRegistrySnapshot
 
+pub fn schema_registry_snapshot_from_binary(Array[Int32]) -> DSchemaRegistrySnapshot?
+
+pub fn schema_registry_snapshot_load_binary_report(Array[Int32]) -> DSchemaRegistryBinaryLoad
+
+pub fn schema_registry_snapshot_to_binary(DSchemaRegistrySnapshot) -> Array[Int32]
+
 pub fn schema_registry_stats(DSchemaRegistry) -> (Int32, Int32, Int32, Int32, Int32, Int32, Int32)
+
+pub fn schema_registry_to_binary(DSchemaRegistry) -> Array[Int32]
 
 pub fn schema_registry_validate_hit(DSchemaRegistry, DHitSpec) -> Bool
 
@@ -2454,6 +2544,14 @@ pub struct BddManager {
   mut mk_calls : Int32
 }
 
+pub struct BddOptimalBuild {
+  built : BddDagFace
+  order : Array[Int32]
+  size : Int32
+  exact : Bool
+  tried : Int32
+}
+
 pub struct BddOptimizedBuild {
   built : BddDagFace
   order : Array[Int32]
@@ -2578,6 +2676,30 @@ pub struct DConstructorSpec {
 pub fn DConstructorSpec::equal(Self, Self) -> Bool
 pub fn DConstructorSpec::not_equal(Self, Self) -> Bool
 pub fn DConstructorSpec::to_repr(Self) -> @debug.Repr
+
+pub struct DCubeBoxFace {
+  axis : Int32
+  hi : Bool
+  cube : DCubeFunction
+}
+
+pub struct DCubeBoxReport {
+  complete : Bool
+  overlaps_ok : Bool
+  failed_overlaps : Int32
+}
+
+pub struct DCubeFunction {
+  arity : Int32
+  at : (Array[Dim]) -> DValue
+}
+
+pub struct DCubeOpenBox {
+  ty : DValue
+  arity : Int32
+  ambient_dlevel : Int32
+  faces : Array[DCubeBoxFace]
+}
 
 pub enum DDimEnv {
   DDimEnvNil
@@ -2900,6 +3022,11 @@ pub struct DSchemaRegistry {
   mut telescope_misses : Int32
 }
 
+pub struct DSchemaRegistryBinaryLoad {
+  status : ModuleBinaryStatus
+  snapshot : DSchemaRegistrySnapshot?
+}
+
 pub struct DSchemaRegistrySnapshot {
   inductive_specs : Array[DInductiveSpec]
   inductive_valid : Array[Bool]
@@ -2952,6 +3079,13 @@ pub struct DSystemNF {
 }
 
 pub struct DSystemRepair {
+  system : DSystem
+  base_removed_region : Bdd
+  repaired_branches : Int32
+  compatible : Bool
+}
+
+pub struct DSystemRepairExact {
   system : DSystem
   base_removed_region : Bdd
   repaired_branches : Int32
@@ -3037,6 +3171,11 @@ pub enum DTerm {
 pub fn DTerm::equal(Self, Self) -> Bool
 pub fn DTerm::not_equal(Self, Self) -> Bool
 pub fn DTerm::to_repr(Self) -> @debug.Repr
+
+pub struct DTermInternTable {
+  ids : Map[String, Int32]
+  terms : Array[DTerm]
+}
 
 pub struct DThunk {
   mut forced : DValue?
@@ -3259,6 +3398,15 @@ pub enum HTm {
   HFst(HTm)
   HSnd(HTm)
 }
+
+pub struct HouIterativeReport {
+  report : HouSearchReport
+  solved_at_depth : Int32
+  rounds : Int32
+} derive(Eq, @debug.Debug)
+pub fn HouIterativeReport::equal(Self, Self) -> Bool
+pub fn HouIterativeReport::not_equal(Self, Self) -> Bool
+pub fn HouIterativeReport::to_repr(Self) -> @debug.Repr
 
 pub struct HouSearchReport {
   status : HouSearchStatus

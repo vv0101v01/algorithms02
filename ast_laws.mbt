@@ -379,15 +379,30 @@ pub fn check_ast_kan_types() -> Bool {
     Some(_) => ()
     None => return false
   }
-  // HITs: a nontrivial circle system is a formal hcomp point, while
-  // eliminators still compute over it by composing in the motive.
-  let formal = hcomp_value(
+  // HITs: a point-valued circle system composes to a point by
+  // De Morgan selection (Phase 11), and eliminators compute over
+  // it.  A tube through a neutral (non-point-valued) path remains
+  // a formal hcomp.
+  let circle_cap = hcomp_value(
     DVCircleTy,
     dsystem_of([tube_branch(FEq1(DVar(0)), _ => circle_point(DVar(0)))]),
     DVCirclePoint(DZero),
     1,
   )
-  match formal {
+  match force_value(circle_cap) {
+    DVCirclePoint(_) => ()
+    _ => return false
+  }
+  if !conv_at(0, 1, DVCircleTy, circle_cap, circle_point(DVar(0))) {
+    return false
+  }
+  match
+    hcomp_value(
+      DVCircleTy,
+      dsystem_of([tube_branch(FEq1(DVar(0)), _ => DVNeutral(DNVar(0)))]),
+      DVCirclePoint(DZero),
+      1,
+    ) {
     DVNeutral(DNHComp(_, _, _)) => ()
     _ => return false
   }
@@ -395,7 +410,7 @@ pub fn check_ast_kan_types() -> Bool {
     _ => DVBoolTy,
     DVBool(true),
     DVPathLam(_ => DVBool(true)),
-    formal,
+    circle_cap,
     1,
   )
   if !dv_is_bool_dep(elim_formal, true) {
@@ -445,11 +460,26 @@ pub fn check_ast_kan_types() -> Bool {
     DHComp(_, tubes, _) => if tubes.length() != 1 { return false } // equal bodies merge in the DSystem normal form
     _ => return false
   }
-  // Torus: a loop system remains a formal hcomp point.
+  // Torus: a point-valued loop system composes to a point by
+  // coordinatewise De Morgan selection (Phase 11); a neutral tube
+  // remains formal.
+  let torus_cap = hcomp_value(
+    DVTorusTy,
+    dsystem_of([tube_branch(FEq1(DVar(0)), _ => torus_point(DVar(0), DZero))]),
+    DVTorusPoint(DZero, DZero),
+    1,
+  )
+  match force_value(torus_cap) {
+    DVTorusPoint(_, _) => ()
+    _ => return false
+  }
+  if !conv_at(0, 1, DVTorusTy, torus_cap, torus_point(DVar(0), DZero)) {
+    return false
+  }
   match
     hcomp_value(
       DVTorusTy,
-      dsystem_of([tube_branch(FEq1(DVar(0)), _ => torus_point(DVar(0), DZero))]),
+      dsystem_of([tube_branch(FEq1(DVar(0)), _ => DVNeutral(DNVar(0)))]),
       DVTorusPoint(DZero, DZero),
       1,
     ) {

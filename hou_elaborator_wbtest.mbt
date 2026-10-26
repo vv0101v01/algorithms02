@@ -12,3 +12,8 @@ test "phase 9 HOU fragments beyond Miller patterns" {
 test "bounded Huet search extensions" {
   assert_true(check_hou_bounded_search())
 }
+
+///|
+test "phase11 HOU search extensions" {
+  assert_true(check_hou_search_extensions())
+}

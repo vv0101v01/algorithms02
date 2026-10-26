@@ -1123,3 +1123,332 @@ pub fn check_root_isolation() -> Bool {
   eigenvalues &&
   hermitian_eigenvalues
 }
+
+// ---------------------------------------------------------------------------
+// Phase 11: separation of Gershgorin eigenvalue clusters.
+//
+// Interval Jacobi returns eigenvalue clusters (`EigenInterval`
+// with `count > 1`) whenever Gershgorin discs overlap; the
+// discs alone cannot tell the eigenvalues inside a cluster
+// apart.  Separation refines each cluster with the *exact*
+// characteristic polynomial: its certified Sturm isolations are
+// pairwise disjoint and carry exact multiplicities, so every
+// cluster splits into one interval per distinct eigenvalue.
+// A cluster consisting of a single eigenvalue of multiplicity
+// `k` stays a single interval of multiplicity `k` -- identical
+// eigenvalues cannot be separated further, and the exact
+// multiplicity is the complete answer.
+// ---------------------------------------------------------------------------
+
+///|
+pub struct SeparatedEigenInterval {
+  lo : Rat
+  hi : Rat
+  multiplicity : Int32
+  cluster : Int32
+} derive(Debug, Eq)
+
+///|
+pub extend SeparatedEigenInterval with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend SeparatedEigenInterval with Eq::{not_equal, equal}
+
+///|
+pub struct JacobiClusterSeparation {
+  intervals : Array[SeparatedEigenInterval]
+  complete : Bool
+} derive(Debug, Eq)
+
+///|
+pub extend JacobiClusterSeparation with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend JacobiClusterSeparation with Eq::{not_equal, equal}
+
+///|
+fn rat_intervals_overlap(lo1 : Rat, hi1 : Rat, lo2 : Rat, hi2 : Rat) -> Bool {
+  rat_cmp_exact(lo1, hi2) <= 0 && rat_cmp_exact(lo2, hi1) <= 0
+}
+
+///|
+/// Separate every cluster of a Jacobi certificate into disjoint
+/// isolating intervals of width at most `2^-width_bits`, one per
+/// distinct eigenvalue, with exact multiplicities.  Returns
+/// `None` only when the exact characteristic polynomial is
+/// unavailable (non-Hermitian input).  `complete` records that
+/// every isolation matched exactly one cluster and that the
+/// multiplicities inside each cluster sum to its Gershgorin
+/// count; it can fail only if `width_bits` is too coarse to keep
+/// isolations clear of neighbouring clusters.
+pub fn jacobi_separate_clusters(
+  input : QCpxMat,
+  cert : JacobiCertificate,
+  width_bits : Int32,
+) -> JacobiClusterSeparation? {
+  let charpoly = match qcpx_hermitian_charpoly(input) {
+    Some(p) => p
+    None => return None
+  }
+  let roots = qpoly_isolate_real_roots(charpoly, width_bits)
+  let intervals : Array[SeparatedEigenInterval] = []
+  let cluster_sums : Array[Int32] = []
+  for _i in 0..<cert.eigenvalues.length() {
+    cluster_sums.push(0)
+  }
+  let mut complete = true
+  let mut total = 0
+  for i in 0..<roots.length() {
+    let r = roots[i]
+    total = total + r.multiplicity
+    let mut matched = -1
+    let mut matches = 0
+    for c in 0..<cert.eigenvalues.length() {
+      let cl = cert.eigenvalues[c]
+      if rat_intervals_overlap(r.lower, r.upper, cl.lo, cl.hi) {
+        matched = c
+        matches = matches + 1
+      }
+    }
+    if matches != 1 {
+      complete = false
+      matched = -1
+    } else {
+      cluster_sums[matched] = cluster_sums[matched] + r.multiplicity
+    }
+    intervals.push({
+      lo: r.lower,
+      hi: r.upper,
+      multiplicity: r.multiplicity,
+      cluster: matched,
+    })
+  }
+  if total != input.n {
+    complete = false
+  }
+  for c in 0..<cert.eigenvalues.length() {
+    if cluster_sums[c] != cert.eigenvalues[c].count {
+      complete = false
+    }
+  }
+  Some({ intervals, complete, })
+}
+
+///|
+/// Multiplicity of the unique root of `p` in `[lo, hi]`, computed
+/// through the gcd chain `gcd(p, p', ..., p^(k))`: the root has
+/// multiplicity `>= m` iff the `m`-th gcd still vanishes there.
+/// (Counting roots of the derivatives alone would be fooled by
+/// unrelated critical points inside a wide interval.)
+fn root_multiplicity_in(p : QPoly, lo : Rat, hi : Rat) -> Int32 {
+  if rat_eq(lo, hi) {
+    // Exact rational root: multiplicity is the order of the
+    // first nonvanishing derivative at the point.
+    let mut deriv = p
+    let mut m = 0
+    while qpoly_degree(deriv) >= 0 && rat_is_zero(qpoly_eval(deriv, lo)) {
+      m = m + 1
+      if qpoly_degree(deriv) == 0 {
+        break
+      }
+      deriv = qpoly_derivative(deriv)
+    }
+    return m
+  }
+  let mut g = p
+  let mut deriv = p
+  let mut m = 0
+  while qpoly_degree(g) > 0 && qpoly_real_root_count(g, lo, hi) >= 1 {
+    m = m + 1
+    deriv = qpoly_derivative(deriv)
+    if qpoly_degree(deriv) < 0 || qpoly_is_zero(deriv) {
+      break
+    }
+    g = qpoly_gcd(g, deriv)
+  }
+  m
+}
+
+///|
+/// Independently certify a cluster separation: the Jacobi
+/// certificate is sound; the separated intervals are sorted,
+/// pairwise disjoint, each Sturm-isolates exactly one distinct
+/// eigenvalue of the exact characteristic polynomial with the
+/// stated multiplicity (recomputed through the gcd chain); all
+/// eigenvalues are accounted for; and the intervals are
+/// consistent with the clusters they refine (unique overlap,
+/// multiplicity sums equal to Gershgorin counts).
+pub fn jacobi_cluster_separation_certified(
+  input : QCpxMat,
+  cert : JacobiCertificate,
+  separation : JacobiClusterSeparation,
+) -> Bool {
+  if !jacobi_certificate_sound(input, cert) {
+    return false
+  }
+  let charpoly = match qcpx_hermitian_charpoly(input) {
+    Some(p) => p
+    None => return false
+  }
+  let intervals = separation.intervals
+  let bound = qpoly_cauchy_bound(qpoly_squarefree_part(charpoly))
+  if intervals.length() !=
+    qpoly_real_root_count(charpoly, rat_neg(bound), bound) {
+    return false
+  }
+  let cluster_sums : Array[Int32] = []
+  for _i in 0..<cert.eigenvalues.length() {
+    cluster_sums.push(0)
+  }
+  let mut total = 0
+  for i in 0..<intervals.length() {
+    let iv = intervals[i]
+    if iv.multiplicity <= 0 || rat_cmp_exact(iv.hi, iv.lo) < 0 {
+      return false
+    }
+    if i > 0 && rat_cmp_exact(intervals[i - 1].hi, iv.lo) >= 0 {
+      return false
+    }
+    if rat_eq(iv.lo, iv.hi) {
+      if !rat_is_zero(qpoly_eval(charpoly, iv.lo)) {
+        return false
+      }
+    } else if qpoly_real_root_count(charpoly, iv.lo, iv.hi) != 1 {
+      return false
+    }
+    if root_multiplicity_in(charpoly, iv.lo, iv.hi) != iv.multiplicity {
+      return false
+    }
+    total = total + iv.multiplicity
+    let mut matches = 0
+    for c in 0..<cert.eigenvalues.length() {
+      let cl = cert.eigenvalues[c]
+      if rat_intervals_overlap(iv.lo, iv.hi, cl.lo, cl.hi) {
+        matches = matches + 1
+        if iv.cluster == c {
+          cluster_sums[c] = cluster_sums[c] + iv.multiplicity
+        }
+      }
+    }
+    if separation.complete {
+      if matches != 1 || iv.cluster < 0 {
+        return false
+      }
+    }
+  }
+  if total != input.n {
+    return false
+  }
+  if separation.complete {
+    for c in 0..<cert.eigenvalues.length() {
+      if cluster_sums[c] != cert.eigenvalues[c].count {
+        return false
+      }
+    }
+  }
+  true
+}
+
+///|
+/// Phase 11 checks for cluster separation.  With zero Jacobi
+/// steps the eigenvalue enclosures are the raw Gershgorin discs,
+/// which cluster for `[[1, 1/16], [1/16, 1]]` (eigenvalues
+/// `15/16, 17/16`); separation must split the cluster exactly.
+/// A repeated eigenvalue stays one interval of multiplicity 2,
+/// and a tampered multiplicity is rejected by the certificate.
+pub fn check_jacobi_cluster_separation() -> Bool {
+  let one = rat_int(1)
+  let sixteenth = rat_make(1, 16)
+  let a2 = qcpx_mat_from_rows([
+    [qcpx_real(one), qcpx_real(sixteenth)],
+    [qcpx_real(sixteenth), qcpx_real(one)],
+  ])
+  let cert2 = match jacobi_interval_eigen(a2, max_steps=0) {
+    Some(c) => c
+    None => return false
+  }
+  if cert2.eigenvalues.length() != 1 || cert2.eigenvalues[0].count != 2 {
+    return false
+  }
+  let sep2 = match jacobi_separate_clusters(a2, cert2, 12) {
+    Some(s) => s
+    None => return false
+  }
+  if !sep2.complete || sep2.intervals.length() != 2 {
+    return false
+  }
+  if sep2.intervals[0].multiplicity != 1 || sep2.intervals[1].multiplicity != 1 {
+    return false
+  }
+  if !eigen_interval_contains(
+      { lo: sep2.intervals[0].lo, hi: sep2.intervals[0].hi, count: 1, },
+      rat_make(15, 16),
+    ) {
+    return false
+  }
+  if !eigen_interval_contains(
+      { lo: sep2.intervals[1].lo, hi: sep2.intervals[1].hi, count: 1, },
+      rat_make(17, 16),
+    ) {
+    return false
+  }
+  if !jacobi_cluster_separation_certified(a2, cert2, sep2) {
+    return false
+  }
+  let tampered = JacobiClusterSeparation::{
+    intervals: [
+      {
+        lo: sep2.intervals[0].lo,
+        hi: sep2.intervals[0].hi,
+        multiplicity: 2,
+        cluster: 0,
+      },
+      sep2.intervals[1],
+    ],
+    complete: true,
+  }
+  if jacobi_cluster_separation_certified(a2, cert2, tampered) {
+    return false
+  }
+  // Block diagonal 3x3: a 2-cluster and a separated eigenvalue.
+  let zero = rat_int(0)
+  let a3 = qcpx_mat_from_rows([
+    [qcpx_real(one), qcpx_real(sixteenth), qcpx_real(zero)],
+    [qcpx_real(sixteenth), qcpx_real(one), qcpx_real(zero)],
+    [qcpx_real(zero), qcpx_real(zero), qcpx_real(rat_int(5))],
+  ])
+  let cert3 = match jacobi_interval_eigen(a3, max_steps=0) {
+    Some(c) => c
+    None => return false
+  }
+  let sep3 = match jacobi_separate_clusters(a3, cert3, 12) {
+    Some(s) => s
+    None => return false
+  }
+  if !sep3.complete || sep3.intervals.length() != 3 {
+    return false
+  }
+  if !jacobi_cluster_separation_certified(a3, cert3, sep3) {
+    return false
+  }
+  // Repeated eigenvalue: one interval of multiplicity two.
+  let a_rep = qcpx_mat_from_rows([
+    [qcpx_real(rat_int(2)), qcpx_real(zero)],
+    [qcpx_real(zero), qcpx_real(rat_int(2))],
+  ])
+  let cert_rep = match jacobi_interval_eigen(a_rep, max_steps=0) {
+    Some(c) => c
+    None => return false
+  }
+  let sep_rep = match jacobi_separate_clusters(a_rep, cert_rep, 8) {
+    Some(s) => s
+    None => return false
+  }
+  if !sep_rep.complete || sep_rep.intervals.length() != 1 {
+    return false
+  }
+  if sep_rep.intervals[0].multiplicity != 2 {
+    return false
+  }
+  jacobi_cluster_separation_certified(a_rep, cert_rep, sep_rep)
+}

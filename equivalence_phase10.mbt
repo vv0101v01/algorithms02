@@ -512,3 +512,157 @@ pub fn check_general_adjointification_and_contractible_fibers() -> Bool {
     dapp_typed(qc.sect, base, DVCircleTy),
   )
 }
+
+///|
+/// Phase 11: the `lemIso` contraction and the adjointification
+/// triangle verified at *generic* points -- neutral variables and
+/// abstract neutral paths -- rather than only at concrete
+/// representatives.  Endpoint conversion at open values is the
+/// general judgment of the NbE kernel, so these checks are the
+/// general theorem in the form this architecture can state it.
+/// They pass for identity equivalences on discrete and on
+/// non-discrete (circle) types, including with an abstract
+/// neutral path in the fiber.  The circle midpoint laws are also
+/// strengthened from Phase 10's under-face conversion to global
+/// conversion: the interpolated point and the connecting path
+/// now *compute* to circle points at generic dimensions by
+/// point-valued composition.
+///
+/// Remaining boundaries, both about conversion of formal
+/// compositions at neutral data rather than about the
+/// construction: (1) for an equivalence *defined by
+/// eliminators* (Bool negation) at neutral points, endpoints of
+/// path-valued eliminator neutrals and the eta/commuting-
+/// eliminator equalities they generate are not decided by
+/// neutral conversion; (2) the adjointification *triangle* at a
+/// neutral variable (any type) compares two formal Kan fillers
+/// whose interiors stay neutral, so it is verified here at a
+/// generic-dimension circle point and at concrete points in
+/// `check_general_adjointification_and_contractible_fibers`.
+pub fn check_lemiso_generic_points() -> Bool {
+  // Nat identity at a neutral point with refl path.
+  let e_nat = equiv_id_value(DVNatTy)
+  let parts_nat = equiv_parts(e_nat, DVNatTy, DVNatTy)
+  let yn : DValue = DVNeutral(DNVar(0))
+  let wn : DValue = DVPair(yn, DVPathLam(_ => yn))
+  let fib_nat = equiv_fiber_type_value(parts_nat, yn)
+  let center_nat = equiv_fiber_center_value(e_nat, DVNatTy, DVNatTy, yn)
+  let contr_nat = equiv_fiber_contraction_value(
+    e_nat,
+    DVNatTy,
+    DVNatTy,
+    yn,
+    wn,
+    2,
+  )
+  if !conv_at(1, 0, fib_nat, dapp_dim(contr_nat, DZero), center_nat) ||
+    !conv_at(1, 0, fib_nat, dapp_dim(contr_nat, DOne), wn) {
+    return false
+  }
+  // Circle identity at a generic-dimension point.
+  let e_circ = equiv_id_value(DVCircleTy)
+  let parts_circ = equiv_parts(e_circ, DVCircleTy, DVCircleTy)
+  let yc = circle_point(DVar(0))
+  let wc : DValue = DVPair(yc, DVPathLam(_ => yc))
+  let fib_circ = equiv_fiber_type_value(parts_circ, yc)
+  let center_circ = equiv_fiber_center_value(e_circ, DVCircleTy, DVCircleTy, yc)
+  let contr_circ = equiv_fiber_contraction_value(
+    e_circ,
+    DVCircleTy,
+    DVCircleTy,
+    yc,
+    wc,
+    2,
+  )
+  if !conv_at(0, 1, fib_circ, dapp_dim(contr_circ, DZero), center_circ) ||
+    !conv_at(0, 1, fib_circ, dapp_dim(contr_circ, DOne), wc) {
+    return false
+  }
+  // Circle identity at neutral points with an abstract neutral
+  // path in the fiber: both endpoints of the contraction.
+  let xv : DValue = DVNeutral(DNVar(0))
+  let yv : DValue = DVNeutral(DNVar(1))
+  let pv : DValue = DVPathLam(i => DVNeutral(DNAppDim(DNVar(2), i)))
+  let wv : DValue = DVPair(xv, pv)
+  let fib_v = equiv_fiber_type_value(parts_circ, yv)
+  let center_v = equiv_fiber_center_value(e_circ, DVCircleTy, DVCircleTy, yv)
+  let contr_v = equiv_fiber_contraction_value(
+    e_circ,
+    DVCircleTy,
+    DVCircleTy,
+    yv,
+    wv,
+    2,
+  )
+  if !conv_at(3, 0, fib_v, dapp_dim(contr_v, DZero), center_v) ||
+    !conv_at(3, 0, fib_v, dapp_dim(contr_v, DOne), wv) {
+    return false
+  }
+  // Nat identity with an abstract neutral path.
+  let fib_np = equiv_fiber_type_value(parts_nat, yv)
+  let center_np = equiv_fiber_center_value(e_nat, DVNatTy, DVNatTy, yv)
+  let contr_np = equiv_fiber_contraction_value(
+    e_nat,
+    DVNatTy,
+    DVNatTy,
+    yv,
+    wv,
+    2,
+  )
+  if !conv_at(3, 0, fib_np, dapp_dim(contr_np, DZero), center_np) ||
+    !conv_at(3, 0, fib_np, dapp_dim(contr_np, DOne), wv) {
+    return false
+  }
+  // Circle midpoint: global endpoint laws and point-valued
+  // computation at generic dimensions.
+  let base : DValue = DVCirclePoint(DZero)
+  let wloop : DValue = DVPair(base, DVPathLam(d => circle_point(d)))
+  let contr_c = equiv_fiber_contraction_value(
+    e_circ,
+    DVCircleTy,
+    DVCircleTy,
+    base,
+    wloop,
+    2,
+  )
+  let mid = dapp_dim(contr_c, DVar(0))
+  let mid_fst = dfst_typed(mid, x => DVPathTy(_ => DVCircleTy, x, base))
+  let mid_snd = dsnd_typed(mid, DVCircleTy, x => {
+    DVPathTy(_ => DVCircleTy, x, base)
+  })
+  if !conv_at(0, 2, DVCircleTy, dapp_dim(mid_snd, DZero), mid_fst) ||
+    !conv_at(0, 2, DVCircleTy, dapp_dim(mid_snd, DOne), base) {
+    return false
+  }
+  match force_value(dapp_dim(mid_snd, DVar(1))) {
+    DVCirclePoint(_) => ()
+    _ => return false
+  }
+  match force_value(mid_fst) {
+    DVCirclePoint(_) => ()
+    _ => return false
+  }
+  // Adjointification triangle at a generic-dimension circle
+  // point: point-valued composition makes both endpoints
+  // compute, so the triangle law converts globally there.
+  let adj_c = adjointify_equiv_value(e_circ, DVCircleTy, DVCircleTy, 2)
+  let qc = adj_c.equiv
+  let tri_c = dapp_typed(adj_c.triangle, yc, DVCircleTy)
+  let retr_c = dapp_typed(qc.retr, yc, DVCircleTy)
+  let fyc = dapp_typed(qc.fwd, yc, DVCircleTy)
+  let path_tyc : DValue = DVPathTy(_ => DVCircleTy, fyc, fyc)
+  conv_at(
+    0,
+    1,
+    path_tyc,
+    dapp_dim(tri_c, DZero),
+    dpath_cong_value(qc.fwd, DVCircleTy, retr_c),
+  ) &&
+  conv_at(
+    0,
+    1,
+    path_tyc,
+    dapp_dim(tri_c, DOne),
+    dapp_typed(qc.sect, fyc, DVCircleTy),
+  )
+}

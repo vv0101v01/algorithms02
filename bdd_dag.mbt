@@ -1465,3 +1465,121 @@ pub fn check_bdd_cost_optimizations() -> Bool {
   let stats = face_cnf_stats(unsat, 12)
   stats.variables > 12 && stats.clauses > 12 && stats.literals > stats.clauses
 }
+
+// ---------------------------------------------------------------------------
+// Phase 11: exact optimal variable order for small variable counts
+// ---------------------------------------------------------------------------
+
+///|
+fn bdd_next_permutation(perm : Array[Int32]) -> Bool {
+  let n = perm.length()
+  let mut i = n - 2
+  while i >= 0 && perm[i] >= perm[i + 1] {
+    i = i - 1
+  }
+  if i < 0 {
+    return false
+  }
+  let mut j = n - 1
+  while perm[j] <= perm[i] {
+    j = j - 1
+  }
+  let tmp = perm[i]
+  perm[i] = perm[j]
+  perm[j] = tmp
+  let mut lo = i + 1
+  let mut hi = n - 1
+  while lo < hi {
+    let t = perm[lo]
+    perm[lo] = perm[hi]
+    perm[hi] = t
+    lo = lo + 1
+    hi = hi - 1
+  }
+  true
+}
+
+///|
+pub struct BddOptimalBuild {
+  built : BddDagFace
+  order : Array[Int32]
+  size : Int32
+  exact : Bool
+  tried : Int32
+}
+
+///|
+/// Build a face's ROBDD under an optimal variable order.  For
+/// `n <= exact_max_vars` (default 8) every permutation is tried,
+/// so `size` is the true minimum reachable node count and
+/// `exact` is true.  Above that the budgeted sifting optimizer
+/// is used and `exact` is false: exact BDD minimization is
+/// NP-hard, and the exponential `n!` enumeration is precisely
+/// the honest cost of the exact answer at small `n`.
+pub fn bdd_dag_of_face_optimal(
+  f : Face,
+  n : Int32,
+  exact_max_vars~ : Int32 = 8,
+  max_nodes~ : Int32 = 0,
+) -> BddOptimalBuild {
+  if n > exact_max_vars {
+    let opt = bdd_dag_of_face_optimized(f, n, max_nodes~)
+    return BddOptimalBuild::{
+      built: opt.built,
+      order: opt.order,
+      size: opt.reachable,
+      exact: false,
+      tried: opt.attempts,
+    }
+  }
+  let perm : Array[Int32] = []
+  for i in 0..<n {
+    perm.push(i)
+  }
+  let mut tried = 0
+  let mut best_size = -1
+  let mut best_order : Array[Int32] = []
+  let mut best_built : BddDagFace? = None
+  while true {
+    tried = tried + 1
+    let order_copy : Array[Int32] = []
+    for i in 0..<perm.length() {
+      order_copy.push(perm[i])
+    }
+    let manager = bdd_manager_with_order(order_copy, n, max_nodes~)
+    let root = bdd_dag_build_face(manager, f)
+    if !manager.exceeded {
+      let size = bdd_dag_reachable_count(manager, root)
+      if best_size < 0 || size < best_size {
+        best_size = size
+        best_order = order_copy
+        best_built = Some(BddDagFace::{ manager, root, ok: true, })
+      }
+    }
+    if !bdd_next_permutation(perm) {
+      break
+    }
+  }
+  match best_built {
+    Some(built) =>
+      BddOptimalBuild::{
+        built,
+        order: best_order,
+        size: best_size,
+        exact: true,
+        tried,
+      }
+    None => {
+      // Every order exceeded the node budget: fall back to the
+      // heuristic build and say so.
+      let opt = bdd_dag_of_face_optimized(f, n, max_nodes~)
+      BddOptimalBuild::{
+        built: opt.built,
+        order: opt.order,
+        size: opt.reachable,
+        exact: false,
+        tried,
+      }
+    }
+  }
+}

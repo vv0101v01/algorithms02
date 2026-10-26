@@ -429,38 +429,216 @@ fn mod_distinct_degrees(coeffs : Array[BigInt], p : Int32) -> Array[Int32]? {
 }
 
 ///|
-fn possible_factor_degrees(coeffs : Array[BigInt]) -> Array[Bool] {
-  let n = coeffs.length() - 1
+fn small_primes_upto(bound : Int32) -> Array[Int32] {
+  if bound < 2 {
+    return []
+  }
+  let sieve : Array[Bool] = []
+  for _i in 0..<(bound + 1) {
+    sieve.push(true)
+  }
+  sieve[0] = false
+  sieve[1] = false
+  let mut p = 2
+  while p * p <= bound {
+    if sieve[p] {
+      let mut multiple = p * p
+      while multiple <= bound {
+        sieve[multiple] = false
+        multiple = multiple + p
+      }
+    }
+    p = p + 1
+  }
+  let out : Array[Int32] = []
+  for i in 2..<(bound + 1) {
+    if sieve[i] {
+      out.push(i)
+    }
+  }
+  out
+}
+
+///|
+/// Intersect the subset-sum constraints of mod-`p` degree
+/// patterns: `allowed[d]` (for `d` up to `n/2`) stays true iff
+/// `d` is a sum of a sub-multiset of *every* pattern.  A rational
+/// factor of degree `d` reduces mod `p` (degree preserved, since
+/// `p` does not divide the leading coefficient at usable primes)
+/// to a product of distinct irreducibles whose degrees form such
+/// a sub-multiset, so a false entry certifies that no factor of
+/// that degree exists over Q.
+fn allowed_degrees_from_patterns(
+  n : Int32,
+  patterns : Array[Array[Int32]],
+) -> Array[Bool] {
   let half = n / 2
   let allowed : Array[Bool] = []
   for _i in 0..<(half + 1) {
     allowed.push(true)
   }
-  let primes = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37]
-  for pi in 0..<primes.length() {
-    match mod_distinct_degrees(coeffs, primes[pi]) {
-      Some(degrees) => {
-        let subset : Array[Bool] = []
-        for _i in 0..<(half + 1) {
-          subset.push(false)
-        }
-        subset[0] = true
-        for i in 0..<degrees.length() {
-          let d = degrees[i]
-          for sum = half - d; sum >= 0; sum = sum - 1 {
-            if subset[sum] {
-              subset[sum + d] = true
-            }
+  for pi in 0..<patterns.length() {
+    let degrees = patterns[pi]
+    let subset : Array[Bool] = []
+    for _i in 0..<(half + 1) {
+      subset.push(false)
+    }
+    subset[0] = true
+    for i in 0..<degrees.length() {
+      let d = degrees[i]
+      if d <= half {
+        for sum = half - d; sum >= 0; sum = sum - 1 {
+          if subset[sum] {
+            subset[sum + d] = true
           }
         }
+      }
+    }
+    for degree in 0..<(half + 1) {
+      allowed[degree] = allowed[degree] && subset[degree]
+    }
+  }
+  allowed
+}
+
+///|
+/// Usable (degree-preserving and squarefree mod `p`) distinct-
+/// degree patterns for primes up to `prime_bound`, stopping early
+/// once `max_usable` patterns have been collected (a negative
+/// `max_usable` means no quota).
+fn mod_degree_pattern_list(
+  coeffs : Array[BigInt],
+  prime_bound : Int32,
+  max_usable : Int32,
+) -> Array[(Int32, Array[Int32])] {
+  let out : Array[(Int32, Array[Int32])] = []
+  let primes = small_primes_upto(prime_bound)
+  for pi in 0..<primes.length() {
+    if max_usable >= 0 && out.length() >= max_usable {
+      break
+    }
+    match mod_distinct_degrees(coeffs, primes[pi]) {
+      Some(degrees) => out.push((primes[pi], degrees))
+      None => ()
+    }
+  }
+  out
+}
+
+///|
+/// Degrees not excluded by mod-`p` patterns.  Primes are scanned
+/// adaptively (bound 251, at most 32 usable patterns, early exit
+/// once every degree `>= 2` is excluded): the fixed list of the
+/// first twelve primes used previously could be entirely unusable
+/// when each of them divides the discriminant, in which case no
+/// pruning happened at all.
+fn possible_factor_degrees(coeffs : Array[BigInt]) -> Array[Bool] {
+  let n = coeffs.length() - 1
+  let half = n / 2
+  let patterns : Array[Array[Int32]] = []
+  let primes = small_primes_upto(251)
+  for pi in 0..<primes.length() {
+    if patterns.length() >= 32 {
+      break
+    }
+    match mod_distinct_degrees(coeffs, primes[pi]) {
+      Some(degrees) => {
+        patterns.push(degrees)
+        let allowed = allowed_degrees_from_patterns(n, patterns)
+        let mut any_left = false
         for degree in 2..<(half + 1) {
-          allowed[degree] = allowed[degree] && subset[degree]
+          if allowed[degree] {
+            any_left = true
+          }
+        }
+        if !any_left {
+          break
         }
       }
       None => ()
     }
   }
-  allowed
+  allowed_degrees_from_patterns(n, patterns)
+}
+
+///|
+/// One usable mod-`p` factor-degree pattern: the multiset of
+/// degrees of the distinct irreducible factors of `f mod p`
+/// (only primes where `f mod p` keeps its degree and is
+/// squarefree give sound constraints and are reported).
+pub struct QPolyDegreePattern {
+  prime : Int32
+  degrees : Array[Int32]
+}
+
+///|
+/// All usable mod-`p` degree patterns of the primitive part of
+/// `f` for primes up to `prime_bound`.
+pub fn qpoly_mod_degree_patterns(
+  f : QPoly,
+  prime_bound : Int32,
+) -> Array[QPolyDegreePattern] {
+  let coeffs = qpoly_integer_coeffs_big(f)
+  let raw = mod_degree_pattern_list(coeffs, prime_bound, -1)
+  let out : Array[QPolyDegreePattern] = []
+  for i in 0..<raw.length() {
+    out.push({ prime: raw[i].0, degrees: raw[i].1, })
+  }
+  out
+}
+
+///|
+/// Factor degrees in `[1, deg(f)/2]` that no usable mod-`p`
+/// pattern (primes up to `prime_bound`) excludes.  If no prime up
+/// to the bound is usable, every degree is reported (no
+/// information).  Degrees absent from the result are *certified*
+/// not to occur for any factor of `f` over Q.
+pub fn qpoly_factor_degree_candidates(
+  f : QPoly,
+  prime_bound : Int32,
+) -> Array[Int32] {
+  let n = qpoly_degree(f)
+  if n < 2 {
+    return []
+  }
+  let coeffs = qpoly_integer_coeffs_big(f)
+  let raw = mod_degree_pattern_list(coeffs, prime_bound, -1)
+  let patterns : Array[Array[Int32]] = []
+  for i in 0..<raw.length() {
+    patterns.push(raw[i].1)
+  }
+  let allowed = allowed_degrees_from_patterns(n, patterns)
+  let out : Array[Int32] = []
+  for degree in 1..<(n / 2 + 1) {
+    if allowed[degree] {
+      out.push(degree)
+    }
+  }
+  out
+}
+
+///|
+/// Irreducibility over Q certified purely by mod-`p` degree
+/// patterns: at least one usable prime `<= prime_bound` exists
+/// and the intersected subset-sum constraints exclude every
+/// degree in `[1, deg(f)/2]`.  Linear polynomials are trivially
+/// irreducible; constants are not.
+pub fn qpoly_irreducible_by_mod_patterns(
+  f : QPoly,
+  prime_bound : Int32,
+) -> Bool {
+  let n = qpoly_degree(f)
+  if n == 1 {
+    return true
+  }
+  if n < 1 {
+    return false
+  }
+  let patterns = qpoly_mod_degree_patterns(f, prime_bound)
+  if patterns.length() == 0 {
+    return false
+  }
+  qpoly_factor_degree_candidates(f, prime_bound).length() == 0
 }
 
 ///|
@@ -475,17 +653,24 @@ fn factor_squarefree(f0 : QPoly, state : Array[Int32]) -> Array[QPoly] {
       out.push(f)
       break
     }
-    let roots = qpoly_rational_roots(f)
-    if roots.length() > 0 {
-      let factor = qpoly_root_factor(roots[0])
-      out.push(factor)
-      f = qpoly_monic(qpoly_div_exact(f, factor))
-      continue
-    }
+    // Mod-`p` degree patterns first: they can certify the
+    // absence of linear factors, in which case the divisor
+    // enumeration behind rational-root search (whose cost grows
+    // with the number of divisors of the constant coefficient)
+    // is skipped entirely.
     let primitive = qpoly_primitive_part(f)
     let coeffs = qpoly_integer_coeffs_big(f)
-    let mut found : QPoly? = None
     let allowed_degrees = possible_factor_degrees(coeffs)
+    if allowed_degrees.length() > 1 && allowed_degrees[1] {
+      let roots = qpoly_rational_roots(f)
+      if roots.length() > 0 {
+        let factor = qpoly_root_factor(roots[0])
+        out.push(factor)
+        f = qpoly_monic(qpoly_div_exact(f, factor))
+        continue
+      }
+    }
+    let mut found : QPoly? = None
     for degree in 2..<(qpoly_degree(f) / 2 + 1) {
       if degree < allowed_degrees.length() && !allowed_degrees[degree] {
         continue
@@ -644,4 +829,73 @@ pub fn check_qpoly_factor_complete() -> Bool {
   !qpoly_is_irreducible(quartic) &&
   qpoly_factor_complete(huge).factors.length() == 2 &&
   bounded
+}
+
+///|
+/// Phase 11 checks: adaptive mod-`p` degree-pattern pruning.
+/// The witness `x^6 - 2*M^6` with `M = 5*7*11*13*17*19*23*29*31*37`
+/// has *no* usable pattern at any of the first twelve primes
+/// (each divides the discriminant, so `f mod p` is not
+/// squarefree), hence the previous fixed prime list pruned
+/// nothing and Kronecker interpolation faced the full search.
+/// With primes up to 251 the patterns jointly exclude every
+/// factor degree, certifying irreducibility without search.
+/// `x^4 + 1` documents the honest limit: its Galois group is the
+/// Klein four-group, so it factors modulo every prime and no
+/// pattern can exclude degree 2 -- Kronecker still decides it.
+pub fn check_qpoly_mod_pattern_pruning() -> Bool {
+  let x = qpoly_x()
+  let x6 = qpoly_pow(x, 6)
+  let trin = qpoly_add(qpoly_add(x6, x), qpoly_int(1))
+  if !qpoly_irreducible_by_mod_patterns(trin, 37) {
+    return false
+  }
+  if qpoly_factor_degree_candidates(trin, 37).length() != 0 {
+    return false
+  }
+  let m = BigInt::from_string("1236789689135")
+  let m6 = m * m * m * m * m * m
+  let witness = qpoly_sub(x6, qpoly_const(rat_big_int(2N * m6)))
+  if qpoly_mod_degree_patterns(witness, 37).length() != 0 {
+    return false
+  }
+  if qpoly_factor_degree_candidates(witness, 37) != [1, 2, 3] {
+    return false
+  }
+  if qpoly_irreducible_by_mod_patterns(witness, 37) {
+    return false
+  }
+  if qpoly_factor_degree_candidates(witness, 251).length() != 0 {
+    return false
+  }
+  if !qpoly_irreducible_by_mod_patterns(witness, 251) {
+    return false
+  }
+  // End to end: complete factorization now proves this
+  // irreducibility by patterns alone (no divisor-tuple search).
+  if !qpoly_is_irreducible(witness) {
+    return false
+  }
+  let reducible = qpoly_mul(
+    qpoly_add(qpoly_mul(x, x), qpoly_int(1)),
+    qpoly_add(qpoly_mul(x, x), qpoly_add(x, qpoly_int(1))),
+  )
+  if qpoly_irreducible_by_mod_patterns(reducible, 251) {
+    return false
+  }
+  let mut has_two = false
+  let cands = qpoly_factor_degree_candidates(reducible, 251)
+  for i in 0..<cands.length() {
+    if cands[i] == 2 {
+      has_two = true
+    }
+  }
+  if !has_two {
+    return false
+  }
+  let x4p1 = qpoly_add(qpoly_pow(x, 4), qpoly_int(1))
+  if qpoly_irreducible_by_mod_patterns(x4p1, 251) {
+    return false
+  }
+  qpoly_is_irreducible(x4p1)
 }

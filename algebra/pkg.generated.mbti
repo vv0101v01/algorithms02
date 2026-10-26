@@ -195,9 +195,15 @@ pub fn check_Jacobi_interval() -> Bool
 
 pub fn check_algebraic_extensions_and_Jordan() -> Bool
 
+pub fn check_jacobi_cluster_separation() -> Bool
+
+pub fn check_poly_cubes() -> Bool
+
 pub fn check_qpoly_factor_complete() -> Bool
 
 pub fn check_qpoly_fast_arithmetic() -> Bool
+
+pub fn check_qpoly_mod_pattern_pruning() -> Bool
 
 pub fn check_radical_denesting() -> Bool
 
@@ -287,9 +293,13 @@ pub fn int_squarefree_decomp(Int32) -> (Int32, Int32)
 
 pub fn jacobi_certificate_sound(QCpxMat, JacobiCertificate) -> Bool
 
+pub fn jacobi_cluster_separation_certified(QCpxMat, JacobiCertificate, JacobiClusterSeparation) -> Bool
+
 pub fn jacobi_coefficients(QCpxMat, Int32, Int32, Int32) -> JacobiCoefficients?
 
 pub fn jacobi_interval_eigen(QCpxMat, max_steps? : Int32, tolerance_sq? : Rat, precision_bits? : Int32) -> JacobiCertificate?
+
+pub fn jacobi_separate_clusters(QCpxMat, JacobiCertificate, Int32) -> JacobiClusterSeparation?
 
 pub fn jacobi_similarity_interval(QCIntervalMat, QCIntervalMat, Int32) -> QCIntervalMat
 
@@ -299,9 +309,53 @@ pub fn jacobi_unitary_residual_contains_zero(QCIntervalMat, Int32) -> Bool
 
 pub fn poly_add(Poly, Poly) -> Poly
 
+pub fn poly_box_cap(PolyOpenBox) -> PolyCube?
+
+pub fn poly_box_face(Int32, Bool, PolyCube) -> PolyBoxFace
+
+pub fn poly_box_face_of(PolyOpenBox, Int32, Bool) -> PolyCube?
+
+pub fn poly_box_fill(PolyOpenBox) -> PolyCube?
+
+pub fn poly_box_fill_verified(PolyOpenBox) -> PolyCube?
+
+pub fn poly_box_filler_faces_ok(PolyOpenBox, PolyCube) -> Bool
+
+pub fn poly_box_validate(PolyOpenBox) -> Bool
+
 pub fn poly_const(Rat) -> Poly
 
+pub fn poly_cube(Int32, Array[Poly]) -> PolyCube
+
+pub fn poly_cube_add(PolyCube, PolyCube) -> PolyCube
+
+pub fn poly_cube_compose(PolyCube, PolyCube) -> PolyCube
+
+pub fn poly_cube_const(Int32, Array[Rat]) -> PolyCube
+
+pub fn poly_cube_degeneracy(PolyCube, Int32) -> PolyCube
+
+pub fn poly_cube_eq(PolyCube, PolyCube) -> Bool
+
+pub fn poly_cube_eval(PolyCube, Array[Rat]) -> Array[Rat]
+
+pub fn poly_cube_face(PolyCube, Int32, Bool) -> PolyCube
+
+pub fn poly_cube_identity(Int32) -> PolyCube
+
+pub fn poly_cube_scale(Poly, PolyCube) -> PolyCube
+
+pub fn poly_cube_sub(PolyCube, PolyCube) -> PolyCube
+
+pub fn poly_drop_atom(Poly, Int32) -> Poly
+
 pub fn poly_eq(Poly, Poly) -> Bool
+
+pub fn poly_eval_point(Poly, Array[Rat]) -> Rat
+
+pub fn poly_eval_var(Poly, Int32, Rat) -> Poly
+
+pub fn poly_insert_atom(Poly, Int32) -> Poly
 
 pub fn poly_int(Int32) -> Poly
 
@@ -315,9 +369,13 @@ pub fn poly_normalize(Array[PolyTerm]) -> Poly
 
 pub fn poly_one() -> Poly
 
+pub fn poly_open_box(Int32, Array[PolyBoxFace]) -> PolyOpenBox
+
 pub fn poly_scale(Rat, Poly) -> Poly
 
 pub fn poly_sub(Poly, Poly) -> Poly
+
+pub fn poly_subst_all(Poly, Array[Poly]) -> Poly
 
 pub fn poly_var(Int32) -> Poly
 
@@ -477,6 +535,8 @@ pub fn qpoly_factor_complete(QPoly) -> QPolyCompleteFactorization
 
 pub fn qpoly_factor_complete_with_budget(QPoly, Int32) -> QPolyCompleteFactorization?
 
+pub fn qpoly_factor_degree_candidates(QPoly, Int32) -> Array[Int32]
+
 pub fn qpoly_factor_rational_roots(QPoly) -> QPolyRationalFactorization
 
 pub fn qpoly_gcd(QPoly, QPoly) -> QPoly
@@ -486,6 +546,8 @@ pub fn qpoly_int(Int32) -> QPoly
 pub fn qpoly_integer_coeffs(QPoly) -> Array[Int32]
 
 pub fn qpoly_integer_coeffs_big(QPoly) -> Array[@bigint.BigInt]
+
+pub fn qpoly_irreducible_by_mod_patterns(QPoly, Int32) -> Bool
 
 pub fn qpoly_irreducible_upto3(QPoly) -> Bool
 
@@ -504,6 +566,8 @@ pub fn qpoly_isolate_real_roots(QPoly, Int32) -> Array[RealRootIsolation]
 pub fn qpoly_leading(QPoly) -> Rat
 
 pub fn qpoly_mod(QPoly, QPoly) -> QPoly
+
+pub fn qpoly_mod_degree_patterns(QPoly, Int32) -> Array[QPolyDegreePattern]
 
 pub fn qpoly_monic(QPoly) -> QPoly
 
@@ -979,6 +1043,14 @@ pub fn JacobiCertificate::equal(Self, Self) -> Bool
 pub fn JacobiCertificate::not_equal(Self, Self) -> Bool
 pub fn JacobiCertificate::to_repr(Self) -> @debug.Repr
 
+pub struct JacobiClusterSeparation {
+  intervals : Array[SeparatedEigenInterval]
+  complete : Bool
+} derive(Eq, @debug.Debug)
+pub fn JacobiClusterSeparation::equal(Self, Self) -> Bool
+pub fn JacobiClusterSeparation::not_equal(Self, Self) -> Bool
+pub fn JacobiClusterSeparation::to_repr(Self) -> @debug.Repr
+
 pub struct JacobiCoefficients {
   p : Int32
   q : Int32
@@ -1007,6 +1079,22 @@ pub fn JacobiRotationCertificate::to_repr(Self) -> @debug.Repr
 
 pub struct Poly {
   terms : Array[PolyTerm]
+}
+
+pub struct PolyBoxFace {
+  axis : Int32
+  hi : Bool
+  cube : PolyCube
+}
+
+pub struct PolyCube {
+  dim : Int32
+  coords : Array[Poly]
+}
+
+pub struct PolyOpenBox {
+  dim : Int32
+  faces : Array[PolyBoxFace]
 }
 
 pub struct PolyTerm {
@@ -1073,6 +1161,11 @@ pub fn QPoly::to_repr(Self) -> @debug.Repr
 pub struct QPolyCompleteFactorization {
   leading : Rat
   factors : Array[QPolyFactor]
+}
+
+pub struct QPolyDegreePattern {
+  prime : Int32
+  degrees : Array[Int32]
 }
 
 pub struct QPolyDiv {
@@ -1167,6 +1260,16 @@ pub struct RealRootIsolation {
   upper : Rat
   multiplicity : Int32
 }
+
+pub struct SeparatedEigenInterval {
+  lo : Rat
+  hi : Rat
+  multiplicity : Int32
+  cluster : Int32
+} derive(Eq, @debug.Debug)
+pub fn SeparatedEigenInterval::equal(Self, Self) -> Bool
+pub fn SeparatedEigenInterval::not_equal(Self, Self) -> Bool
+pub fn SeparatedEigenInterval::to_repr(Self) -> @debug.Repr
 
 pub struct SplittingField {
   modulus : QPoly

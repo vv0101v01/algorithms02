@@ -828,8 +828,24 @@ pub fn comp_list_value(
 }
 
 // ---------------------------------------------------------------------------
-// HIT compositions: all-base reduction, otherwise formal hcomp points
+// HIT compositions: point-valued boxes compose by De Morgan selection
 // ---------------------------------------------------------------------------
+
+///|
+/// The characteristic dimension of a face: a `Dim` that is `1`
+/// exactly where the face holds (vertex semantics).  `(r = 0)`
+/// has characteristic `~r`, `(r = 1)` has `r`, and the face
+/// connectives map to the De Morgan connectives.
+pub fn dim_of_face(f : Face) -> Dim {
+  match f {
+    FTop => DOne
+    FBot => DZero
+    FEq0(r) => DNeg(r)
+    FEq1(r) => r
+    FAnd(a, b) => DAnd(dim_of_face(a), dim_of_face(b))
+    FOr(a, b) => DOr(dim_of_face(a), dim_of_face(b))
+  }
+}
 
 ///|
 fn is_circle_base(v : DValue) -> Bool {
@@ -840,6 +856,23 @@ fn is_circle_base(v : DValue) -> Bool {
 }
 
 ///|
+/// Composition in the circle.  Boxes whose base and tubes are all
+/// the base point reduce to the base point.  More generally, if
+/// the base and every tube are *point-valued* (at a generic
+/// dimension and at the cap), the cap is computed coordinatewise
+/// by iterated De Morgan selection
+///
+///   c := coord(base);
+///   c := (delta_i and coord(path_i(1))) or (~delta_i and c)
+///
+/// where `delta_i` is the characteristic dimension of branch
+/// `i`'s face.  Circle-point conversion in this kernel is
+/// vertex-semantic equality of coordinates (after `circle_point`
+/// endpoint normalisation), and pairwise compatibility of the
+/// system makes the branch coordinates agree on overlaps in
+/// exactly that sense, so the selected coordinate restricts to
+/// each branch's cap coordinate on its face.  Boxes that are not
+/// point-valued remain formal `DNComp` neutrals.
 pub fn comp_circle_value(
   line : (Dim) -> DValue,
   branches : DSystem,
@@ -856,10 +889,27 @@ pub fn comp_circle_value(
     }
   }
   if ok {
-    DVCirclePoint(DZero)
-  } else {
-    DVNeutral(DNComp(line, branches, base))
+    return DVCirclePoint(DZero)
   }
+  let base_coord = match force_value(base) {
+    DVCirclePoint(_) => circle_dim_of(circle_point(circle_dim_of(base)))
+    _ => return DVNeutral(DNComp(line, branches, base))
+  }
+  let mut coord = base_coord
+  for i in 0..<branches.branches.length() {
+    let br = branches.branches[i]
+    let generic = (br.path)(DVar(dlevel))
+    let cap = (br.path)(DOne)
+    match (force_value(generic), force_value(cap)) {
+      (DVCirclePoint(_), DVCirclePoint(_)) => {
+        let q = circle_dim_of(circle_point(circle_dim_of(cap)))
+        let delta = dim_of_face(br.face)
+        coord = dim_simplify(DOr(DAnd(delta, q), DAnd(DNeg(delta), coord)))
+      }
+      _ => return DVNeutral(DNComp(line, branches, base))
+    }
+  }
+  circle_point(coord)
 }
 
 ///|
@@ -872,6 +922,14 @@ fn is_torus_base(v : DValue) -> Bool {
 }
 
 ///|
+fn torus_coord_pair(v : DValue) -> (Dim, Dim) {
+  let (a, b) = torus_dims_of(v)
+  torus_dims_of(torus_point(a, b))
+}
+
+///|
+/// Composition in the torus: the circle's De Morgan selection
+/// applied to both coordinates (see `comp_circle_value`).
 pub fn comp_torus_value(
   line : (Dim) -> DValue,
   branches : DSystem,
@@ -888,8 +946,27 @@ pub fn comp_torus_value(
     }
   }
   if ok {
-    DVTorusPoint(DZero, DZero)
-  } else {
-    DVNeutral(DNComp(line, branches, base))
+    return DVTorusPoint(DZero, DZero)
   }
+  let start = match force_value(base) {
+    DVTorusPoint(_, _) => torus_coord_pair(base)
+    _ => return DVNeutral(DNComp(line, branches, base))
+  }
+  let mut coord_a = start.0
+  let mut coord_b = start.1
+  for i in 0..<branches.branches.length() {
+    let br = branches.branches[i]
+    let generic = (br.path)(DVar(dlevel))
+    let cap = (br.path)(DOne)
+    match (force_value(generic), force_value(cap)) {
+      (DVTorusPoint(_, _), DVTorusPoint(_, _)) => {
+        let (qa, qb) = torus_coord_pair(cap)
+        let delta = dim_of_face(br.face)
+        coord_a = dim_simplify(DOr(DAnd(delta, qa), DAnd(DNeg(delta), coord_a)))
+        coord_b = dim_simplify(DOr(DAnd(delta, qb), DAnd(DNeg(delta), coord_b)))
+      }
+      _ => return DVNeutral(DNComp(line, branches, base))
+    }
+  }
+  torus_point(coord_a, coord_b)
 }

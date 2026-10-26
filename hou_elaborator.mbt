@@ -1932,6 +1932,95 @@ fn huet_imitation_template(
 }
 
 ///|
+/// Deep imitation: like `huet_imitation_template`, but rigid
+/// structure is copied recursively -- into arguments and under
+/// binders -- and variables bound by the copied binders are kept
+/// (they have the same relative indices in the template).
+/// Subterms that cannot be copied (flex heads, free variables of
+/// the equation context) become fresh pattern metavariables.
+/// This is still a Huet imitation guess, just a more specific
+/// one: it solves in one branch some problems whose standard
+/// imitation needs several further search rounds.
+fn huet_imitation_template_deep(
+  unifier : Unifier,
+  rhs : UTerm,
+  formals : Int32,
+  binders : Int32,
+) -> UTerm? {
+  match uterm_whnf(rhs, unifier) {
+    UConst(_) | UType(_) | UBoolLit(_) | UNatZero => Some(rhs)
+    UVar(k) => if k < binders { Some(rhs) } else { None }
+    UApp(f, x) =>
+      match huet_imitation_template_deep(unifier, f, formals, binders) {
+        Some(head) =>
+          Some(UApp(head, huet_deep_or_fresh(unifier, x, formals, binders)))
+        None => None
+      }
+    UPair(a, b) =>
+      Some(
+        UPair(
+          huet_deep_or_fresh(unifier, a, formals, binders),
+          huet_deep_or_fresh(unifier, b, formals, binders),
+        ),
+      )
+    UFst(a) => Some(UFst(huet_deep_or_fresh(unifier, a, formals, binders)))
+    USnd(a) => Some(USnd(huet_deep_or_fresh(unifier, a, formals, binders)))
+    USucc(a) => Some(USucc(huet_deep_or_fresh(unifier, a, formals, binders)))
+    UNatElim(a, b, c, d) =>
+      Some(
+        UNatElim(
+          huet_deep_or_fresh(unifier, a, formals, binders),
+          huet_deep_or_fresh(unifier, b, formals, binders),
+          huet_deep_or_fresh(unifier, c, formals, binders),
+          huet_deep_or_fresh(unifier, d, formals, binders),
+        ),
+      )
+    ULam(dom, body) =>
+      Some(
+        ULam(
+          huet_deep_or_fresh(unifier, dom, formals, binders),
+          huet_deep_or_fresh(unifier, body, formals, binders + 1),
+        ),
+      )
+    UPi(dom, body) =>
+      Some(
+        UPi(
+          huet_deep_or_fresh(unifier, dom, formals, binders),
+          huet_deep_or_fresh(unifier, body, formals, binders + 1),
+        ),
+      )
+    UImplicitPi(dom, body) =>
+      Some(
+        UImplicitPi(
+          huet_deep_or_fresh(unifier, dom, formals, binders),
+          huet_deep_or_fresh(unifier, body, formals, binders + 1),
+        ),
+      )
+    USigma(dom, body) =>
+      Some(
+        USigma(
+          huet_deep_or_fresh(unifier, dom, formals, binders),
+          huet_deep_or_fresh(unifier, body, formals, binders + 1),
+        ),
+      )
+    _ => None
+  }
+}
+
+///|
+fn huet_deep_or_fresh(
+  unifier : Unifier,
+  rhs : UTerm,
+  formals : Int32,
+  binders : Int32,
+) -> UTerm {
+  match huet_imitation_template_deep(unifier, rhs, formals, binders) {
+    Some(template) => template
+    None => huet_fresh_over(unifier, formals, binders)
+  }
+}
+
+///|
 fn huet_projection_template(
   unifier : Unifier,
   formals : Int32,
@@ -2020,9 +2109,30 @@ fn hou_search_try_flex(
     }
     hou_restore_unifier(unifier, snapshot)
   }
+  // Deep imitation (Phase 11): a more specific imitation guess
+  // that copies rigid structure into arguments and under binders.
+  {
+    let snapshot = hou_clone_unifier(unifier)
+    match huet_imitation_template_deep(unifier, rhs, arity, 0) {
+      Some(body) => {
+        let result = hou_search_try_body(
+          a, b, depth, unifier, state, max_nodes, search_depth, max_depth, meta_id,
+          arity, body,
+        )
+        if result == 1 || result == -1 {
+          return result
+        }
+      }
+      None => ()
+    }
+    hou_restore_unifier(unifier, snapshot)
+  }
   // Projections, first exact projections and then projections
-  // applied to fresh subgoals.
-  for applied_args in 0..<3 {
+  // applied to fresh subgoals.  The number of applied fresh
+  // subgoals is bounded by `state[3]` (`max_projection_args`),
+  // threaded through the search state.
+  let proj_limit = state[3] + 1
+  for applied_args in 0..<proj_limit {
     for position in 0..<arity {
       let snapshot = hou_clone_unifier(unifier)
       let body = huet_projection_template(
@@ -2152,6 +2262,94 @@ fn hou_search_common_constant(
   let common_id = hou_fresh_meta_id(unifier)
   if !huet_assign_solution(unifier, id_a, UMeta(common_id, []), args_a.length()) ||
     !huet_assign_solution(unifier, id_b, UMeta(common_id, []), args_b.length()) {
+    return -2
+  }
+  hou_search_go(
+    a,
+    b,
+    depth,
+    unifier,
+    state,
+    max_nodes,
+    search_depth + 1,
+    max_depth,
+  )
+}
+
+///|
+/// Identification for distinct flex heads (Phase 11): guess a
+/// common fresh head applied to the argument positions that can
+/// be made equal on both sides (found greedily by transactional
+/// pairwise unification).  This generalizes the common-constant
+/// guess (the empty common spine), retaining exactly the shared
+/// argument dependence.  Like the same-head prune, the result is
+/// a sound specific unifier, not a most general one.
+fn hou_search_identification(
+  a : UTerm,
+  b : UTerm,
+  depth : Int32,
+  unifier : Unifier,
+  state : Array[Int32],
+  max_nodes : Int32,
+  search_depth : Int32,
+  max_depth : Int32,
+  id_a : Int32,
+  args_a : Array[UTerm],
+  id_b : Int32,
+  args_b : Array[UTerm],
+) -> Int32 {
+  state[1] = state[1] + 1
+  let used_b : Array[Bool] = []
+  for _i in 0..<args_b.length() {
+    used_b.push(false)
+  }
+  let positions_a : Array[Int32] = []
+  let positions_b : Array[Int32] = []
+  for i in 0..<args_a.length() {
+    for j in 0..<args_b.length() {
+      if used_b[j] {
+        continue
+      }
+      let before_pair = hou_clone_unifier(unifier)
+      if hou_unify(args_a[i], args_b[j], depth, unifier) &&
+        hou_semantic_optimize(args_a[i], unifier) ==
+        hou_semantic_optimize(args_b[j], unifier) {
+        positions_a.push(i)
+        positions_b.push(j)
+        used_b[j] = true
+        break
+      }
+      hou_restore_unifier(unifier, before_pair)
+    }
+  }
+  if positions_a.length() == 0 {
+    return -2
+  }
+  let common_id = hou_fresh_meta_id(unifier)
+  let common_args_a : Array[UTerm] = []
+  for i in 0..<positions_a.length() {
+    common_args_a.push(
+      UVar(huet_formal_index(args_a.length(), 0, positions_a[i])),
+    )
+  }
+  let common_args_b : Array[UTerm] = []
+  for i in 0..<positions_b.length() {
+    common_args_b.push(
+      UVar(huet_formal_index(args_b.length(), 0, positions_b[i])),
+    )
+  }
+  if !huet_assign_solution(
+      unifier,
+      id_a,
+      UMeta(common_id, common_args_a),
+      args_a.length(),
+    ) ||
+    !huet_assign_solution(
+      unifier,
+      id_b,
+      UMeta(common_id, common_args_b),
+      args_b.length(),
+    ) {
     return -2
   }
   hou_search_go(
@@ -2337,6 +2535,15 @@ fn hou_search_go(
       if second == 1 || second == -1 {
         return second
       }
+      let before_id = hou_clone_unifier(unifier)
+      let identified = hou_search_identification(
+        a, b, depth, unifier, state, max_nodes, search_depth, max_depth, id_a, args_a,
+        id_b, args_b,
+      )
+      if identified == 1 || identified == -1 {
+        return identified
+      }
+      hou_restore_unifier(unifier, before_id)
       let before = hou_clone_unifier(unifier)
       let common = hou_search_common_constant(
         a, b, depth, unifier, state, max_nodes, search_depth, max_depth, id_a, args_a,
@@ -2367,10 +2574,13 @@ fn hou_search_go(
 ///|
 /// Bounded Huet search.  The deterministic Miller/constructor/
 /// intersection fragment is tried first at every node; thereafter
-/// the search branches over imitation, projection, eta-generation,
-/// same-head invariant-coordinate pruning, and (for distinct
-/// flex-flex pairs) a common constant.  A failed or exhausted
-/// search restores the input unifier exactly.
+/// the search branches over imitation, deep imitation,
+/// projection (applied to at most `max_projection_args` fresh
+/// subgoals), eta-generation, same-head invariant-coordinate
+/// pruning, and (for distinct flex-flex pairs) identification
+/// over a shared argument spine, falling back to a common
+/// constant.  A failed or exhausted search restores the input
+/// unifier exactly.
 pub fn hou_search_unify(
   a : UTerm,
   b : UTerm,
@@ -2378,9 +2588,21 @@ pub fn hou_search_unify(
   unifier : Unifier,
   max_nodes~ : Int32 = 1000,
   max_depth~ : Int32 = 4,
+  max_projection_args~ : Int32 = 2,
 ) -> HouSearchReport {
   let initial = hou_clone_unifier(unifier)
-  let state : Array[Int32] = [0, 0, 0]
+  // Search state: [nodes, branches, max depth reached,
+  // projection applied-argument cap].
+  let state : Array[Int32] = [
+    0,
+    0,
+    0,
+    if max_projection_args < 0 {
+      0
+    } else {
+      max_projection_args
+    },
+  ]
   let code = if max_nodes <= 0 {
     -1
   } else {
@@ -2426,6 +2648,95 @@ pub fn hou_search_unify_bool(
 ) -> Bool {
   hou_search_unify(a, b, depth, unifier, max_nodes~, max_depth~).status ==
   HouSolved
+}
+
+///|
+pub struct HouIterativeReport {
+  report : HouSearchReport
+  solved_at_depth : Int32
+  rounds : Int32
+} derive(Debug, Eq)
+
+///|
+pub extend HouIterativeReport with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend HouIterativeReport with Eq::{not_equal, equal}
+
+///|
+/// Iterative-deepening Huet search (Phase 11): run bounded search
+/// at depths `0, 1, ..., depth_cap`, each with its own node
+/// budget, stopping at the first success or at a definitive
+/// no-unifier answer.  Because every round is transactional, a
+/// failed round leaves the unifier untouched for the next.  The
+/// report names the shallowest solving depth (`-1` if none), so
+/// callers can see how much guessing a problem actually needed.
+pub fn hou_search_unify_iterative(
+  a : UTerm,
+  b : UTerm,
+  depth : Int32,
+  unifier : Unifier,
+  max_nodes_per_round~ : Int32 = 1000,
+  depth_cap~ : Int32 = 6,
+  max_projection_args~ : Int32 = 2,
+) -> HouIterativeReport {
+  let mut last : HouSearchReport? = None
+  for d in 0..<(depth_cap + 1) {
+    let report = hou_search_unify(
+      a,
+      b,
+      depth,
+      unifier,
+      max_nodes=max_nodes_per_round,
+      max_depth=d,
+      max_projection_args~,
+    )
+    if report.status == HouSolved {
+      return { report, solved_at_depth: d, rounds: d + 1, }
+    }
+    if report.status == HouNoUnifier {
+      return { report, solved_at_depth: -1, rounds: d + 1, }
+    }
+    last = Some(report)
+  }
+  let fallback = HouSearchReport::{
+    status: HouResidual,
+    solved_metas: 0,
+    nodes: 0,
+    branches_tried: 0,
+    max_depth_reached: 0,
+  }
+  {
+    report: match last {
+      Some(r) => r
+      None => fallback
+    },
+    solved_at_depth: -1,
+    rounds: depth_cap + 1,
+  }
+}
+
+///|
+/// Boolean wrapper for iterative-deepening search.
+pub fn hou_search_unify_iterative_bool(
+  a : UTerm,
+  b : UTerm,
+  depth : Int32,
+  unifier : Unifier,
+  max_nodes_per_round~ : Int32 = 1000,
+  depth_cap~ : Int32 = 6,
+  max_projection_args~ : Int32 = 2,
+) -> Bool {
+  hou_search_unify_iterative(
+    a,
+    b,
+    depth,
+    unifier,
+    max_nodes_per_round~,
+    depth_cap~,
+    max_projection_args~,
+  ).solved_at_depth >=
+  0
 }
 
 ///|
@@ -2498,4 +2809,150 @@ pub fn check_hou_bounded_search() -> Bool {
   let u5 = unifier_new()
   hou_search_unify(UBoolLit(true), UBoolLit(false), 0, u5).status ==
   HouNoUnifier
+}
+
+///|
+/// Phase 11 checks: deep imitation templates, the projection
+/// applied-argument cap, identification retaining shared
+/// argument dependence, and iterative deepening.
+pub fn check_hou_search_extensions() -> Bool {
+  // Deep imitation copies rigid structure under a binder,
+  // keeping the bound variable; the standard template leaves
+  // the body fresh.
+  let u0 = unifier_new()
+  let deep_rhs = ULam(
+    UConst("Nat"),
+    UPair(UApp(UConst("c"), UVar(0)), UApp(UConst("d"), UVar(0))),
+  )
+  match huet_imitation_template_deep(u0, deep_rhs, 0, 0) {
+    Some(ULam(_, UPair(UApp(UConst("c"), UVar(0)), UApp(UConst("d"), UVar(0))))) =>
+      ()
+    _ => return false
+  }
+  match huet_imitation_template(u0, deep_rhs, 0, 0) {
+    Some(ULam(_, UPair(_, _))) => return false
+    _ => ()
+  }
+  // Projection cap: ?F (g x) (succ y) = ((g x) d1 d2 d3, succ y).
+  // Imitation guesses the pair, but then the first coordinate's
+  // fresh meta can only be solved by projecting its first formal
+  // (the term `g x` itself) onto three fresh subgoals: plain
+  // imitation there would need a subgoal equal to the bound
+  // variable `x`, which no branch can produce.  So a projection
+  // cap of 2 leaves the problem residual, while 3 solves it.
+  let gx = UApp(UConst("g"), UVar(1))
+  let sy = USucc(UVar(0))
+  let proj_rhs = UPair(
+    UApp(UApp(UApp(gx, UConst("d1")), UConst("d2")), UConst("d3")),
+    sy,
+  )
+  let proj_problem = UMeta(0, [gx, sy])
+  let u1 = unifier_new()
+  ignore(hou_fresh_meta(u1, 0))
+  let capped = hou_search_unify(
+    proj_problem,
+    proj_rhs,
+    2,
+    u1,
+    max_projection_args=2,
+  )
+  if capped.status == HouSolved {
+    return false
+  }
+  match u1.metas[0].solution {
+    Some(_) => return false
+    None => ()
+  }
+  let u2 = unifier_new()
+  ignore(hou_fresh_meta(u2, 0))
+  let uncapped = hou_search_unify(
+    proj_problem,
+    proj_rhs,
+    2,
+    u2,
+    max_projection_args=3,
+  )
+  if uncapped.status != HouSolved ||
+    hou_semantic_optimize(proj_problem, u2) != proj_rhs {
+    return false
+  }
+  // Identification (white-box): it keeps the shared constant
+  // argument, so the solution of ?F genuinely depends on its
+  // second argument (a common-constant solution would not).
+  // (Black-box search may find this equation through earlier
+  // branches; here the identification branch itself is forced.)
+  let u3 = unifier_new()
+  ignore(hou_fresh_meta(u3, 0))
+  ignore(hou_fresh_meta(u3, 0))
+  let f_side = UMeta(0, [UVar(1), UConst("c")])
+  let g_side = UMeta(1, [UConst("c"), UVar(0)])
+  let id_state : Array[Int32] = [0, 0, 0, 2]
+  let id_code = hou_search_identification(
+    f_side,
+    g_side,
+    2,
+    u3,
+    id_state,
+    1000,
+    0,
+    4,
+    0,
+    [UVar(1), UConst("c")],
+    1,
+    [UConst("c"), UVar(0)],
+  )
+  if id_code != 1 {
+    return false
+  }
+  if hou_semantic_optimize(f_side, u3) != hou_semantic_optimize(g_side, u3) {
+    return false
+  }
+  let f_at_c = hou_semantic_optimize(UMeta(0, [UVar(1), UConst("c")]), u3)
+  let f_at_d = hou_semantic_optimize(UMeta(0, [UVar(1), UConst("d")]), u3)
+  if f_at_c == f_at_d {
+    return false
+  }
+  // And the equation is of course solvable by the full search.
+  let u3b = unifier_new()
+  ignore(hou_fresh_meta(u3b, 0))
+  ignore(hou_fresh_meta(u3b, 0))
+  if !hou_search_unify_bool(f_side, g_side, 2, u3b) {
+    return false
+  }
+  // Iterative deepening finds the projection problem's shallow
+  // solution and reports it; with the projection cap kept at 2
+  // it exhausts the rounds transactionally.
+  let u4 = unifier_new()
+  ignore(hou_fresh_meta(u4, 0))
+  let iterative = hou_search_unify_iterative(
+    proj_problem,
+    proj_rhs,
+    2,
+    u4,
+    depth_cap=4,
+    max_projection_args=3,
+  )
+  if iterative.solved_at_depth < 1 ||
+    iterative.solved_at_depth > 3 ||
+    iterative.rounds != iterative.solved_at_depth + 1 ||
+    hou_semantic_optimize(proj_problem, u4) != proj_rhs {
+    return false
+  }
+  let u5 = unifier_new()
+  ignore(hou_fresh_meta(u5, 0))
+  let exhausted = hou_search_unify_iterative(
+    proj_problem,
+    proj_rhs,
+    2,
+    u5,
+    depth_cap=2,
+    max_projection_args=2,
+  )
+  if exhausted.solved_at_depth != -1 || exhausted.rounds != 3 {
+    return false
+  }
+  match u5.metas[0].solution {
+    Some(_) => false
+    None => u5.metas.length() == 1
+  }
 }

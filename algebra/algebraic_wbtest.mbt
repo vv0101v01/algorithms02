@@ -38,3 +38,13 @@ test "Karatsuba integer polynomial multiplication agrees with schoolbook" {
   assert_true(rat_eq(qpoly_coeff(p, 0), rat_int(1)))
   assert_true(rat_eq(qpoly_coeff(p, 37), rat_int(1)))
 }
+
+///|
+test "adaptive mod-p degree pattern pruning for Kronecker" {
+  inspect(check_qpoly_mod_pattern_pruning(), content="true")
+}
+
+///|
+test "polynomial cubes and connection-blend filling" {
+  inspect(check_poly_cubes(), content="true")
+}
