@@ -456,6 +456,8 @@ pub fn check_hou_bounded_search() -> Bool
 
 pub fn check_hou_elaborator() -> Bool
 
+pub fn check_hou_pattern_mgu_and_residuals() -> Bool
+
 pub fn check_hou_phase9_extensions() -> Bool
 
 pub fn check_hou_search_extensions() -> Bool

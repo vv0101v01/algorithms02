@@ -397,22 +397,76 @@ pub fn comp_univ_value(
 }
 
 ///|
+/// Endpoint Glue structure of a line whose endpoint type may
+/// have reduced away its (generic, path-based) Glue form -- the
+/// analogue of `glue_equiv_endpoint_parts` for `DVGlue`.  This
+/// arises for universe-valued eliminators over composite
+/// points: the generic point is a `comp_univ_value` Glue while
+/// the endpoints are plain types.  Branch faces are specialised
+/// at the endpoint but bottom branches are retained, preserving
+/// the branch-index alignment used by `comp_glue_value`.
+fn glue_endpoint_parts(
+  line : (Dim) -> DValue,
+  d : Dim,
+  dlevel : Int32,
+) -> DGlueParts {
+  let parts = glue_at(line, d)
+  if parts.system.branches.length() > 0 {
+    return parts
+  }
+  let generic = glue_at(line, DVar(dlevel))
+  if generic.system.branches.length() == 0 {
+    return parts
+  }
+  if dim_is_zero(d) || dim_is_one(d) {
+    let val = dim_is_one(d)
+    let bs : Array[DTubeBranch] = []
+    for b in generic.system.branches {
+      bs.push(
+        tube_branch(face_simplify(face_subst(b.face, dlevel, val)), b.path),
+      )
+    }
+    let system = DSystem::{ branches: bs, }
+    DGlueParts::{
+      system,
+      face: dsystem_domain_face(system),
+      line: generic.line,
+      base: parts.base,
+      level: generic.level,
+    }
+  } else {
+    generic
+  }
+}
+
+///|
 fn glue_branch_path_at(
   line : (Dim) -> DValue,
   j : Dim,
   idx : Int32,
+  dlevel : Int32,
 ) -> (Dim) -> DValue {
   let g = glue_at(line, j)
   if idx >= 0 && idx < g.system.branches.length() {
-    g.system.branches[idx].path
+    return g.system.branches[idx].path
+  }
+  // At a collapsed endpoint the branch path survives only in
+  // the generic Glue structure.
+  let generic = glue_at(line, DVar(dlevel))
+  if idx >= 0 && idx < generic.system.branches.length() {
+    generic.system.branches[idx].path
   } else {
     _ => g.base
   }
 }
 
 ///|
-fn glue_branch_cap_line(line : (Dim) -> DValue, idx : Int32) -> (Dim) -> DValue {
-  (j : Dim) => glue_branch_path_at(line, j, idx)(DOne)
+fn glue_branch_cap_line(
+  line : (Dim) -> DValue,
+  idx : Int32,
+  dlevel : Int32,
+) -> (Dim) -> DValue {
+  (j : Dim) => glue_branch_path_at(line, j, idx, dlevel)(DOne)
 }
 
 ///|
@@ -491,9 +545,9 @@ pub fn comp_glue_value(
 ) -> DValue {
   let a_line = (j : Dim) => glue_at(line, j).base
   let packed_base = glue_pack_at(line, DZero, base, dlevel)
-  let src = glue_at(line, DZero)
-  let tgt = glue_at(line, DOne)
-  let first_cap = glue_branch_cap_line(line, 0)
+  let src = glue_endpoint_parts(line, DZero, dlevel)
+  let tgt = glue_endpoint_parts(line, DOne, dlevel)
+  let first_cap = glue_branch_cap_line(line, 0, dlevel)
   let snd_branches = map_branches(branches, p => {
     (j : Dim) => {
       dsnd_typed(glue_pack_at(line, j, p(j), dlevel), first_cap(j), _ => {
@@ -511,7 +565,7 @@ pub fn comp_glue_value(
   let fills : Array[(Dim) -> DValue] = []
   let t_outs : Array[DValue] = []
   for idx in 0..<count {
-    let t_line = glue_branch_cap_line(line, idx)
+    let t_line = glue_branch_cap_line(line, idx, dlevel)
     let t_branches = map_branches(branches, p => {
       (j : Dim) => {
         glue_partial_at(line, j, glue_pack_at(line, j, p(j), dlevel), idx)
@@ -521,7 +575,7 @@ pub fn comp_glue_value(
       partial0[idx]
     } else {
       coe_value(
-        glue_branch_path_at(line, DZero, idx),
+        glue_branch_path_at(line, DZero, idx, dlevel),
         DZero,
         DOne,
         base0,
@@ -530,10 +584,17 @@ pub fn comp_glue_value(
     }
     let t_fill = fill_value(t_line, t_branches, t_base, dlevel)
     fills.push(t_fill)
-    if idx >= src.system.branches.length() {
+    // A branch whose face is bottom at the source carries no
+    // source partial value to fill from; its target value is
+    // the one compatible with the composed base value, obtained
+    // by coercing along the branch path (as for a branch absent
+    // at the source altogether).
+    let src_active = idx < src.system.branches.length() &&
+      !face_is_bot_sem(src.system.branches[idx].face)
+    if !src_active {
       t_outs.push(
         coe_value(
-          glue_branch_path_at(line, DOne, idx),
+          glue_branch_path_at(line, DOne, idx, dlevel),
           DZero,
           DOne,
           a_raw,
@@ -553,7 +614,7 @@ pub fn comp_glue_value(
       let t_fill = fills[idx]
       let correction = (k : Dim) => {
         let down = coe_value(
-          glue_branch_path_at(line, k, idx),
+          glue_branch_path_at(line, k, idx, dlevel),
           DOne,
           DZero,
           t_fill(k),
@@ -565,12 +626,22 @@ pub fn comp_glue_value(
     }
     hcomp_value(a_line(DOne), dsystem_of(correction_branches), a_raw, dlevel)
   }
-  if count == 0 {
+  if count == 0 || face_is_bot_sem(tgt.face) {
     a_out
-  } else if count == 1 && face_is_top_sem(tgt.face) {
-    t_outs[0]
   } else {
-    DVPair(glue_store_partial(tgt, t_outs), a_out)
+    // A top branch at the target collapses the Glue type to
+    // that branch's partial type, for any branch count.
+    let mut top = -1
+    for idx in 0..<count {
+      if face_is_top_sem(tgt.system.branches[idx].face) {
+        top = idx
+      }
+    }
+    if top >= 0 && top < t_outs.length() {
+      t_outs[top]
+    } else {
+      DVPair(glue_store_partial(tgt, t_outs), a_out)
+    }
   }
 }
 

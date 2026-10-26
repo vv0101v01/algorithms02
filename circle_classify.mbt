@@ -12,17 +12,18 @@
 // `check_circle_encode_decode`): the fibre over `base` is the
 // integers, encode computes on `refl`, the generating loop and its
 // inverse, decode computes on `0`, `1`, `-1`, and the two round
-// trips hold by conversion on those representatives.  Windings of
-// composite loops are computed by subdividing substitution over the
-// loop's factors (transport functoriality): a single substitution
-// over a loop whose points are `trans`/`hcomp` composites evaluates
-// the cover through composition in the universe, and the resulting
-// `Glue`-type line does not chain the generating equivalences under
-// this kernel's composition (a direct substitution over `loop` then
-// `loop` in one composite point computes `1`, not `2`).  This is an
-// intensional boundary of universe composition, recorded here and in
-// the audit, not a claim that the single-substitution encode is a
-// different map propositionally.
+// trips hold by conversion on those representatives.  Since
+// Phase 12 a *single* substitution also computes the windings of
+// `trans`-composite loops (`loop^2`, `loop^3`, `loop^-2`, and a
+// cancelling composite, all in the check): composition in the
+// universe over a composite point yields a generic Glue line
+// whose endpoint Glue structure has reduced away, and
+// `comp_glue_value` now reconstructs that structure from the
+// generic point (`glue_endpoint_parts`), deriving target partial
+// values for source-inactive branches from the composed base --
+// which is exactly what chains the successor equivalence once
+// per factor.  The subdivided encoder remains as an independent
+// cross-check of the same windings.
 //
 // The primitive circle type cannot serve as the object of this
 // classification: its point conversion only compares the boolean
@@ -93,10 +94,10 @@ pub fn circle_encode_value(p : DValue, dlevel : Int32) -> DValue {
 
 ///|
 /// Encode a composite loop given by its factors: iterated
-/// substitution in the universal cover.  This is how the winding of
-/// `trans`-composite loops is computed; see the header for why a
-/// single substitution over composite points does not chain the
-/// windings in this kernel.
+/// substitution in the universal cover (transport functoriality
+/// by hand).  Single substitutions over composites compute the
+/// same windings directly since Phase 12; this factored form is
+/// retained as a cross-check.
 pub fn circle_encode_pieces_value(
   pieces : Array[DValue],
   dlevel : Int32,
@@ -154,9 +155,10 @@ pub fn circle_decode_value(n : DValue, dlevel : Int32) -> DValue {
 
 ///|
 /// Encode/decode for the schema circle computes as expected on the
-/// standard representatives, and the round trips hold by conversion
-/// there; composite windings are computed by subdivision.  See the
-/// file header for the exact intensional boundary.
+/// standard representatives, including single-substitution
+/// windings of composite loops, and the round trips hold by
+/// conversion there.  See the file header for what a full
+/// internal `pi_1(S^1) ≃ Z` statement would still require.
 pub fn check_circle_encode_decode() -> Bool {
   let z = integer_type_value()
   let base = circle_hit_base_value()
@@ -164,6 +166,11 @@ pub fn check_circle_encode_decode() -> Bool {
   let lpi = dpath_sym_value(lp)
   let refl = dpath_refl_value(base)
   let loop_ty = circle_loop_space_type_value()
+  let circle_ty = circle_hit_type_value()
+  let loop2 = dpath_trans_value(circle_ty, lp, lp, 2)
+  let loop3 = dpath_trans_value(circle_ty, loop2, lp, 2)
+  let loopm2 = dpath_trans_value(circle_ty, lpi, lpi, 2)
+  let loop_cancel = dpath_trans_value(circle_ty, lp, lpi, 2)
   // The fibre of the cover over the base point is the integer type.
   if !conv_at(0, 0, DVUniv(0), circle_cover_value(base), z) {
     return false
@@ -186,6 +193,20 @@ pub fn check_circle_encode_decode() -> Bool {
     return false
   }
   if !conv_at(0, 0, z, circle_encode_value(lpi, 2), integer_value(-1)) {
+    return false
+  }
+  // A single substitution computes composite windings: the
+  // successor equivalence chains once per `trans` factor.
+  if !conv_at(0, 0, z, circle_encode_value(loop2, 2), integer_value(2)) {
+    return false
+  }
+  if !conv_at(0, 0, z, circle_encode_value(loop3, 2), integer_value(3)) {
+    return false
+  }
+  if !conv_at(0, 0, z, circle_encode_value(loopm2, 2), integer_value(-2)) {
+    return false
+  }
+  if !conv_at(0, 0, z, circle_encode_value(loop_cancel, 2), integer_value(0)) {
     return false
   }
   // Composite windings by subdivision over the factors.
@@ -238,10 +259,9 @@ pub fn check_circle_encode_decode() -> Bool {
   if !conv_at(0, 0, loop_ty, circle_decode_value(integer_value(-1), 2), lpi) {
     return false
   }
-  // Round trip: encode after decode on 0, +/-1 by a single
-  // substitution; on +/-2, 3 by subdivision over decode's own
-  // factorisation into generator steps.
-  for n in [0, 1, -1] {
+  // Round trip: encode after decode by a single substitution,
+  // on windings -2..3.
+  for n in [0, 1, -1, 2, -2, 3] {
     if !conv_at(
         0,
         0,
@@ -261,9 +281,12 @@ pub fn check_circle_encode_decode() -> Bool {
     ) {
     return false
   }
-  // Round trip: decode after encode on refl, the generator and its
-  // inverse, by conversion in the loop space.
-  let reps : Array[DValue] = [refl, lp, lpi]
+  // Round trip: decode after encode on refl, the generator, its
+  // inverse and the two-fold composite, by conversion in the
+  // loop space.  (Three-fold composites in the other
+  // association are not claimed: path composition is not
+  // definitionally associative.)
+  let reps : Array[DValue] = [refl, lp, lpi, loop2]
   for p in reps {
     if !conv_at(
         0,
