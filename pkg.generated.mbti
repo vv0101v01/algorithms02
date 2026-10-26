@@ -338,11 +338,17 @@ pub fn check_bdd_cost_optimizations() -> Bool
 
 pub fn check_bdd_dag_native_operations() -> Bool
 
+pub fn check_bdd_optimal_order_exact() -> Bool
+
 pub fn check_categories_all() -> Bool
+
+pub fn check_cdcl_clause_learning() -> Bool
 
 pub fn check_certified_algebraic_numeric() -> Bool
 
 pub fn check_circle_encode_decode() -> Bool
+
+pub fn check_circle_torus_point_comp() -> Bool
 
 pub fn check_coe_definitional() -> Bool
 
@@ -359,6 +365,8 @@ pub fn check_cube_comp() -> Bool
 pub fn check_cubical_algorithms() -> Bool
 
 pub fn check_cubical_identities(Cube, Array[Double]) -> Bool
+
+pub fn check_dcube_open_box_filler() -> Bool
 
 pub fn check_dep_all() -> Bool
 
@@ -378,6 +386,8 @@ pub fn check_dsystem_first_match_nf() -> Bool
 
 pub fn check_dsystem_repair_phase9() -> Bool
 
+pub fn check_dterm_hash_consing() -> Bool
+
 pub fn check_eigenspace() -> Bool
 
 pub fn check_equiv_ast() -> Bool
@@ -394,7 +404,11 @@ pub fn check_eta_swap_involution() -> Bool
 
 pub fn check_eta_unit() -> Bool
 
+pub fn check_face_agreement_and_exact_repair() -> Bool
+
 pub fn check_face_poset_category() -> Bool
+
+pub fn check_family_functor_persistence() -> Bool
 
 pub fn check_family_nested_functors() -> Bool
 
@@ -513,6 +527,8 @@ pub fn check_schema_list() -> Bool
 pub fn check_schema_nat_add() -> Bool
 
 pub fn check_schema_nat_neutral_quote() -> Bool
+
+pub fn check_schema_registry_byte_persistence() -> Bool
 
 pub fn check_schema_registry_persistence() -> Bool
 

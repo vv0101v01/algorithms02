@@ -9,7 +9,7 @@
 > (`root` / `algebra` / `cmd-main`).
 
 <!-- APPENDIX:BEGIN -->
-**2871** public symbols (declarations + constructors + fields) in 59 specification families; by package: `algebra` 664, `root` 2207.
+**3118** public symbols (declarations + constructors + fields) in 61 specification families; by package: `algebra` 746, `root` 2372.
 
 ### Complex scalars
 
@@ -184,9 +184,9 @@
 | `check_bdd_canonical` | root | function |
 | `check_interval_faces` | root | function |
 | `contains_int` | root | function |
+| `dim_of_face` | root | function |
 | `dim_simplify` | root | function |
 | `dim_subst` | root | function |
-| `face_agreement_region` | root | function |
 | `face_bound` | root | function |
 | `face_eq_decide` | root | function |
 | `face_eq_mod` | root | function |
@@ -657,6 +657,7 @@
 | `check_ast_kan_all` | root | function |
 | `check_ast_kan_terms` | root | function |
 | `check_ast_kan_types` | root | function |
+| `check_circle_torus_point_comp` | root | function |
 | `coe_value` | root | function |
 | `comp_glue_value` | root | function |
 | `comp_path_value` | root | function |
@@ -709,7 +710,7 @@
 
 ### Persistent environments, laziness and semantic caches
 
-- Canonical form: length-carrying persistent lists DEnv/DDimEnv (innermost de Bruijn head); DVThunk is forced at most once; cache keys are simplified dimensions / quoted-term Debug keys
+- Canonical form: length-carrying persistent lists DEnv/DDimEnv (innermost de Bruijn head); DVThunk is forced at most once; cache keys are simplified dimensions / quoted-term Debug keys; global DTerm hash-consing builds an intern table bottom-up from subterm stamps so structurally equal subterms share one intern id while rebuilt terms stay structurally equal
 - Categorification: CwF context extension is cons with a shared tail; lazy values are call-by-need semantic values and memoized families/dimension lines are finite graphs of extensional functions
 - Decision: environment indexing, force_count and cache-key equality
 
@@ -721,10 +722,14 @@
 | `DEnv` | root | enum |
 | `DEnv::DEnvCons` | root | constructor |
 | `DEnv::DEnvNil` | root | constructor |
+| `DTermInternTable` | root | struct |
+| `DTermInternTable.ids` | root | field |
+| `DTermInternTable.terms` | root | field |
 | `DThunk` | root | struct |
 | `DThunk.compute` | root | field |
 | `DThunk.force_count` | root | field |
 | `DThunk.forced` | root | field |
+| `check_dterm_hash_consing` | root | function |
 | `check_persistent_env_lazy_cache` | root | function |
 | `ddim_at` | root | function |
 | `ddim_cons` | root | function |
@@ -743,6 +748,16 @@
 | `denv_to_array` | root | function |
 | `dim_cache_key` | root | function |
 | `dterm_cache_key` | root | function |
+| `dterm_distinct_subterm_count` | root | function |
+| `dterm_intern` | root | function |
+| `dterm_intern_all` | root | function |
+| `dterm_intern_id` | root | function |
+| `dterm_intern_table_new` | root | function |
+| `dterm_intern_table_size` | root | function |
+| `dterm_local_stamp` | root | function |
+| `dterm_rebuild` | root | function |
+| `dterm_sharing_ratio` | root | function |
+| `dterm_tree_node_count` | root | function |
 | `force_value` | root | function |
 | `lazy_deval` | root | function |
 | `lazy_force_count` | root | function |
@@ -804,6 +819,7 @@
 | `dsystem_of_first_match_nf` | root | function |
 | `dsystem_pairwise_compatible` | root | function |
 | `dsystem_repair_to_base` | root | function |
+| `dsystem_repair_to_base_exact` | root | function |
 | `dsystem_singleton` | root | function |
 | `glue_partial_values` | root | function |
 | `glue_store_partial` | root | function |
@@ -948,6 +964,11 @@
 | `schema_expected_param_terms` | root | function |
 | `schema_intro_term` | root | function |
 | `schema_motives_conv` | root | function |
+| `schema_registry_binary_format_version` | root | function |
+| `schema_registry_binary_from_hex` | root | function |
+| `schema_registry_binary_roundtrip_ok` | root | function |
+| `schema_registry_binary_to_hex` | root | function |
+| `schema_registry_from_binary` | root | function |
 | `schema_registry_hit_by_id` | root | function |
 | `schema_registry_hit_by_name` | root | function |
 | `schema_registry_hit_plan` | root | function |
@@ -962,7 +983,11 @@
 | `schema_registry_register_inductives` | root | function |
 | `schema_registry_restore` | root | function |
 | `schema_registry_snapshot` | root | function |
+| `schema_registry_snapshot_from_binary` | root | function |
+| `schema_registry_snapshot_load_binary_report` | root | function |
+| `schema_registry_snapshot_to_binary` | root | function |
 | `schema_registry_stats` | root | function |
+| `schema_registry_to_binary` | root | function |
 | `schema_registry_validate_hit` | root | function |
 | `schema_registry_validate_inductive` | root | function |
 | `schema_telescope_family_occurs` | root | function |
@@ -1150,15 +1175,21 @@
 | `int_gcd` | algebra | function |
 | `poly_add` | algebra | function |
 | `poly_const` | algebra | function |
+| `poly_drop_atom` | algebra | function |
 | `poly_eq` | algebra | function |
+| `poly_eval_point` | algebra | function |
+| `poly_eval_var` | algebra | function |
+| `poly_insert_atom` | algebra | function |
 | `poly_int` | algebra | function |
 | `poly_is_zero` | algebra | function |
 | `poly_mul` | algebra | function |
 | `poly_neg` | algebra | function |
 | `poly_normalize` | algebra | function |
 | `poly_one` | algebra | function |
+| `poly_open_box` | algebra | function |
 | `poly_scale` | algebra | function |
 | `poly_sub` | algebra | function |
+| `poly_subst_all` | algebra | function |
 | `poly_var` | algebra | function |
 | `poly_zero` | algebra | function |
 | `rat_add` | algebra | function |
@@ -1578,7 +1609,7 @@
 
 - Canonical form: hash-consed DAG node ids; the reachable-node count of a root is its ROBDD size
 - Categorification: shared canonical graphs of boolean functions at a fixed variable order; apply is a memoized lattice operation
-- Decision: same-manager root-id equality, sat as root≠0, node-budget FaceDecision, or step-budgeted DPLL (the legacy scanner and the watched-literal engine on Tseitin CNF); candidate-order minimization, bounded sifting that moves each variable through every insertion position with an honest initial/final report, and apply-cache doubling rehash once apply_misses exceeds four times the bucket count, and a 3ⁿ worst-case node bound; watched/list DPLL are differentially checked against 2^n brute force
+- Decision: same-manager root-id equality, sat as root≠0, node-budget FaceDecision, or step-budgeted DPLL (the legacy scanner and the watched-literal engine on Tseitin CNF); candidate-order minimization, bounded sifting that moves each variable through every insertion position with an honest initial/final report, and apply-cache doubling rehash once apply_misses exceeds four times the bucket count, and a 3ⁿ worst-case node bound; watched/list DPLL are differentially checked against 2^n brute force; CDCL adds 1-UIP clause learning, VSIDS and Luby restarts on top of watched propagation and is checked on generated faces and pigeonhole instances; for n≤8 all variable permutations are enumerated for a provably optimal order, above the cap non-exactness is reported
 
 | Symbol | Package | Kind |
 |---|---|---|
@@ -1610,6 +1641,12 @@
 | `BddManager.nodes` | root | field |
 | `BddManager.order` | root | field |
 | `BddManager.position` | root | field |
+| `BddOptimalBuild` | root | struct |
+| `BddOptimalBuild.built` | root | field |
+| `BddOptimalBuild.exact` | root | field |
+| `BddOptimalBuild.order` | root | field |
+| `BddOptimalBuild.size` | root | field |
+| `BddOptimalBuild.tried` | root | field |
 | `BddOptimizedBuild` | root | struct |
 | `BddOptimizedBuild.attempts` | root | field |
 | `BddOptimizedBuild.built` | root | field |
@@ -1620,6 +1657,18 @@
 | `FaceBoolExpr::equal` | root | function |
 | `FaceBoolExpr::not_equal` | root | function |
 | `FaceBoolExpr::to_repr` | root | function |
+| `FaceCdclResult` | root | struct |
+| `FaceCdclResult.decision` | root | field |
+| `FaceCdclResult.stats` | root | field |
+| `FaceCdclStats` | root | struct |
+| `FaceCdclStats.conflicts` | root | field |
+| `FaceCdclStats.decisions` | root | field |
+| `FaceCdclStats.learned` | root | field |
+| `FaceCdclStats.propagations` | root | field |
+| `FaceCdclStats.restarts` | root | field |
+| `FaceCdclStats::equal` | root | function |
+| `FaceCdclStats::not_equal` | root | function |
+| `FaceCdclStats::to_repr` | root | function |
 | `FaceCnfStats` | root | struct |
 | `FaceCnfStats.auxiliary_variables` | root | field |
 | `FaceCnfStats.clauses` | root | field |
@@ -1653,6 +1702,7 @@
 | `bdd_dag_not` | root | function |
 | `bdd_dag_of_face` | root | function |
 | `bdd_dag_of_face_best` | root | function |
+| `bdd_dag_of_face_optimal` | root | function |
 | `bdd_dag_of_face_optimized` | root | function |
 | `bdd_dag_or` | root | function |
 | `bdd_dag_reachable_count` | root | function |
@@ -1673,17 +1723,22 @@
 | `bdd_worst_case_nodes` | root | function |
 | `check_bdd_cost_optimizations` | root | function |
 | `check_bdd_dag_native_operations` | root | function |
+| `check_bdd_optimal_order_exact` | root | function |
+| `check_cdcl_clause_learning` | root | function |
 | `face_cnf_stats` | root | function |
+| `face_eq_cdcl` | root | function |
 | `face_eq_dpll` | root | function |
 | `face_eq_watched_dpll` | root | function |
 | `face_eq_within_budget` | root | function |
+| `face_sat_cdcl` | root | function |
+| `face_sat_cdcl_report` | root | function |
 | `face_sat_dpll` | root | function |
 | `face_sat_watched_dpll` | root | function |
 | `face_sat_within_budget` | root | function |
 
 ### Raw DSystem compatibility and first-match normal forms
 
-- Canonical form: compatible systems reuse the type-directed DSystem normal form; arbitrary first-match systems become disjoint effective regions DTubeNF
+- Canonical form: compatible systems reuse the type-directed DSystem normal form; arbitrary first-match systems become disjoint effective regions DTubeNF; agreement regions of two values come in both boolean BDD form and a Face-valued form retaining both endpoints, and exact repair truncates branches to the Face-valued agreement without touching endpoints
 - Categorification: partial elements in face-relative slices; the checked constructor is a reflection into the composition-system subclass
 - Decision: local-context conversion over BDD-cube enumerations, checking the base and pairwise overlaps; the first conflict is reported
 
@@ -1714,6 +1769,11 @@
 | `DSystemRepair.compatible` | root | field |
 | `DSystemRepair.repaired_branches` | root | field |
 | `DSystemRepair.system` | root | field |
+| `DSystemRepairExact` | root | struct |
+| `DSystemRepairExact.base_removed_region` | root | field |
+| `DSystemRepairExact.compatible` | root | field |
+| `DSystemRepairExact.repaired_branches` | root | field |
+| `DSystemRepairExact.system` | root | field |
 | `DTubeNF` | root | struct |
 | `DTubeNF.classes` | root | field |
 | `DTubeNF.undefined` | root | field |
@@ -1723,9 +1783,13 @@
 | `check_dsystem_compatibility` | root | function |
 | `check_dsystem_first_match_nf` | root | function |
 | `check_dsystem_repair_phase9` | root | function |
+| `check_face_agreement_and_exact_repair` | root | function |
 | `conv_at_under_face` | root | function |
 | `conv_at_under_face_report` | root | function |
 | `dtube_nf_class` | root | function |
+| `face_agreement_face` | root | function |
+| `face_agreement_face_sound` | root | function |
+| `face_agreement_region` | root | function |
 | `tube_paths_conv_under_face` | root | function |
 
 ### First-class AST Equiv and GlueEquiv
@@ -1821,7 +1885,7 @@
 
 ### Schema registry and elaboration caches
 
-- Canonical form: DInductivePlan/DHitPlan interned in DSchemaRegistry by stable Debug keys, with telescope prefix chains
+- Canonical form: DInductivePlan/DHitPlan interned in DSchemaRegistry by stable Debug keys, with telescope prefix chains; the CHREGBIN v1 byte form is magic + version + length + checksum + full DTerm/schema codec payload
 - Categorification: schema descriptors are shareable plans; caches store only finite graphs of the same elaboration functions and do not change denotation
 - Decision: validation booleans and semantic telescope prefixes are looked up by (term,args,args) keys; hit/miss counters are observable
 
@@ -1851,6 +1915,9 @@
 | `DSchemaRegistry.telescopes` | root | field |
 | `DSchemaRegistry.validation_hits` | root | field |
 | `DSchemaRegistry.validation_misses` | root | field |
+| `DSchemaRegistryBinaryLoad` | root | struct |
+| `DSchemaRegistryBinaryLoad.snapshot` | root | field |
+| `DSchemaRegistryBinaryLoad.status` | root | field |
 | `DSchemaRegistrySnapshot` | root | struct |
 | `DSchemaRegistrySnapshot.hit_specs` | root | field |
 | `DSchemaRegistrySnapshot.hit_valid` | root | field |
@@ -1862,20 +1929,29 @@
 | `DTelescopeCacheEntry.prefix_values` | root | field |
 | `DTelescopeCacheEntry.types` | root | field |
 | `DTelescopeCacheEntry.values` | root | field |
+| `check_family_functor_persistence` | root | function |
+| `check_schema_registry_byte_persistence` | root | function |
 | `check_schema_registry_persistence` | root | function |
 | `default_schema_registry` | root | constant |
 
 ### Schema functors, positivity and induction-recursion
 
-- Canonical form: the Id/Const/Product/Sum/List/Pi/Container grammar of DPositiveFunctor and its decoded types; DPositivityReport records occurrences and polarities
+- Canonical form: the Id/Const/Product/Sum/List/Pi/Container/DecodedFunction/Family grammar of DPositiveFunctor (Family marks host-Self versus external parameter slots with DFunctorParamArg; cross-family only, parameters must occur at gatherable leaves) and its decoded types; DPositivityReport records occurrences and polarities
 - Categorification: initial algebras of positive type functors with decoded induction hypotheses; DDecode is the decoding function of a Tarski universe (induction-recursion)
 - Decision: polarity recursion on alias-expanded DTerms: nested functors and positive positions are accepted, negative positions and unknown neutral family applications are rejected; IHs are generated by functor recursion
 
 | Symbol | Package | Kind |
 |---|---|---|
+| `DFunctorParamArg` | root | enum |
+| `DFunctorParamArg::DFunctorParamSelf` | root | constructor |
+| `DFunctorParamArg::DFunctorParamTerm` | root | constructor |
+| `DFunctorParamArg::equal` | root | function |
+| `DFunctorParamArg::not_equal` | root | function |
+| `DFunctorParamArg::to_repr` | root | function |
 | `DPositiveFunctor` | root | enum |
 | `DPositiveFunctor::DFunctorConst` | root | constructor |
 | `DPositiveFunctor::DFunctorContainer` | root | constructor |
+| `DPositiveFunctor::DFunctorFamily` | root | constructor |
 | `DPositiveFunctor::DFunctorIdentity` | root | constructor |
 | `DPositiveFunctor::DFunctorList` | root | constructor |
 | `DPositiveFunctor::DFunctorPi` | root | constructor |
@@ -1895,6 +1971,7 @@
 | `DPositivityReport::not_equal` | root | function |
 | `DPositivityReport::to_repr` | root | function |
 | `check_container_functor_tree` | root | function |
+| `check_family_nested_functors` | root | function |
 | `check_nested_rose_tree` | root | function |
 | `check_structural_positivity` | root | function |
 | `check_tarski_induction_recursion` | root | function |
@@ -1905,8 +1982,11 @@
 | `decode_term` | root | function |
 | `dfunctor_const` | root | function |
 | `dfunctor_container` | root | function |
+| `dfunctor_family` | root | function |
 | `dfunctor_identity` | root | function |
 | `dfunctor_list` | root | function |
+| `dfunctor_param_self` | root | function |
+| `dfunctor_param_term` | root | function |
 | `dfunctor_pi` | root | function |
 | `dfunctor_product` | root | function |
 | `dfunctor_sigma` | root | function |
@@ -2076,17 +2156,20 @@
 | `qpoly_eval` | algebra | function |
 | `qpoly_extgcd` | algebra | function |
 | `qpoly_factor` | algebra | function |
+| `qpoly_factor_degree_candidates` | algebra | function |
 | `qpoly_factor_rational_roots` | algebra | function |
 | `qpoly_gcd` | algebra | function |
 | `qpoly_int` | algebra | function |
 | `qpoly_integer_coeffs` | algebra | function |
 | `qpoly_integer_coeffs_big` | algebra | function |
+| `qpoly_irreducible_by_mod_patterns` | algebra | function |
 | `qpoly_irreducible_upto3` | algebra | function |
 | `qpoly_is_one` | algebra | function |
 | `qpoly_is_squarefree` | algebra | function |
 | `qpoly_is_zero` | algebra | function |
 | `qpoly_leading` | algebra | function |
 | `qpoly_mod` | algebra | function |
+| `qpoly_mod_degree_patterns` | algebra | function |
 | `qpoly_monic` | algebra | function |
 | `qpoly_mul` | algebra | function |
 | `qpoly_neg` | algebra | function |
@@ -2473,7 +2556,7 @@
 
 - Canonical form: RatInterval/CInterval rectangular enclosures and dyadically outward-rounded Hermitian interval matrices; every rotation stores before/after matrices and the accumulated unitary transform
 - Categorification: monotone lifting of Hermitian similarity transforms to interval-matrix enclosures; Gershgorin discs give spectral image decompositions and multiplicity clusters
-- Decision: exact rational square comparisons certify sqrt/phase/c/s enclosures; every rotation recomputes J†J−I∋0 and J†AJ⊆after, and final discs are clustered and counted
+- Decision: exact rational square comparisons certify sqrt/phase/c/s enclosures; every rotation recomputes J†J−I∋0 and J†AJ⊆after, and final discs are clustered and counted; eigenvalue clusters are separated by Sturm-counting the squarefree part (Sturm chain with derivative gcd) and matching multiplicities back by unique interval overlap
 
 | Symbol | Package | Kind |
 |---|---|---|
@@ -2500,6 +2583,12 @@
 | `JacobiCertificate::equal` | algebra | function |
 | `JacobiCertificate::not_equal` | algebra | function |
 | `JacobiCertificate::to_repr` | algebra | function |
+| `JacobiClusterSeparation` | algebra | struct |
+| `JacobiClusterSeparation.complete` | algebra | field |
+| `JacobiClusterSeparation.intervals` | algebra | field |
+| `JacobiClusterSeparation::equal` | algebra | function |
+| `JacobiClusterSeparation::not_equal` | algebra | function |
+| `JacobiClusterSeparation::to_repr` | algebra | function |
 | `JacobiCoefficients` | algebra | struct |
 | `JacobiCoefficients.cosine` | algebra | field |
 | `JacobiCoefficients.modulus` | algebra | field |
@@ -2546,6 +2635,15 @@
 | `RatInterval::equal` | algebra | function |
 | `RatInterval::not_equal` | algebra | function |
 | `RatInterval::to_repr` | algebra | function |
+| `SeparatedEigenInterval` | algebra | struct |
+| `SeparatedEigenInterval.cluster` | algebra | field |
+| `SeparatedEigenInterval.hi` | algebra | field |
+| `SeparatedEigenInterval.lo` | algebra | field |
+| `SeparatedEigenInterval.multiplicity` | algebra | field |
+| `SeparatedEigenInterval::equal` | algebra | function |
+| `SeparatedEigenInterval::not_equal` | algebra | function |
+| `SeparatedEigenInterval::to_repr` | algebra | function |
+| `check_jacobi_cluster_separation` | algebra | function |
 | `cinterval` | algebra | function |
 | `cinterval_add` | algebra | function |
 | `cinterval_conj` | algebra | function |
@@ -2562,8 +2660,10 @@
 | `cinterval_zero` | algebra | function |
 | `eigen_interval_contains` | algebra | function |
 | `jacobi_certificate_sound` | algebra | function |
+| `jacobi_cluster_separation_certified` | algebra | function |
 | `jacobi_coefficients` | algebra | function |
 | `jacobi_interval_eigen` | algebra | function |
+| `jacobi_separate_clusters` | algebra | function |
 | `jacobi_similarity_interval` | algebra | function |
 | `jacobi_unitary_interval` | algebra | function |
 | `jacobi_unitary_residual_contains_zero` | algebra | function |
@@ -2615,7 +2715,7 @@
 
 - Canonical form: Miller-pattern spines `?F x₁…xₙ` in UTerm and beta/projection-reduced zonked cores; surface STerm resolves names to de Bruijn UTerm
 - Categorification: pattern HOU is the decidable fragment of higher-order unification; bidirectional elaboration sends implicit arguments and dependent motives to the same unifier and compiles to the dependent core
-- Decision: rigid decomposition after WHNF, pattern abstraction, occurs/scope checks and a closed-term fallback; a bounded Huet-style search above the deterministic fragment tries rigid/spine decomposition, same-head invariant coordinates, distinct flex-flex constants, imitation and projection transactionally under node/depth budgets and reports solved/no-unifier/residual/budget-exceeded honestly (general HOU is undecidable, so no completeness is claimed); check/infer insert implicit metavariables and unsolved ones are rejected before DTerm translation
+- Decision: rigid decomposition after WHNF, pattern abstraction, occurs/scope checks and a closed-term fallback; a bounded Huet-style search above the deterministic fragment tries rigid/spine decomposition, same-head invariant coordinates, distinct flex-flex constants, imitation and projection transactionally under node/depth budgets and reports solved/no-unifier/residual/budget-exceeded honestly (general HOU is undecidable, so no completeness is claimed); check/infer insert implicit metavariables and unsolved ones are rejected before DTerm translation; phase 11 adds deep imitation, a widened projection-candidate cap and same-head identification, with iterative deepening recorded in HouIterativeReport
 
 | Symbol | Package | Kind |
 |---|---|---|
@@ -2637,6 +2737,13 @@
 | `Elaborator::equal` | root | function |
 | `Elaborator::not_equal` | root | function |
 | `Elaborator::to_repr` | root | function |
+| `HouIterativeReport` | root | struct |
+| `HouIterativeReport.report` | root | field |
+| `HouIterativeReport.rounds` | root | field |
+| `HouIterativeReport.solved_at_depth` | root | field |
+| `HouIterativeReport::equal` | root | function |
+| `HouIterativeReport::not_equal` | root | function |
+| `HouIterativeReport::to_repr` | root | function |
 | `HouSearchReport` | root | struct |
 | `HouSearchReport.branches_tried` | root | field |
 | `HouSearchReport.max_depth_reached` | root | field |
@@ -2706,6 +2813,7 @@
 | `check_hou_bounded_search` | root | function |
 | `check_hou_elaborator` | root | function |
 | `check_hou_phase9_extensions` | root | function |
+| `check_hou_search_extensions` | root | function |
 | `elab_check` | root | function |
 | `elab_infer` | root | function |
 | `elab_result_to_dterm` | root | function |
@@ -2714,6 +2822,8 @@
 | `hou_fresh_meta` | root | function |
 | `hou_search_unify` | root | function |
 | `hou_search_unify_bool` | root | function |
+| `hou_search_unify_iterative` | root | function |
+| `hou_search_unify_iterative_bool` | root | function |
 | `hou_semantic_optimize` | root | function |
 | `hou_unify` | root | function |
 | `unifier_new` | root | function |
@@ -2727,7 +2837,7 @@
 
 ### Parameterized modules and namespaces
 
-- Canonical form: module telescopes (parameters→imports→local declarations) with separate name→ordinal bindings; instances are simultaneously substituted closed declarations
+- Canonical form: module telescopes (parameters→imports and local declarations interleaved as ModuleItem entries; the legacy decls-only construction still reads, with all imports front-loaded) with separate name→ordinal bindings; instances are simultaneously substituted closed declarations
 - Categorification: parameterized modules are module functors, import is inlined functor application, and open/alias/rename are name projections of one telescope entry
 - Decision: cycle detection, dependent checking of parameter arguments, ambiguity rejection for import selection/hiding/renaming, neutralization of opaque exports, and dep_check of every closed instance declaration
 
@@ -2751,6 +2861,7 @@
 | `ModuleDef` | root | struct |
 | `ModuleDef.decls` | root | field |
 | `ModuleDef.imports` | root | field |
+| `ModuleDef.items` | root | field |
 | `ModuleDef.opens` | root | field |
 | `ModuleDef.params` | root | field |
 | `ModuleDef.path` | root | field |
@@ -2808,6 +2919,12 @@
 | `ModuleInstanceDecl::equal` | root | function |
 | `ModuleInstanceDecl::not_equal` | root | function |
 | `ModuleInstanceDecl::to_repr` | root | function |
+| `ModuleItem` | root | enum |
+| `ModuleItem::ModuleItemDecl` | root | constructor |
+| `ModuleItem::ModuleItemImport` | root | constructor |
+| `ModuleItem::equal` | root | function |
+| `ModuleItem::not_equal` | root | function |
+| `ModuleItem::to_repr` | root | function |
 | `ModuleRename` | root | struct |
 | `ModuleRename.from_name` | root | field |
 | `ModuleRename.to_name` | root | field |
@@ -2823,6 +2940,7 @@
 | `ModuleSignature::not_equal` | root | function |
 | `ModuleSignature::to_repr` | root | function |
 | `bool_ops_module` | root | function |
+| `check_module_interleaved_items` | root | function |
 | `check_module_system` | root | function |
 | `generic_iterate_module` | root | function |
 | `module_decl` | root | function |
@@ -2923,9 +3041,9 @@
 
 ### Complete exact algebra and root isolation
 
-- Canonical form: BigInt rationals; irreducible factors and multiplicities in Q[x]; Sturm real-root intervals and disjoint Rouché complex disks; split roots in successive algebraic towers; denested radical expressions
+- Canonical form: BigInt rationals; irreducible factors and multiplicities in Q[x]; Sturm real-root intervals and disjoint Rouché complex disks; split roots in successive algebraic towers; denested radical expressions; biquadratic numbers as rational coefficients on the basis [1,√d₁,√d₂,√(d₁d₂)] for at most two squarefree generators
 - Categorification: unique factorization in Q[x], root multisets in an algebraic closure and finite splitting extensions; AlgPoly is polynomial algebra over an extension
-- Decision: Kronecker/finite-field lifting, Sturm counting, Cauchy-square Taylor exclusion and Rouché subdivision; every certificate is recomputed with exact polynomial arithmetic
+- Decision: factorization first prunes by adaptive mod-p degree patterns and rational roots, then Kronecker enumeration; Sturm counting, Cauchy-square Taylor exclusion and Rouché subdivision; radical denesting is decided inside biquadratic fields by conjugate norms and algebraic-number square roots (genuinely biquadratic radicands needing another biquadratic or higher multicubic root are the stated boundary); every certificate is recomputed with exact polynomial arithmetic
 
 | Symbol | Package | Kind |
 |---|---|---|
@@ -2938,6 +3056,12 @@
 | `AlgPolyFactor` | algebra | struct |
 | `AlgPolyFactor.factor` | algebra | field |
 | `AlgPolyFactor.multiplicity` | algebra | field |
+| `BiquadNum` | algebra | struct |
+| `BiquadNum.basis` | algebra | field |
+| `BiquadNum.coeffs` | algebra | field |
+| `BiquadNum::equal` | algebra | function |
+| `BiquadNum::not_equal` | algebra | function |
+| `BiquadNum::to_repr` | algebra | function |
 | `ComplexDisk` | algebra | struct |
 | `ComplexDisk.im` | algebra | field |
 | `ComplexDisk.radius` | algebra | field |
@@ -2949,6 +3073,9 @@
 | `QPolyCompleteFactorization` | algebra | struct |
 | `QPolyCompleteFactorization.factors` | algebra | field |
 | `QPolyCompleteFactorization.leading` | algebra | field |
+| `QPolyDegreePattern` | algebra | struct |
+| `QPolyDegreePattern.degrees` | algebra | field |
+| `QPolyDegreePattern.prime` | algebra | field |
 | `RadicalExpr` | algebra | enum |
 | `RadicalExpr::RAdd` | algebra | constructor |
 | `RadicalExpr::RDiv` | algebra | constructor |
@@ -3000,7 +3127,23 @@
 | `bigint_sqrt_floor` | algebra | function |
 | `bigint_squarefree_decomp` | algebra | function |
 | `bigint_to_double` | algebra | function |
+| `biquad_add` | algebra | function |
+| `biquad_div` | algebra | function |
+| `biquad_eq` | algebra | function |
+| `biquad_inv` | algebra | function |
+| `biquad_mul` | algebra | function |
+| `biquad_neg` | algebra | function |
+| `biquad_of_quad` | algebra | function |
+| `biquad_rat` | algebra | function |
+| `biquad_sign` | algebra | function |
+| `biquad_sqrt` | algebra | function |
+| `biquad_sqrt_rat` | algebra | function |
+| `biquad_sub` | algebra | function |
+| `biquad_to_radical` | algebra | function |
+| `biquad_zero` | algebra | function |
+| `check_biquadratic_denesting` | algebra | function |
 | `check_qpoly_factor_complete` | algebra | function |
+| `check_qpoly_mod_pattern_pruning` | algebra | function |
 | `check_radical_denesting` | algebra | function |
 | `check_root_isolation` | algebra | function |
 | `check_splitting_field` | algebra | function |
@@ -3018,10 +3161,12 @@
 | `qpoly_splitting_field` | algebra | function |
 | `qpoly_sturm_sequence` | algebra | function |
 | `qpoly_sturm_variations` | algebra | function |
+| `radical_equal_exact` | algebra | function |
 | `radical_int` | algebra | function |
 | `radical_rat` | algebra | function |
 | `radical_simplify` | algebra | function |
 | `radical_sqrt` | algebra | function |
+| `radical_to_biquad` | algebra | function |
 | `real_root_isolation_refine` | algebra | function |
 | `real_root_isolations_are_certified` | algebra | function |
 | `splitting_field_is_certified` | algebra | function |
@@ -3097,8 +3242,10 @@
 | `check_mutual_declaration_positivity` | root | function |
 | `check_nested_iter_datatype` | root | function |
 | `check_simultaneous_induction_recursion` | root | function |
+| `check_simultaneous_ir_compiled_decode` | root | function |
 | `check_type_operator_positivity_extraction` | root | function |
 | `circle_level_decl` | root | function |
+| `code_interpretation_ir` | root | function |
 | `compile_nested_iter_decl` | root | function |
 | `darg_nested_from_type` | root | function |
 | `dlevel_expr_in_scope` | root | function |
@@ -3126,6 +3273,9 @@
 | `nat_parity_double_ir` | root | function |
 | `nested_iter_intro_term_at` | root | function |
 | `nested_iter_type_term` | root | function |
+| `simultaneous_ir_compile_decode` | root | function |
+| `simultaneous_ir_function_universe_level` | root | function |
+| `simultaneous_ir_uses_other_hypotheses` | root | function |
 | `simultaneous_ir_validate` | root | function |
 | `type_operator_is_strictly_positive` | root | function |
 | `type_operator_positivity` | root | function |
@@ -3148,6 +3298,7 @@
 | `adjointify_equiv_value` | root | function |
 | `check_adjoint_equivalence_and_fibers` | root | function |
 | `check_general_adjointification_and_contractible_fibers` | root | function |
+| `check_lemiso_generic_points` | root | function |
 | `check_propositional_truncation` | root | function |
 | `contractible_fibers_type_term` | root | function |
 | `equiv_contractible_fibers_value` | root | function |
@@ -3242,9 +3393,9 @@
 
 ### Separate module compilation and linking
 
-- Canonical form: the flattened checked telescope, exports, dependency fingerprints and public interface projection of CompiledModule; abstract declarations have body=None; the cache is indexed by source fingerprints; the stable external form is the CHMODBIN byte array specified in the Decision column
+- Canonical form: the flattened checked telescope, exports, dependency fingerprints and public interface projection of CompiledModule; abstract declarations have body=None; the cache is indexed by source fingerprints; the stable external form is the CHMODBIN byte array specified in the Decision column (v2 appends a producer string to the v1 payload); CompiledModuleStore keeps module artifact bytes with hit/miss counters
 - Categorification: compiled objects of module functors and synthetic import-free linking definitions; prefix specialization is partial functor application
-- Decision: interface hashes omit opaque bodies and implementation hashes cover all entries; implementations supply abstract exports; cache entries invalidate on source or dependency-interface fingerprints; the stable binary format is magic CHMODBIN + version u16 + length u32 + checksum u32 + payload (tag bytes, fixed-width little-endian i32 fields and UTF-16LE strings), and decoding rejects bad magic/version/truncation/checksum/malformed/trailing bytes before rerunning module validation and fingerprint checks
+- Decision: interface hashes omit opaque bodies and implementation hashes cover all entries; implementations supply abstract exports; cache entries invalidate on source or dependency-interface fingerprints; the stable binary format is magic CHMODBIN + version u16 + length u32 + checksum u32 + payload (tag bytes, fixed-width little-endian i32 fields and UTF-16LE strings), and decoding rejects bad magic/version/truncation/checksum/malformed/trailing bytes before rerunning module validation and fingerprint checks; the loader accepts v1/v2 and migrates v1 with a default producer, while the legacy v1 writer refuses v2-only nodes (such as functor tag 8) with None
 
 | Symbol | Package | Kind |
 |---|---|---|
@@ -3258,6 +3409,7 @@
 | `CompiledModule.interface_hash` | root | field |
 | `CompiledModule.module_path` | root | field |
 | `CompiledModule.params` | root | field |
+| `CompiledModule.producer` | root | field |
 | `CompiledModule::equal` | root | function |
 | `CompiledModule::not_equal` | root | function |
 | `CompiledModule::to_repr` | root | function |
@@ -3266,6 +3418,18 @@
 | `CompiledModuleEnv::equal` | root | function |
 | `CompiledModuleEnv::not_equal` | root | function |
 | `CompiledModuleEnv::to_repr` | root | function |
+| `CompiledModuleStore` | root | struct |
+| `CompiledModuleStore.blobs` | root | field |
+| `CompiledModuleStore.hits` | root | field |
+| `CompiledModuleStore.misses` | root | field |
+| `CompiledModuleStoreStats` | root | struct |
+| `CompiledModuleStoreStats.entries` | root | field |
+| `CompiledModuleStoreStats.hits` | root | field |
+| `CompiledModuleStoreStats.misses` | root | field |
+| `CompiledModuleStoreStats.total_bytes` | root | field |
+| `CompiledModuleStoreStats::equal` | root | function |
+| `CompiledModuleStoreStats::not_equal` | root | function |
+| `CompiledModuleStoreStats::to_repr` | root | function |
 | `ModuleBinaryLoad` | root | struct |
 | `ModuleBinaryLoad.module_` | root | field |
 | `ModuleBinaryLoad.status` | root | field |
@@ -3304,10 +3468,13 @@
 | `ModuleDependencyFingerprint::to_repr` | root | function |
 | `abstract_point_module` | root | function |
 | `check_module_binary_format` | root | function |
+| `check_module_binary_versions_and_store` | root | function |
 | `check_module_compilation` | root | function |
 | `compiled_module_binary_format_version` | root | function |
 | `compiled_module_binary_from_hex` | root | function |
+| `compiled_module_binary_supported_versions` | root | function |
 | `compiled_module_binary_to_hex` | root | function |
+| `compiled_module_binary_version_of` | root | function |
 | `compiled_module_env_add` | root | function |
 | `compiled_module_env_find` | root | function |
 | `compiled_module_env_new` | root | function |
@@ -3318,8 +3485,16 @@
 | `compiled_module_is_implementation` | root | function |
 | `compiled_module_load_binary` | root | function |
 | `compiled_module_load_binary_report` | root | function |
+| `compiled_module_migrate_binary` | root | function |
+| `compiled_module_producer_default` | root | function |
 | `compiled_module_specialize_prefix` | root | function |
+| `compiled_module_store_contains` | root | function |
+| `compiled_module_store_get` | root | function |
+| `compiled_module_store_new` | root | function |
+| `compiled_module_store_put` | root | function |
+| `compiled_module_store_stats` | root | function |
 | `compiled_module_to_binary` | root | function |
+| `compiled_module_to_binary_v1` | root | function |
 | `compiled_module_to_module_def` | root | function |
 | `compiled_module_validate` | root | function |
 | `module_compile` | root | function |
@@ -3402,6 +3577,96 @@
 | `spec_covers` | root | function |
 | `spec_registry` | root | function |
 | `spec_registry_sound` | root | function |
+
+### The circle's universal cover and encode/decode
+
+- Canonical form: cover fibres are canonical IntegerS integers over base and ua-line GlueEquiv types over loop points; loop representatives are DVHitCell paths of the schema circle and winding numbers are canonical integer values
+- Categorification: the helix is a fibration family from the circle to the universe; encode is the endpoint of substitution (path lifting) in the cover and decode is integer elimination into loop powers
+- Decision: the base fibre is convertible to ℤ at universe level; substitution computes directly on the generator, its inverse and refl, while composite loops are computed by subdividing transport (a single substitution across trans points passes through a Glue line from universe composition that does not chain the equivalences — a recorded intensional boundary); both round trips are checked by conversion on representatives
+
+| Symbol | Package | Kind |
+|---|---|---|
+| `check_circle_encode_decode` | root | function |
+| `circle_cover_value` | root | function |
+| `circle_decode_value` | root | function |
+| `circle_encode_pieces_value` | root | function |
+| `circle_encode_value` | root | function |
+| `circle_hit_type_value` | root | function |
+| `circle_loop_space_type_value` | root | function |
+| `integer_succ_equiv_value` | root | function |
+
+### Host-opaque cubes and open-box filling
+
+- Canonical form: cubes are host functions (dimension lists to semantic values / rational-polynomial coordinates); an open box is boundary data missing one face and the cap is the filler's restriction to that face
+- Categorification: external cubical data over □ with a host implementation of the Kan filling condition; polynomial cubes are cubical maps in exact rational coordinates, filled by the iteration F += w·(S − F|face) face by face
+- Decision: boundary completeness and overlap compatibility are verified face by face by typed conversion / canonical polynomial equality; incompatible or incomplete boxes are rejected with failure counts
+
+| Symbol | Package | Kind |
+|---|---|---|
+| `DCubeBoxFace` | root | struct |
+| `DCubeBoxFace.axis` | root | field |
+| `DCubeBoxFace.cube` | root | field |
+| `DCubeBoxFace.hi` | root | field |
+| `DCubeBoxReport` | root | struct |
+| `DCubeBoxReport.complete` | root | field |
+| `DCubeBoxReport.failed_overlaps` | root | field |
+| `DCubeBoxReport.overlaps_ok` | root | field |
+| `DCubeFunction` | root | struct |
+| `DCubeFunction.arity` | root | field |
+| `DCubeFunction.at` | root | field |
+| `DCubeOpenBox` | root | struct |
+| `DCubeOpenBox.ambient_dlevel` | root | field |
+| `DCubeOpenBox.arity` | root | field |
+| `DCubeOpenBox.faces` | root | field |
+| `DCubeOpenBox.ty` | root | field |
+| `PolyBoxFace` | algebra | struct |
+| `PolyBoxFace.axis` | algebra | field |
+| `PolyBoxFace.cube` | algebra | field |
+| `PolyBoxFace.hi` | algebra | field |
+| `PolyCube` | algebra | struct |
+| `PolyCube.coords` | algebra | field |
+| `PolyCube.dim` | algebra | field |
+| `PolyOpenBox` | algebra | struct |
+| `PolyOpenBox.dim` | algebra | field |
+| `PolyOpenBox.faces` | algebra | field |
+| `check_dcube_open_box_filler` | root | function |
+| `check_poly_cubes` | algebra | function |
+| `dcube_at` | root | function |
+| `dcube_box_cap` | root | function |
+| `dcube_box_complete` | root | function |
+| `dcube_box_face` | root | function |
+| `dcube_box_face_of` | root | function |
+| `dcube_box_fill` | root | function |
+| `dcube_box_fill_verified` | root | function |
+| `dcube_box_validate` | root | function |
+| `dcube_constant` | root | function |
+| `dcube_cubes_conv` | root | function |
+| `dcube_degenerate` | root | function |
+| `dcube_face` | root | function |
+| `dcube_filler_faces_ok` | root | function |
+| `dcube_function` | root | function |
+| `dcube_generic_dims` | root | function |
+| `dcube_of_path` | root | function |
+| `dcube_of_point` | root | function |
+| `dcube_open_box` | root | function |
+| `poly_box_cap` | algebra | function |
+| `poly_box_face` | algebra | function |
+| `poly_box_face_of` | algebra | function |
+| `poly_box_fill` | algebra | function |
+| `poly_box_fill_verified` | algebra | function |
+| `poly_box_filler_faces_ok` | algebra | function |
+| `poly_box_validate` | algebra | function |
+| `poly_cube` | algebra | function |
+| `poly_cube_add` | algebra | function |
+| `poly_cube_compose` | algebra | function |
+| `poly_cube_const` | algebra | function |
+| `poly_cube_degeneracy` | algebra | function |
+| `poly_cube_eq` | algebra | function |
+| `poly_cube_eval` | algebra | function |
+| `poly_cube_face` | algebra | function |
+| `poly_cube_identity` | algebra | function |
+| `poly_cube_scale` | algebra | function |
+| `poly_cube_sub` | algebra | function |
 
 ### Utilities
 

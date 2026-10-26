@@ -538,6 +538,46 @@ pub fn run_all_checks() -> Array[CheckResult] {
       name: "核內整數與球面環路代表元：IntegerS、π₃ 商型別、懸掛環路生成元與代表元範式分類",
       ok: check_sphere_loop_representatives_internal(),
     },
+    CheckResult::{
+      name: "Schema 跨家族函子與同時 IR 編譯：DFunctorFamily 巢狀實例化、gather 驗證與 simultaneous→decode 位置編譯",
+      ok: check_family_nested_functors() &&
+      check_simultaneous_ir_compiled_decode() &&
+      check_family_functor_persistence(),
+    },
+    CheckResult::{
+      name: "原始 DSystem 面值合意與精確修復：雙端點合意面、exact repair、宿主不透明立方開盒與多項式立方填充",
+      ok: check_face_agreement_and_exact_repair() &&
+      check_dcube_open_box_filler() &&
+      check_poly_cubes(),
+    },
+    CheckResult::{
+      name: "lemIso 一般點驗證與圓環面點值合成：中性點與中性路徑兩端的收縮、Circle/Torus De Morgan 點合成計算",
+      ok: check_lemiso_generic_points() && check_circle_torus_point_comp(),
+    },
+    CheckResult::{
+      name: "註冊字節持久化與全域 hash-consing：CHREGBIN 往返與拒絕損壞、DTerm intern 子項共享且檢查/正規形不變",
+      ok: check_schema_registry_byte_persistence() && check_dterm_hash_consing(),
+    },
+    CheckResult::{
+      name: "精確代數第十一期：自適應 mod-p 因式圖樣剪枝、雙二次域去巢與判等、Jacobi 特徵值簇分離",
+      ok: check_qpoly_mod_pattern_pruning() &&
+      check_biquadratic_denesting() &&
+      check_jacobi_cluster_separation(),
+    },
+    CheckResult::{
+      name: "CDCL 子句學習與 BDD 精確最佳順序：1-UIP 斷言子句、Luby 重啟、全排列最優變量序恰勝啟發式",
+      ok: check_cdcl_clause_learning() && check_bdd_optimal_order_exact(),
+    },
+    CheckResult::{
+      name: "圓的 encode/decode：helix 萬有覆疊（base↦ℤ、loop↦ua succ）、subst 繞數、整數消去環路冪與代表元往返轉換",
+      ok: check_circle_encode_decode(),
+    },
+    CheckResult::{
+      name: "HOU 搜尋擴展與模組交錯遷移：深 imitation 與 identification、import/本地宣告交錯、v1→v2 遷移與 artifact store",
+      ok: check_hou_search_extensions() &&
+      check_module_interleaved_items() &&
+      check_module_binary_versions_and_store(),
+    },
   ]
 }
 

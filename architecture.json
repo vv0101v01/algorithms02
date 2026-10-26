@@ -81,7 +81,7 @@
         "algebra/qpoly_factor.mbt",
         "algebra/root_isolation.mbt",
         "algebra/splitting_field.mbt",
-        "algebra/radical_denest.mbt"
+        "algebra/radical_denest.mbt", "algebra/biquad_denest.mbt", "algebra/poly_cube.mbt"
       ],
       "depends_on": [],
       "summary_en": "A physically separate exact-algebra MoonBit package: BigInt rationals, complete Q-factorization, real/complex root isolation, splitting fields, radical denesting and arbitrary-precision Jacobi intervals.",
@@ -112,8 +112,8 @@
         "kan_ast.mbt",
         "equiv_ast.mbt",
         "checked_line.mbt",
-        "dsystem_compat.mbt",
-        "dterm_transform.mbt",
+        "dsystem_compat.mbt", "dcube_filler.mbt",
+        "dterm_transform.mbt", "dterm_intern.mbt",
         "schema.mbt",
         "schema_extensions.mbt",
         "schema_functor.mbt",
@@ -170,7 +170,7 @@
         "hou_elaborator.mbt",
         "module_system.mbt",
         "module_compilation.mbt",
-        "module_binary.mbt"
+        "module_binary.mbt", "schema_registry_persist.mbt"
       ],
       "depends_on": [
         "dependent-kernel",
@@ -191,7 +191,7 @@
         "equivalence_phase9.mbt",
         "truncation.mbt",
         "equivalence_phase10.mbt",
-        "sphere_classification.mbt"
+        "sphere_classification.mbt", "circle_classify.mbt"
       ],
       "depends_on": [
         "foundation",
