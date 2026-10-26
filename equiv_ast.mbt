@@ -848,6 +848,52 @@ fn glue_equiv_pack_with(parts : DGlueEquivParts, v : DValue) -> DValue {
 }
 
 ///|
+/// Endpoint Glue structure of a line whose endpoint type may have
+/// reduced away its Glue form (e.g. a universe-valued HIT eliminator
+/// whose point case is a plain type while its path case is a `ua`
+/// line).  When the endpoint itself carries no branches but the
+/// generic point does, the endpoint structure is the generic one
+/// with every branch face specialised at the endpoint: this is the
+/// Glue structure the line has at that endpoint before reduction.
+/// Lines whose endpoints are already Glue-shaped (term-level Glue
+/// and `ua` lines) are returned unchanged.
+fn glue_equiv_endpoint_parts(
+  line : (Dim) -> DValue,
+  d : Dim,
+  dlevel : Int32,
+) -> DGlueEquivParts {
+  let parts = glue_equiv_at(line, d)
+  if parts.branches.length() > 0 {
+    return parts
+  }
+  let generic = glue_equiv_at(line, DVar(dlevel))
+  if generic.branches.length() == 0 {
+    return parts
+  }
+  if dim_is_zero(d) || dim_is_one(d) {
+    let val = dim_is_one(d)
+    let bs : Array[DEquivBranchValue] = []
+    for b in generic.branches {
+      bs.push(
+        dequiv_branch_value(
+          face_simplify(face_subst(b.face, dlevel, val)),
+          b.ty,
+          b.equiv,
+        ),
+      )
+    }
+    DGlueEquivParts::{
+      branches: bs,
+      face: glue_equiv_domain_face(bs),
+      base: parts.base,
+      level: generic.level,
+    }
+  } else {
+    generic
+  }
+}
+
+///|
 fn glue_equiv_pack_at(
   line : (Dim) -> DValue,
   d : Dim,
@@ -856,14 +902,7 @@ fn glue_equiv_pack_at(
 ) -> DValue {
   match force_value(v) {
     DVPair(_, _) => v
-    _ => {
-      let parts = glue_equiv_at(line, d)
-      if parts.branches.length() == 0 {
-        glue_equiv_pack_with(glue_equiv_at(line, DVar(dlevel)), v)
-      } else {
-        glue_equiv_pack_with(parts, v)
-      }
-    }
+    _ => glue_equiv_pack_with(glue_equiv_endpoint_parts(line, d, dlevel), v)
   }
 }
 
@@ -915,9 +954,8 @@ pub fn comp_glue_equiv_value(
     DVUnitTy
   }
   let packed_base = glue_equiv_pack_at(line, DZero, base, dlevel)
-  let src0 = glue_equiv_at(line, DZero)
-  let src = if src0.branches.length() == 0 { generic } else { src0 }
-  let tgt = glue_equiv_at(line, DOne)
+  let src = glue_equiv_endpoint_parts(line, DZero, dlevel)
+  let tgt = glue_equiv_endpoint_parts(line, DOne, dlevel)
   let snd_branches = map_branches(branches, p => {
     (j : Dim) => {
       dsnd_typed(glue_equiv_pack_at(line, j, p(j), dlevel), first_ty, _ => {

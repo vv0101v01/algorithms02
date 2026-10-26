@@ -342,6 +342,8 @@ pub fn check_categories_all() -> Bool
 
 pub fn check_certified_algebraic_numeric() -> Bool
 
+pub fn check_circle_encode_decode() -> Bool
+
 pub fn check_coe_definitional() -> Bool
 
 pub fn check_commuting() -> Bool
@@ -596,9 +598,17 @@ pub fn checked_type_line_closed(DTerm) -> DCheckedTypeLine?
 
 pub fn checked_ua_line(DTerm, DEnv, DEnv, DDimEnv) -> DCheckedTypeLine?
 
+pub fn circle_cover_value(DValue) -> DValue
+
+pub fn circle_decode_value(DValue, Int32) -> DValue
+
 pub fn circle_degree_value(Int32, DValue, Int32) -> DValue
 
 pub fn circle_dim_of(DValue) -> Dim
+
+pub fn circle_encode_pieces_value(Array[DValue], Int32) -> DValue
+
+pub fn circle_encode_value(DValue, Int32) -> DValue
 
 pub fn circle_hit_base_value() -> DValue
 
@@ -606,9 +616,13 @@ pub fn circle_hit_loop_path_value() -> DValue
 
 pub fn circle_hit_loop_power_value(Int32) -> DValue
 
+pub fn circle_hit_type_value() -> DValue
+
 pub fn circle_level_decl() -> DLevelHitDecl
 
 pub fn circle_level_scheme() -> DHitLevelScheme
+
+pub fn circle_loop_space_type_value() -> DValue
 
 pub fn circle_point(Dim) -> DValue
 
@@ -1665,6 +1679,8 @@ pub fn int_pow(Int32, Int32) -> Int32
 pub fn integer_pred_value(DValue) -> DValue
 
 pub fn integer_schema() -> DInductiveSpec
+
+pub fn integer_succ_equiv_value() -> DValue
 
 pub fn integer_succ_value(DValue) -> DValue
 

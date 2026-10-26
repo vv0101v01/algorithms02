@@ -48,3 +48,8 @@ test "adaptive mod-p degree pattern pruning for Kronecker" {
 test "polynomial cubes and connection-blend filling" {
   inspect(check_poly_cubes(), content="true")
 }
+
+///|
+test "biquadratic denesting" {
+  inspect(check_biquadratic_denesting(), content="true")
+}

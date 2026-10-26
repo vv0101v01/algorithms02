@@ -187,6 +187,34 @@ pub fn bigint_squarefree_decomp(@bigint.BigInt) -> (@bigint.BigInt, @bigint.BigI
 
 pub fn bigint_to_double(@bigint.BigInt) -> Double
 
+pub fn biquad_add(BiquadNum, BiquadNum) -> BiquadNum?
+
+pub fn biquad_div(BiquadNum, BiquadNum) -> BiquadNum?
+
+pub fn biquad_eq(BiquadNum, BiquadNum) -> Bool
+
+pub fn biquad_inv(BiquadNum) -> BiquadNum?
+
+pub fn biquad_mul(BiquadNum, BiquadNum) -> BiquadNum?
+
+pub fn biquad_neg(BiquadNum) -> BiquadNum
+
+pub fn biquad_of_quad(QuadNum) -> BiquadNum
+
+pub fn biquad_rat(Rat) -> BiquadNum
+
+pub fn biquad_sign(BiquadNum) -> Int32
+
+pub fn biquad_sqrt(BiquadNum) -> BiquadNum?
+
+pub fn biquad_sqrt_rat(Rat) -> BiquadNum?
+
+pub fn biquad_sub(BiquadNum, BiquadNum) -> BiquadNum?
+
+pub fn biquad_to_radical(BiquadNum) -> RadicalExpr
+
+pub fn biquad_zero() -> BiquadNum
+
 pub fn charpoly_sym(SymMat) -> UPoly
 
 pub fn check_Jacobi_arbitrary_precision() -> Bool
@@ -194,6 +222,8 @@ pub fn check_Jacobi_arbitrary_precision() -> Bool
 pub fn check_Jacobi_interval() -> Bool
 
 pub fn check_algebraic_extensions_and_Jordan() -> Bool
+
+pub fn check_biquadratic_denesting() -> Bool
 
 pub fn check_jacobi_cluster_separation() -> Bool
 
@@ -687,6 +717,8 @@ pub fn qvec_sub(Array[Rat], Array[Rat]) -> Array[Rat]
 
 pub fn qvec_zero(Int32) -> Array[Rat]
 
+pub fn radical_equal_exact(RadicalExpr, RadicalExpr) -> Bool?
+
 pub fn radical_int(Int32) -> RadicalExpr
 
 pub fn radical_rat(Rat) -> RadicalExpr
@@ -694,6 +726,8 @@ pub fn radical_rat(Rat) -> RadicalExpr
 pub fn radical_simplify(RadicalExpr) -> RadicalExpr
 
 pub fn radical_sqrt(RadicalExpr) -> RadicalExpr
+
+pub fn radical_to_biquad(RadicalExpr) -> BiquadNum?
 
 pub fn rat_abs_exact(Rat) -> Rat
 
@@ -1001,6 +1035,14 @@ pub struct AlgRref {
   pivots : Array[Int32]
   rank : Int32
 }
+
+pub struct BiquadNum {
+  basis : Array[@bigint.BigInt]
+  coeffs : Array[Rat]
+} derive(Eq, @debug.Debug)
+pub fn BiquadNum::equal(Self, Self) -> Bool
+pub fn BiquadNum::not_equal(Self, Self) -> Bool
+pub fn BiquadNum::to_repr(Self) -> @debug.Repr
 
 pub struct CInterval {
   re : RatInterval

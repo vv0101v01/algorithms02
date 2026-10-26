@@ -412,3 +412,8 @@ test "phase11: family functor persistence and v1 refusal" {
   }
   assert_true(compiled_module_to_binary_v1(compiled) == None)
 }
+
+///|
+test "circle encode decode" {
+  inspect(check_circle_encode_decode(), content="true")
+}

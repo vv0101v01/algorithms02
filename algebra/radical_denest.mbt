@@ -321,6 +321,18 @@ fn radical_to_quad(e : RadicalExpr) -> QuadNum? {
 }
 
 ///|
+
+///|
+/// Phase 11 fallback: evaluate into a biquadratic number and
+/// emit its canonical radical form, when possible.
+fn radical_via_biquad(e : RadicalExpr) -> RadicalExpr {
+  match radical_to_biquad(e) {
+    Some(x) => biquad_to_radical(x)
+    None => e
+  }
+}
+
+///|
 fn radical_is_nonnegative_rat(e : RadicalExpr) -> Bool {
   match e {
     RRat(r) => rat_cmp_exact(r, rat_zero()) >= 0
@@ -340,35 +352,35 @@ pub fn radical_simplify(e : RadicalExpr) -> RadicalExpr {
       let aa = radical_simplify(a)
       match radical_to_quad(RadicalExpr::RNeg(aa)) {
         Some(q) => quad_to_radical(q)
-        None => RadicalExpr::RNeg(aa)
+        None => radical_via_biquad(RadicalExpr::RNeg(aa))
       }
     }
     RAdd(a, b) => {
       let out = RadicalExpr::RAdd(radical_simplify(a), radical_simplify(b))
       match radical_to_quad(out) {
         Some(q) => quad_to_radical(q)
-        None => out
+        None => radical_via_biquad(out)
       }
     }
     RSub(a, b) => {
       let out = RadicalExpr::RSub(radical_simplify(a), radical_simplify(b))
       match radical_to_quad(out) {
         Some(q) => quad_to_radical(q)
-        None => out
+        None => radical_via_biquad(out)
       }
     }
     RMul(a, b) => {
       let out = RadicalExpr::RMul(radical_simplify(a), radical_simplify(b))
       match radical_to_quad(out) {
         Some(q) => quad_to_radical(q)
-        None => out
+        None => radical_via_biquad(out)
       }
     }
     RDiv(a, b) => {
       let out = RadicalExpr::RDiv(radical_simplify(a), radical_simplify(b))
       match radical_to_quad(out) {
         Some(q) => quad_to_radical(q)
-        None => out
+        None => radical_via_biquad(out)
       }
     }
     RRoot(n, a) => {
@@ -410,7 +422,7 @@ pub fn radical_simplify(e : RadicalExpr) -> RadicalExpr {
               None => RadicalExpr::RRoot(n, aa)
             }
           }
-        None => RadicalExpr::RRoot(n, aa)
+        None => radical_via_biquad(RadicalExpr::RRoot(n, aa))
       }
     }
   }
