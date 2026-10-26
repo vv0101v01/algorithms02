@@ -394,6 +394,8 @@ pub fn check_eta_unit() -> Bool
 
 pub fn check_face_poset_category() -> Bool
 
+pub fn check_family_nested_functors() -> Bool
+
 pub fn check_finite_univalence() -> Bool
 
 pub fn check_general_adjointification_and_contractible_fibers() -> Bool
@@ -462,7 +464,11 @@ pub fn check_level_polymorphic_declarations() -> Bool
 
 pub fn check_module_binary_format() -> Bool
 
+pub fn check_module_binary_versions_and_store() -> Bool
+
 pub fn check_module_compilation() -> Bool
+
+pub fn check_module_interleaved_items() -> Bool
 
 pub fn check_module_system() -> Bool
 
@@ -519,6 +525,8 @@ pub fn check_schema_w() -> Bool
 pub fn check_semantic_dimension_substitution() -> Bool
 
 pub fn check_simultaneous_induction_recursion() -> Bool
+
+pub fn check_simultaneous_ir_compiled_decode() -> Bool
 
 pub fn check_sphere3() -> Bool
 
@@ -605,6 +613,8 @@ pub fn circle_level_scheme() -> DHitLevelScheme
 pub fn circle_point(Dim) -> DValue
 
 pub fn circle_schema() -> DHitSpec
+
+pub fn code_interpretation_ir(Bool) -> DSimultaneousIRSpec
 
 pub fn coe_computes(UPath) -> Bool
 
@@ -942,9 +952,15 @@ pub fn dfunctor_const(DTerm) -> DPositiveFunctor
 
 pub fn dfunctor_container(DTerm, DTerm, index? : Array[DTerm]) -> DPositiveFunctor
 
+pub fn dfunctor_family(DInductiveSpec, params? : Array[DFunctorParamArg], index? : Array[DTerm]) -> DPositiveFunctor
+
 pub fn dfunctor_identity(Array[DTerm]) -> DPositiveFunctor
 
 pub fn dfunctor_list(DPositiveFunctor) -> DPositiveFunctor
+
+pub fn dfunctor_param_self(index? : Array[DTerm]) -> DFunctorParamArg
+
+pub fn dfunctor_param_term(DTerm) -> DFunctorParamArg
 
 pub fn dfunctor_pi(DTerm, DPositiveFunctor) -> DPositiveFunctor
 
@@ -2170,6 +2186,12 @@ pub fn schema_value_prefix(Array[DValue], Int32) -> Array[DValue]
 
 pub fn segment_schema() -> DHitSpec
 
+pub fn simultaneous_ir_compile_decode(DSimultaneousIRSpec, Int32) -> DInductiveSpec?
+
+pub fn simultaneous_ir_function_universe_level(DSimultaneousIRSpec, Int32) -> Int32
+
+pub fn simultaneous_ir_uses_other_hypotheses(DSimultaneousIRSpec, Int32) -> Bool
+
 pub fn simultaneous_ir_validate(DSimultaneousIRSpec) -> Bool
 
 pub fn singleton_contraction_value(DValue) -> DValue
@@ -2811,6 +2833,14 @@ pub struct DFamilyParts {
   fam : (DValue) -> DValue
 }
 
+pub enum DFunctorParamArg {
+  DFunctorParamTerm(DTerm)
+  DFunctorParamSelf(Array[DTerm])
+} derive(Eq, @debug.Debug)
+pub fn DFunctorParamArg::equal(Self, Self) -> Bool
+pub fn DFunctorParamArg::not_equal(Self, Self) -> Bool
+pub fn DFunctorParamArg::to_repr(Self) -> @debug.Repr
+
 pub struct DGlueEquivParts {
   branches : Array[DEquivBranchValue]
   face : Face
@@ -3039,6 +3069,7 @@ pub enum DPositiveFunctor {
   DFunctorPi(DTerm, DPositiveFunctor)
   DFunctorContainer(DTerm, DTerm, Array[DTerm])
   DFunctorSigma(DPositiveFunctor, DPositiveFunctor)
+  DFunctorFamily(DInductiveSpec, Array[DFunctorParamArg], Array[DTerm])
 } derive(Eq, @debug.Debug)
 pub fn DPositiveFunctor::equal(Self, Self) -> Bool
 pub fn DPositiveFunctor::not_equal(Self, Self) -> Bool

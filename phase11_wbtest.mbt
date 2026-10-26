@@ -370,3 +370,45 @@ test "phase11: exact optimal BDD order beats blocked order and matches semantics
   let big = bdd_dag_of_face_optimal(f, 6, exact_max_vars=4)
   assert_true(!big.exact)
 }
+
+///|
+test "phase11: family functor persistence and v1 refusal" {
+  let rose = dinductive_spec(
+    "FamRoseTreeS",
+    0,
+    [dtelescope_entry("A", DUniv(0))],
+    [],
+    [
+      dconstructor_spec("leaf", [darg_external("label", DTVar(0))]),
+      dconstructor_spec("node", [
+        darg_nested(
+          "children",
+          dfunctor_family(list_schema(), params=[dfunctor_param_self()]),
+        ),
+      ]),
+    ],
+  )
+  // Registry bytes carry the tag-8 functor node.
+  let registry = schema_registry_new()
+  ignore(schema_registry_register_inductive(registry, rose))
+  assert_true(schema_registry_binary_roundtrip_ok(registry))
+  // A module mentioning the family compiles; v2 bytes round-trip
+  // and the legacy v1 writer refuses the v2-only node.
+  let module_ = module_def("Demo.FamRose", decls=[
+    module_decl("RoseBool", DUniv(0), DInductive(rose, [DBoolTy])),
+  ])
+  let compiled = match module_compile(module_env_new(), module_, []) {
+    Some(v) => v
+    None => {
+      assert_false(true)
+      return
+    }
+  }
+  let bytes = compiled_module_to_binary(compiled)
+  assert_true(compiled_module_binary_version_of(bytes) == 2)
+  match compiled_module_load_binary(bytes) {
+    Some(back) => assert_true(back == compiled)
+    None => assert_false(true)
+  }
+  assert_true(compiled_module_to_binary_v1(compiled) == None)
+}

@@ -87,6 +87,24 @@ fn functor_instantiate_levels(
         functor_instantiate_levels(a, levels, ok),
         functor_instantiate_levels(b, levels, ok),
       )
+    DFunctorFamily(spec, pargs, index) => {
+      let out : Array[DFunctorParamArg] = []
+      for i in 0..<pargs.length() {
+        out.push(
+          match pargs[i] {
+            DFunctorParamTerm(t) =>
+              DFunctorParamTerm(dterm_instantiate_levels_go(t, levels, ok))
+            DFunctorParamSelf(js) =>
+              DFunctorParamSelf(dterm_instantiate_levels_list(js, levels, ok))
+          },
+        )
+      }
+      DFunctorFamily(
+        inductive_spec_instantiate_levels_raw(spec, levels, ok),
+        out,
+        dterm_instantiate_levels_list(index, levels, ok),
+      )
+    }
   }
 }
 
@@ -553,6 +571,25 @@ fn functor_levels_in_scope(f : DPositiveFunctor, arity : Int32) -> Bool {
       dterm_list_levels_in_scope(index, arity)
     DFunctorSigma(a, b) =>
       functor_levels_in_scope(a, arity) && functor_levels_in_scope(b, arity)
+    DFunctorFamily(spec, pargs, index) => {
+      if !inductive_spec_levels_in_scope(spec, arity) ||
+        !dterm_list_levels_in_scope(index, arity) {
+        return false
+      }
+      for i in 0..<pargs.length() {
+        match pargs[i] {
+          DFunctorParamTerm(t) =>
+            if !dterm_levels_in_scope(t, arity) {
+              return false
+            }
+          DFunctorParamSelf(js) =>
+            if !dterm_list_levels_in_scope(js, arity) {
+              return false
+            }
+        }
+      }
+      true
+    }
   }
 }
 
@@ -1618,6 +1655,30 @@ fn mutual_external_functor_ok(
       }
       true
     }
+    DFunctorFamily(spec, pargs, _) => {
+      // The applied family must be external to the mutual block,
+      // and no explicit parameter term may mention a component.
+      // (`Self` arguments and index terms are positions the
+      // joint checker accounts for separately, as with the
+      // container node's indices.)
+      for i in 0..<names.length() {
+        if spec.name == names[i] {
+          return false
+        }
+      }
+      for i in 0..<pargs.length() {
+        match pargs[i] {
+          DFunctorParamTerm(t) =>
+            for n in 0..<names.length() {
+              if dterm_family_occurs(t, names[n]) {
+                return false
+              }
+            }
+          DFunctorParamSelf(_) => ()
+        }
+      }
+      true
+    }
   }
 }
 
@@ -2268,4 +2329,297 @@ pub fn check_hit_moving_dimension_lift() -> Bool {
     _ => true
   }
   canonical && conv_at(0, 1, ty, result, base)
+}
+
+// ---------------------------------------------------------------------------
+// Compiling one simultaneous function into a plain decode
+// ---------------------------------------------------------------------------
+
+///|
+/// The universe level of a simultaneous function whose result
+/// type computes (at fresh parameters, indices, and a neutral
+/// code) to a universe, or -1.  Result types that genuinely
+/// depend on the code do not reduce at the neutral probe and are
+/// rejected here even when universe-valued.
+pub fn simultaneous_ir_function_universe_level(
+  spec : DSimultaneousIRSpec,
+  function_index : Int32,
+) -> Int32 {
+  if function_index < 0 || function_index >= spec.functions.length() {
+    return -1
+  }
+  let param_values = schema_fresh_values(spec.base.params.length(), 10600)
+  let index_values = schema_fresh_values(spec.base.indices.length(), 10650)
+  match
+    force_value(
+      simultaneous_result_type(
+        spec,
+        function_index,
+        param_values,
+        index_values,
+        DVNeutral(DNVar(10700)),
+      ),
+    ) {
+    DVUniv(level) => level
+    _ => -1
+  }
+}
+
+///|
+fn simultaneous_arg_has_hypothesis(kind : DArgKind) -> Bool {
+  match kind {
+    DArgExternal | DArgDecoded => false
+    _ => true
+  }
+}
+
+///|
+/// Map each position of the simultaneous case context for one
+/// constructor (parameters; then per argument the value followed
+/// by one hypothesis per function; then constraint proofs) to
+/// the corresponding plain-decode context position for
+/// `function_index`, with -1 for other functions' hypotheses.
+/// Also returns the decode context length.
+fn simultaneous_decode_layout(
+  spec : DSimultaneousIRSpec,
+  function_index : Int32,
+  ctor : DConstructorSpec,
+) -> (Array[Int32], Int32) {
+  let map : Array[Int32] = []
+  let mut dec = 0
+  for _i in 0..<spec.base.params.length() {
+    map.push(dec)
+    dec = dec + 1
+  }
+  for i in 0..<ctor.args.length() {
+    map.push(dec)
+    dec = dec + 1
+    if simultaneous_arg_has_hypothesis(ctor.args[i].kind) {
+      for g in 0..<spec.functions.length() {
+        map.push(if g == function_index { dec } else { -1 })
+      }
+      dec = dec + 1
+    }
+  }
+  for _i in 0..<ctor.constraints.length() {
+    map.push(dec)
+    dec = dec + 1
+  }
+  (map, dec)
+}
+
+///|
+/// Whether some case of `function_index` mentions another
+/// function's hypothesis (and therefore cannot be compiled to a
+/// plain single decode).
+pub fn simultaneous_ir_uses_other_hypotheses(
+  spec : DSimultaneousIRSpec,
+  function_index : Int32,
+) -> Bool {
+  if function_index < 0 || function_index >= spec.functions.length() {
+    return true
+  }
+  for c in 0..<spec.base.constructors.length() {
+    if c >= spec.functions[function_index].cases.length() {
+      return true
+    }
+    let (map, _) = simultaneous_decode_layout(
+      spec,
+      function_index,
+      spec.base.constructors[c],
+    )
+    let sim_len = map.length()
+    let mut foreign = false
+    ignore(
+      dterm_map_vars_at(spec.functions[function_index].cases[c], 0, (v, depth) => {
+        if v >= depth {
+          let pos = sim_len - 1 - (v - depth)
+          if pos >= 0 && pos < sim_len && map[pos] < 0 {
+            foreign = true
+          }
+        }
+        DTVar(v)
+      }),
+    )
+    if foreign {
+      return true
+    }
+  }
+  false
+}
+
+///|
+/// Compile one universe-valued function of a simultaneous
+/// induction-recursive block into the plain decode of a copy of
+/// the base family (renamed `Base#function`), so the ordinary
+/// `DDecode` former, constructor typing with decoded arguments,
+/// and `eval_inductive_decode` can consume it.  Compilation is a
+/// de Bruijn renumbering of the case terms from the simultaneous
+/// case context to the decode case context; it is refused when
+/// the block does not validate, when the function is not
+/// universe-valued, when any case uses another function's
+/// hypothesis (genuine interdependence has no single-decode
+/// form), or when the resulting schema fails validation.
+pub fn simultaneous_ir_compile_decode(
+  spec : DSimultaneousIRSpec,
+  function_index : Int32,
+) -> DInductiveSpec? {
+  if function_index < 0 || function_index >= spec.functions.length() {
+    return None
+  }
+  if !simultaneous_ir_validate(spec) ||
+    simultaneous_ir_uses_other_hypotheses(spec, function_index) {
+    return None
+  }
+  let level = simultaneous_ir_function_universe_level(spec, function_index)
+  if level < 0 {
+    return None
+  }
+  let decode_cases : Array[DTerm] = []
+  for c in 0..<spec.base.constructors.length() {
+    let (map, dec_len) = simultaneous_decode_layout(
+      spec,
+      function_index,
+      spec.base.constructors[c],
+    )
+    let sim_len = map.length()
+    let rewritten = dterm_map_vars_at(
+      spec.functions[function_index].cases[c],
+      0,
+      (v, depth) => {
+        if v < depth {
+          DTVar(v)
+        } else {
+          let pos = sim_len - 1 - (v - depth)
+          if pos >= 0 && pos < sim_len && map[pos] >= 0 {
+            DTVar(dec_len - 1 - map[pos] + depth)
+          } else {
+            DTVar(v)
+          }
+        }
+      },
+    )
+    decode_cases.push(rewritten)
+  }
+  let compiled = DInductiveSpec::{
+    name: spec.base.name + "#" + spec.functions[function_index].name,
+    level: spec.base.level,
+    params: spec.base.params,
+    indices: spec.base.indices,
+    constructors: spec.base.constructors,
+    decode_cases,
+    decode_level: level,
+  }
+  if inductive_schema_validate(compiled) &&
+    inductive_decode_cases_validate(compiled) {
+    Some(compiled)
+  } else {
+    None
+  }
+}
+
+///|
+fn code_schema_for_simultaneous() -> DInductiveSpec {
+  dinductive_spec("CodeS", 0, [], [], [
+    dconstructor_spec("cnat", []),
+    dconstructor_spec("cbool", []),
+    dconstructor_spec("cpair", [
+      darg_recursive("first"),
+      darg_recursive("second"),
+    ]),
+    dconstructor_spec("carrow", [darg_recursive("dom"), darg_recursive("cod")]),
+  ])
+}
+
+///|
+/// A small Tarski-style universe given simultaneously with a
+/// size function.  The interpretation does not use the size
+/// hypotheses, so it compiles to a plain decode (verified in
+/// `check_simultaneous_ir_compiled_decode`); the variant whose
+/// pair case mentions a size hypothesis does not.
+pub fn code_interpretation_ir(use_size : Bool) -> DSimultaneousIRSpec {
+  // Binary constructor context positions: a, El a, size a, b,
+  // El b, size b (length 6).  El a is DTVar(4); under one binder
+  // El b is DTVar(2); size a is DTVar(3).
+  let pair_case = if use_size {
+    DApp(DLam(DNatTy, DSigma(DTVar(5), DTVar(3))), DTVar(3))
+  } else {
+    DSigma(DTVar(4), DTVar(2))
+  }
+  dsimultaneous_ir_spec(code_schema_for_simultaneous(), [
+    dsimultaneous_function("El", DUniv(0), [
+      DNatTy,
+      DBoolTy,
+      pair_case,
+      DPi(DTVar(4), DTVar(2)),
+    ]),
+    dsimultaneous_function("size", DNatTy, [
+      DSucc(DNatZero),
+      DSucc(DNatZero),
+      DSucc(DTVar(3)),
+      DSucc(DTVar(3)),
+    ]),
+  ])
+}
+
+///|
+pub fn check_simultaneous_ir_compiled_decode() -> Bool {
+  let spec = code_interpretation_ir(false)
+  if !simultaneous_ir_validate(spec) ||
+    simultaneous_ir_function_universe_level(spec, 0) != 0 ||
+    simultaneous_ir_function_universe_level(spec, 1) != -1 ||
+    simultaneous_ir_uses_other_hypotheses(spec, 0) {
+    return false
+  }
+  let compiled = match simultaneous_ir_compile_decode(spec, 0) {
+    Some(s) => s
+    None => return false
+  }
+  if compiled.name != "CodeS#El" ||
+    compiled.decode_level != 0 ||
+    compiled.decode_cases.length() != 4 {
+    return false
+  }
+  // The non-universe function and the size-using variant refuse.
+  match simultaneous_ir_compile_decode(spec, 1) {
+    Some(_) => return false
+    None => ()
+  }
+  let dependent = code_interpretation_ir(true)
+  if !simultaneous_ir_validate(dependent) ||
+    !simultaneous_ir_uses_other_hypotheses(dependent, 0) {
+    return false
+  }
+  match simultaneous_ir_compile_decode(dependent, 0) {
+    Some(_) => return false
+    None => ()
+  }
+  // Compiled decode agrees with the simultaneous evaluation on
+  // concrete codes, semantically and at the term level.
+  let cnat_b : DValue = DVIntro(spec.base, 0, [], [])
+  let cbool_b : DValue = DVIntro(spec.base, 1, [], [])
+  let code_b : DValue = DVIntro(spec.base, 3, [], [
+    cnat_b,
+    DVIntro(spec.base, 2, [], [cbool_b, cnat_b]),
+  ])
+  let cnat_c : DValue = DVIntro(compiled, 0, [], [])
+  let cbool_c : DValue = DVIntro(compiled, 1, [], [])
+  let code_c : DValue = DVIntro(compiled, 3, [], [
+    cnat_c,
+    DVIntro(compiled, 2, [], [cbool_c, cnat_c]),
+  ])
+  let expected : DValue = DVPi(DVNatTy, _ => DVSigma(DVBoolTy, _ => DVNatTy))
+  if !conv_ty(0, 0, eval_simultaneous_ir(spec, 0, [], [], code_b, 0), expected) ||
+    !conv_ty(0, 0, eval_inductive_decode(compiled, [], [], code_c, 0), expected) {
+    return false
+  }
+  let cnat_t = schema_intro_term(compiled, 0, [], [])
+  let cbool_t = schema_intro_term(compiled, 1, [], [])
+  let code_t = schema_intro_term(compiled, 3, [], [
+    cnat_t,
+    schema_intro_term(compiled, 2, [], [cbool_t, cnat_t]),
+  ])
+  dep_check_closed(code_t, schema_type_term(compiled, [])) &&
+  dep_nf_closed(decode_term(compiled, [], [], code_t), DUniv(0)) ==
+  Some(DPi(DNatTy, DSigma(DBoolTy, DNatTy)))
 }

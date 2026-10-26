@@ -27,3 +27,8 @@ test "simultaneous induction recursion" {
 test "HIT moving dimension cell lift" {
   inspect(check_hit_moving_dimension_lift(), content="true")
 }
+
+///|
+test "phase11 simultaneous IR compiled to decode" {
+  inspect(check_simultaneous_ir_compiled_decode(), content="true")
+}

@@ -404,6 +404,7 @@ pub fn check_cube3_and_moving_hit_comp() -> Bool {
 ///|
 pub fn check_schema_extensions() -> Bool {
   check_structural_positivity() &&
+  check_family_nested_functors() &&
   check_nested_rose_tree() &&
   check_container_functor_tree() &&
   check_constructor_constraints() &&
@@ -412,4 +413,200 @@ pub fn check_schema_extensions() -> Bool {
   check_universe_schemes() &&
   check_quotient_schema() &&
   check_cube3_and_moving_hit_comp()
+}
+
+///|
+/// Sum the Nat leaves of a family-gather IH bundle (nested
+/// pairs, one slot per constructor argument, unit-terminated).
+fn dv_sum_bundle_leaves(v : DValue) -> DValue {
+  match force_value(v) {
+    DVPair(a, b) =>
+      dv_nat_plus(dv_sum_bundle_leaves(a), dv_sum_bundle_leaves(b))
+    DVZeroNat => DVZeroNat
+    DVSucc(_) => v
+    _ => DVZeroNat
+  }
+}
+
+///|
+/// Phase 11: recursion nested through *declared* families.
+/// Rose trees whose children form a `ListS` (a declared family,
+/// not the primitive list functor), and binary trees whose
+/// branching is a `VecS _ 2`; in both cases the eliminator's
+/// induction hypotheses for the children are produced by the
+/// inner family's own eliminator.  Validation rejects a `Self`
+/// instantiation at a parameter used in a function domain or in
+/// a non-leaf constant position.
+pub fn check_family_nested_functors() -> Bool {
+  // Rose trees through the declared List family.
+  let rose = dinductive_spec(
+    "FamRoseTreeS",
+    0,
+    [dtelescope_entry("A", DUniv(0))],
+    [],
+    [
+      dconstructor_spec("leaf", [darg_external("label", DTVar(0))]),
+      dconstructor_spec("node", [
+        darg_nested(
+          "children",
+          dfunctor_family(list_schema(), params=[dfunctor_param_self()]),
+        ),
+      ]),
+    ],
+  )
+  if !inductive_schema_validate(rose) {
+    return false
+  }
+  let leaf : DValue = DVIntro(rose, 0, [DVBoolTy], [DVBool(true)])
+  let kids : DValue = DVIntro(
+    list_schema(),
+    1,
+    [DVInductive(rose, [DVBoolTy], [])],
+    [
+      leaf,
+      DVIntro(list_schema(), 1, [DVInductive(rose, [DVBoolTy], [])], [
+        leaf,
+        DVIntro(list_schema(), 0, [DVInductive(rose, [DVBoolTy], [])], []),
+      ]),
+    ],
+  )
+  let tree : DValue = DVIntro(rose, 1, [DVBoolTy], [kids])
+  // The node argument type is the declared List family applied
+  // to the rose family itself.
+  if !conv_ty(
+      0,
+      0,
+      inductive_arg_type(rose, rose.constructors[1].args[0], [DVBoolTy], []),
+      DVInductive(list_schema(), [DVInductive(rose, [DVBoolTy], [])], []),
+    ) {
+    return false
+  }
+  // The IH bundle type for the children, computed by ListS's
+  // eliminator into the universe: per cons cell a Sigma slot for
+  // the head's motive and one for the tail's bundle.
+  let bundle_ty = positive_functor_ih_type(
+    dfunctor_family(list_schema(), params=[dfunctor_param_self()]),
+    [DVBoolTy],
+    [],
+    _ => DVInductive(rose, [DVBoolTy], []),
+    (_, _) => DVNatTy,
+    kids,
+  )
+  let tail_bundle_ty : DValue = DVSigma(DVNatTy, _ => {
+    DVSigma(DVUnitTy, _ => DVUnitTy)
+  })
+  if !conv_ty(
+      0,
+      0,
+      bundle_ty,
+      DVSigma(DVNatTy, _ => DVSigma(tail_bundle_ty, _ => DVUnitTy)),
+    ) {
+    return false
+  }
+  // Counting leaves: the node case receives the IH bundle
+  // gathered by ListS's eliminator.
+  let leaves = eval_inductive_elim(
+    rose,
+    (_, _) => DVNatTy,
+    [
+      DVLam(_ => dv_nat_lit(1)),
+      DVLam(_ => DVLam(all => dv_sum_bundle_leaves(all))),
+    ],
+    [DVBoolTy],
+    [],
+    tree,
+    0,
+  )
+  if !dv_is_nat(leaves, 2) {
+    return false
+  }
+  // Binary branching through the declared Vec family at length 2.
+  let vtree = dinductive_spec(
+    "FamVecTreeS",
+    0,
+    [dtelescope_entry("A", DUniv(0))],
+    [],
+    [
+      dconstructor_spec("leaf", [darg_external("label", DTVar(0))]),
+      dconstructor_spec("node", [
+        darg_nested(
+          "children",
+          dfunctor_family(vec_schema(), params=[dfunctor_param_self()], index=[
+            DSucc(DSucc(DNatZero)),
+          ]),
+        ),
+      ]),
+    ],
+  )
+  if !inductive_schema_validate(vtree) {
+    return false
+  }
+  let vleaf : DValue = DVIntro(vtree, 0, [DVBoolTy], [DVBool(false)])
+  let vfam : DValue = DVInductive(vtree, [DVBoolTy], [])
+  let vkids : DValue = DVIntro(vec_schema(), 1, [vfam], [
+    vleaf,
+    dv_nat_lit(1),
+    DVIntro(vec_schema(), 1, [vfam], [
+      vleaf,
+      dv_nat_lit(0),
+      DVIntro(vec_schema(), 0, [vfam], []),
+    ]),
+  ])
+  let vtree_val : DValue = DVIntro(vtree, 1, [DVBoolTy], [vkids])
+  let vleaves = eval_inductive_elim(
+    vtree,
+    (_, _) => DVNatTy,
+    [
+      DVLam(_ => dv_nat_lit(1)),
+      DVLam(_ => DVLam(all => dv_sum_bundle_leaves(all))),
+    ],
+    [DVBoolTy],
+    [],
+    vtree_val,
+    0,
+  )
+  if !dv_is_nat(vleaves, 2) {
+    return false
+  }
+  // A parameter used in a function domain cannot take `Self`.
+  let bad_inner = dinductive_spec(
+    "FamBadInnerS",
+    0,
+    [dtelescope_entry("A", DUniv(0))],
+    [],
+    [
+      dconstructor_spec("mk", [
+        darg_nested("fnarg", dfunctor_pi(DTVar(0), dfunctor_identity([]))),
+      ]),
+    ],
+  )
+  let bad_host = dinductive_spec("FamBadHostS", 0, [], [], [
+    dconstructor_spec("mk", [
+      darg_nested(
+        "inner",
+        dfunctor_family(bad_inner, params=[dfunctor_param_self()]),
+      ),
+    ]),
+  ])
+  if inductive_schema_validate(bad_host) {
+    return false
+  }
+  // A parameter stored at a non-leaf constant type (here under a
+  // Pi codomain inside a constant term) cannot take `Self`.
+  let bad_inner2 = dinductive_spec(
+    "FamBadInner2S",
+    0,
+    [dtelescope_entry("A", DUniv(0))],
+    [],
+    [dconstructor_spec("mk", [darg_external("wrapped", DPi(DNatTy, DTVar(1)))])],
+  )
+  let bad_host2 = dinductive_spec("FamBadHost2S", 0, [], [], [
+    dconstructor_spec("mk", [
+      darg_nested(
+        "inner",
+        dfunctor_family(bad_inner2, params=[dfunctor_param_self()]),
+      ),
+    ]),
+  ])
+  !inductive_schema_validate(bad_host2)
 }

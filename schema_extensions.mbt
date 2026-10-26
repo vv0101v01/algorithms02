@@ -91,6 +91,21 @@ fn mutual_transform_functor(
         mutual_transform_functor(a, tag),
         mutual_transform_functor(b, tag),
       )
+    DFunctorFamily(spec, pargs, index) => {
+      // The inner family's own indices are untouched; `Self`
+      // arguments denote the joint family, so they take the tag.
+      let out : Array[DFunctorParamArg] = []
+      for i in 0..<pargs.length() {
+        out.push(
+          match pargs[i] {
+            DFunctorParamTerm(t) => DFunctorParamTerm(t)
+            DFunctorParamSelf(js) =>
+              DFunctorParamSelf(mutual_prepend_tag(tag, js))
+          },
+        )
+      }
+      DFunctorFamily(spec, out, index)
+    }
   }
 }
 

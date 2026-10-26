@@ -584,6 +584,48 @@ fn positivity_param_in_functor(
         positivity_param_in_functor(a, scope, param_index),
         positivity_param_in_functor(b, scope + 1, param_index),
       )
+    DFunctorFamily(spec, pargs, index) => {
+      let mut out = positivity_param_in_terms(index, scope, param_index)
+      for k in 0..<pargs.length() {
+        out = positivity_combine(
+          out,
+          match pargs[k] {
+            DFunctorParamTerm(t) =>
+              positivity_compose_param(
+                positivity_param_in_type(t, scope, param_index, true),
+                inductive_parameter_positivity(spec, k),
+              )
+            DFunctorParamSelf(js) =>
+              positivity_param_in_terms(js, scope, param_index)
+          },
+        )
+      }
+      out
+    }
+  }
+}
+
+///|
+/// Polarities compose along a parameter instantiation: the outer
+/// report describes the argument term, the inner report how the
+/// applied family uses its parameter.  An unused parameter makes
+/// the occurrence vanish.
+fn positivity_compose_param(
+  outer : DPositivityReport,
+  inner : DPositivityReport,
+) -> DPositivityReport {
+  if !outer.occurs || !inner.occurs {
+    positivity_absent()
+  } else {
+    DPositivityReport::{
+      occurs: true,
+      strictly_positive: outer.strictly_positive && inner.strictly_positive,
+      positive_polarity: (outer.positive_polarity && inner.positive_polarity) ||
+      (outer.negative_polarity && inner.negative_polarity),
+      negative_polarity: (outer.positive_polarity && inner.negative_polarity) ||
+      (outer.negative_polarity && inner.positive_polarity),
+      unknown: outer.unknown || inner.unknown,
+    }
   }
 }
 

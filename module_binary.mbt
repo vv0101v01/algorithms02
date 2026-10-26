@@ -1558,6 +1558,27 @@ fn bw_positive_functor(w : ModuleBinWriter, value : DPositiveFunctor) -> Unit {
       bw_positive_functor(w, a)
       bw_positive_functor(w, b)
     }
+    DFunctorFamily(spec, pargs, index) => {
+      // Tag 8 exists only in layout version 2; the reader gate
+      // below rejects it in v1 payloads, which is also what makes
+      // `compiled_module_to_binary_v1` refuse such modules.
+      bw_u8(w, 8)
+      bw_inductive_spec(w, spec)
+      bw_i32(w, pargs.length())
+      for i in 0..<pargs.length() {
+        match pargs[i] {
+          DFunctorParamTerm(t) => {
+            bw_u8(w, 0)
+            bw_term(w, t)
+          }
+          DFunctorParamSelf(js) => {
+            bw_u8(w, 1)
+            bw_terms(w, js)
+          }
+        }
+      }
+      bw_terms(w, index)
+    }
   }
 }
 
@@ -1640,6 +1661,47 @@ fn br_positive_functor(r : ModuleBinReader, depth : Int32) -> DPositiveFunctor? 
         None => return None
       }
       Some(DFunctorSigma(a, b))
+    }
+    8 => {
+      if r.version < 2 {
+        if r.status == ModuleBinaryOk {
+          r.status = ModuleBinaryUnsupportedVersion
+        }
+        return None
+      }
+      let spec = match br_inductive_spec(r, depth + 1) {
+        Some(v) => v
+        None => return None
+      }
+      let count = br_i32(r)
+      if !br_require_ok(r) || count < 0 || count > 4096 {
+        return None
+      }
+      let pargs : Array[DFunctorParamArg] = []
+      for _i in 0..<count {
+        match br_u8(r) {
+          0 => {
+            let t = match br_term(r, depth + 1) {
+              Some(v) => v
+              None => return None
+            }
+            pargs.push(DFunctorParamTerm(t))
+          }
+          1 => {
+            let js = match br_terms(r, depth + 1) {
+              Some(v) => v
+              None => return None
+            }
+            pargs.push(DFunctorParamSelf(js))
+          }
+          _ => return None
+        }
+      }
+      let index = match br_terms(r, depth + 1) {
+        Some(v) => v
+        None => return None
+      }
+      Some(DFunctorFamily(spec, pargs, index))
     }
     _ => {
       if r.status == ModuleBinaryOk {

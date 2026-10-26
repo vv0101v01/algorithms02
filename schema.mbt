@@ -41,6 +41,21 @@ pub extend DArgKind with @moonbitlang/core/debug.Debug::{to_repr}
 pub extend DArgKind with Eq::{not_equal, equal}
 
 ///|
+/// One argument instantiating a parameter of a family applied by
+/// `DFunctorFamily`: an ordinary term, or the family being
+/// declared itself at the given index terms.
+pub enum DFunctorParamArg {
+  DFunctorParamTerm(DTerm)
+  DFunctorParamSelf(Array[DTerm])
+} derive(Debug, Eq)
+
+///|
+pub extend DFunctorParamArg with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend DFunctorParamArg with Eq::{not_equal, equal}
+
+///|
 /// A strictly positive type-functor descriptor.  `DFunctorIdentity`
 /// is one recursive occurrence at the displayed family indices;
 /// constants and the domains of `DFunctorPi` must be external.  The
@@ -65,6 +80,18 @@ pub enum DPositiveFunctor {
   // Sigma type operators that are not dependent containers whose
   // second component is a single recursive leaf.
   DFunctorSigma(DPositiveFunctor, DPositiveFunctor)
+  // Application of another declared inductive family.  The second
+  // component instantiates the inner family's parameters: an entry
+  // is either an ordinary term over the ambient telescope, or the
+  // family currently being declared at the given index terms --
+  // which is how recursion through the other family (rose trees
+  // through a declared List family, fixed-length branching through
+  // a declared Vec family) is expressed.  The third component is
+  // the inner family's index vector.  Induction hypotheses for the
+  // recursive occurrences reached through this node are produced
+  // by eliminating the inner value with the inner family's own
+  // eliminator; see `family_gather_type` in schema_functor.mbt.
+  DFunctorFamily(DInductiveSpec, Array[DFunctorParamArg], Array[DTerm])
 } derive(Debug, Eq)
 
 ///|
@@ -128,6 +155,27 @@ pub fn dfunctor_sigma(
   second : DPositiveFunctor,
 ) -> DPositiveFunctor {
   DFunctorSigma(first, second)
+}
+
+///|
+pub fn dfunctor_param_term(term : DTerm) -> DFunctorParamArg {
+  DFunctorParamTerm(term)
+}
+
+///|
+pub fn dfunctor_param_self(index~ : Array[DTerm] = []) -> DFunctorParamArg {
+  DFunctorParamSelf(index)
+}
+
+///|
+/// The positive functor denoting the previously declared family
+/// `spec` at the given parameter instantiation and indices.
+pub fn dfunctor_family(
+  spec : DInductiveSpec,
+  params~ : Array[DFunctorParamArg] = [],
+  index~ : Array[DTerm] = [],
+) -> DPositiveFunctor {
+  DFunctorFamily(spec, params, index)
 }
 
 ///|
