@@ -48,3 +48,8 @@ test "phase12: simultaneous IR eliminator compilation for interdependent blocks"
 test "phase12: case-split conversion and path-valued circle/torus comp" {
   inspect(check_case_split_conversion_and_path_comp(), content="true")
 }
+
+///|
+test "phase12: stratified extensionality for host cube functions" {
+  inspect(check_dcube_stratified_extensionality(), content="true")
+}

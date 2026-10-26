@@ -384,6 +384,8 @@ pub fn check_bdd_optimal_order_dp() -> Bool
 
 pub fn check_bdd_optimal_order_exact() -> Bool
 
+pub fn check_case_split_conversion_and_path_comp() -> Bool
+
 pub fn check_categories_all() -> Bool
 
 pub fn check_cdcl_clause_learning() -> Bool
@@ -599,6 +601,8 @@ pub fn check_semantic_dimension_substitution() -> Bool
 pub fn check_simultaneous_induction_recursion() -> Bool
 
 pub fn check_simultaneous_ir_compiled_decode() -> Bool
+
+pub fn check_simultaneous_ir_eliminator_compilation() -> Bool
 
 pub fn check_sphere3() -> Bool
 
@@ -850,6 +854,10 @@ pub fn conv_schema_args_full(Int32, Int32, Array[DConstructorArg], Array[DValue]
 
 pub fn conv_telescope_values(Int32, Int32, Array[DTelescopeEntry], Array[DValue], Array[DValue], Array[DValue], Array[DValue]) -> Bool
 
+pub fn conv_terms_case_split(Array[DTerm], DTerm, DTerm, DTerm) -> Bool
+
+pub fn conv_terms_plain(Array[DTerm], DTerm, DTerm, DTerm) -> Bool
+
 pub fn conv_ty(Int32, Int32, DValue, DValue) -> Bool
 
 pub fn cube3_schema() -> DHitSpec
@@ -950,17 +958,27 @@ pub fn dcube_box_fill(DCubeOpenBox) -> DCubeFunction?
 
 pub fn dcube_box_fill_verified(DCubeOpenBox, Int32) -> DCubeFunction?
 
+pub fn dcube_box_fill_verified_stratified(DCubeOpenBox, Int32) -> DCubeFunction?
+
 pub fn dcube_box_validate(DCubeOpenBox, Int32) -> DCubeBoxReport
+
+pub fn dcube_box_validate_stratified(DCubeOpenBox, Int32) -> DCubeBoxReport
 
 pub fn dcube_constant(Int32, DValue) -> DCubeFunction
 
 pub fn dcube_cubes_conv(Int32, Int32, DValue, DCubeFunction, DCubeFunction) -> Bool
+
+pub fn dcube_cubes_conv_stratified(Int32, Int32, DValue, DCubeFunction, DCubeFunction) -> Bool
+
+pub fn dcube_cubes_conv_stratified_report(Int32, Int32, DValue, DCubeFunction, DCubeFunction) -> DCubeStratifiedReport
 
 pub fn dcube_degenerate(DCubeFunction, Int32) -> DCubeFunction
 
 pub fn dcube_face(DCubeFunction, Int32, Dim) -> DCubeFunction
 
 pub fn dcube_filler_faces_ok(DCubeOpenBox, DCubeFunction, Int32) -> Bool
+
+pub fn dcube_filler_faces_ok_stratified(DCubeOpenBox, DCubeFunction, Int32) -> Bool
 
 pub fn dcube_function(Int32, (Array[Dim]) -> DValue) -> DCubeFunction
 
@@ -2314,7 +2332,11 @@ pub fn segment_schema() -> DHitSpec
 
 pub fn simultaneous_ir_compile_decode(DSimultaneousIRSpec, Int32) -> DInductiveSpec?
 
-pub fn simultaneous_ir_compile_decode_block(DSimultaneousIRSpec) -> Array[DInductiveSpec?]
+pub fn simultaneous_ir_compile_eliminator(DSimultaneousIRSpec, Int32) -> DTerm?
+
+pub fn simultaneous_ir_compile_eliminator_block(DSimultaneousIRSpec) -> Array[DTerm?]
+
+pub fn simultaneous_ir_eliminator_type(DSimultaneousIRSpec, Int32) -> DTerm?
 
 pub fn simultaneous_ir_function_universe_level(DSimultaneousIRSpec, Int32) -> Int32
 
@@ -2940,6 +2962,13 @@ pub struct DCubeOpenBox {
   arity : Int32
   ambient_dlevel : Int32
   faces : Array[DCubeBoxFace]
+}
+
+pub struct DCubeStratifiedReport {
+  equal : Bool
+  probes : Int32
+  failed : Int32
+  complete : Bool
 }
 
 pub enum DDimEnv {

@@ -377,3 +377,260 @@ pub fn dcube_box_fill_verified(
     None => None
   }
 }
+
+// ---------------------------------------------------------------------------
+// Phase 12: stratified extensionality for host cube functions.
+//
+// `dcube_cubes_conv` probes one generic interior point, but a
+// host cube is an arbitrary function on dimension expressions:
+// it can branch on an axis being an endpoint, on two axes
+// coinciding, or on connection structure (`i ∧ j`, `i ∨ j`,
+// `¬i`), none of which a single generic probe sees.  The
+// stratified checker evaluates both cubes on three tiers of
+// dimension assignments:
+//
+//   A. every axis in {0, 1, fresh var} -- all faces' interiors;
+//   B. every axis in {0, 1, s, t} for two shared dimensions
+//      `s` (an ambient variable when one exists) and `t` --
+//      diagonals and ambient collisions;
+//   C. every axis in {s, ¬s, s ∧ t, s ∨ t} -- connection
+//      strata.
+//
+// This is still a finite probe set (a host function could in
+// principle hide behaviour on expressions outside it), but it
+// covers every stratum of the cube's face lattice and the
+// standard connection/diagonal degenerations.  Tiers whose
+// probe count exceeds 4096 are skipped and reported through
+// `complete = false`.
+// ---------------------------------------------------------------------------
+
+///|
+pub struct DCubeStratifiedReport {
+  equal : Bool
+  probes : Int32
+  failed : Int32
+  complete : Bool
+}
+
+///|
+fn dcube_stratified_tier(
+  level : Int32,
+  dlevel : Int32,
+  ty : DValue,
+  f : DCubeFunction,
+  g : DCubeFunction,
+  pools : Array[Array[Dim]],
+  stats : Array[Int32],
+) -> Bool {
+  let n = pools.length()
+  let indices : Array[Int32] = []
+  for _i in 0..<n {
+    indices.push(0)
+  }
+  while true {
+    let dims : Array[Dim] = []
+    for i in 0..<n {
+      dims.push(pools[i][indices[i]])
+    }
+    stats[0] = stats[0] + 1
+    if !conv_at(level, dlevel, ty, dcube_at(f, dims), dcube_at(g, dims)) {
+      stats[1] = stats[1] + 1
+      return false
+    }
+    let mut pos = n - 1
+    while pos >= 0 {
+      indices[pos] = indices[pos] + 1
+      if indices[pos] < pools[pos].length() {
+        break
+      }
+      indices[pos] = 0
+      pos = pos - 1
+    }
+    if pos < 0 {
+      break
+    }
+  }
+  true
+}
+
+///|
+pub fn dcube_cubes_conv_stratified_report(
+  level : Int32,
+  ambient_dlevel : Int32,
+  ty : DValue,
+  f : DCubeFunction,
+  g : DCubeFunction,
+) -> DCubeStratifiedReport {
+  if f.arity != g.arity {
+    return { equal: false, probes: 0, failed: 0, complete: false, }
+  }
+  let n = f.arity
+  if n == 0 {
+    let eq = conv_at(
+      level,
+      ambient_dlevel,
+      ty,
+      dcube_at(f, []),
+      dcube_at(g, []),
+    )
+    return {
+      equal: eq,
+      probes: 1,
+      failed: if eq {
+        0
+      } else {
+        1
+      },
+      complete: true,
+    }
+  }
+  let dlevel = ambient_dlevel + n + 2
+  let shared_s = DVar(0)
+  let shared_t = DVar(ambient_dlevel + n)
+  let tiers : Array[Array[Array[Dim]]] = []
+  let tier_a : Array[Array[Dim]] = []
+  for i in 0..<n {
+    tier_a.push([DZero, DOne, DVar(ambient_dlevel + i)])
+  }
+  tiers.push(tier_a)
+  let tier_b : Array[Array[Dim]] = []
+  for _i in 0..<n {
+    tier_b.push([DZero, DOne, shared_s, shared_t])
+  }
+  tiers.push(tier_b)
+  let tier_c : Array[Array[Dim]] = []
+  for _i in 0..<n {
+    tier_c.push([
+      shared_s,
+      DNeg(shared_s),
+      DAnd(shared_s, shared_t),
+      DOr(shared_s, shared_t),
+    ])
+  }
+  tiers.push(tier_c)
+  let stats = [0, 0]
+  let mut complete = true
+  for t in 0..<tiers.length() {
+    let pools = tiers[t]
+    let mut count = 1
+    for i in 0..<pools.length() {
+      count = count * pools[i].length()
+    }
+    if count > 4096 {
+      complete = false
+      continue
+    }
+    if !dcube_stratified_tier(level, dlevel, ty, f, g, pools, stats) {
+      return { equal: false, probes: stats[0], failed: stats[1], complete, }
+    }
+  }
+  { equal: true, probes: stats[0], failed: 0, complete, }
+}
+
+///|
+pub fn dcube_cubes_conv_stratified(
+  level : Int32,
+  ambient_dlevel : Int32,
+  ty : DValue,
+  f : DCubeFunction,
+  g : DCubeFunction,
+) -> Bool {
+  dcube_cubes_conv_stratified_report(level, ambient_dlevel, ty, f, g).equal
+}
+
+///|
+/// Stratified box validation: pairwise face overlaps are
+/// compared on all strata of the shared edge, not only at its
+/// generic interior.
+pub fn dcube_box_validate_stratified(
+  box : DCubeOpenBox,
+  level : Int32,
+) -> DCubeBoxReport {
+  let complete = dcube_box_complete(box)
+  let mut failed = 0
+  if complete && box.arity >= 2 {
+    for i in 0..<box.faces.length() {
+      for j in (i + 1)..<box.faces.length() {
+        let a = box.faces[i]
+        let b = box.faces[j]
+        if a.axis == b.axis {
+          continue
+        }
+        let a_edge = dcube_face(
+          a.cube,
+          dcube_overlap_axis(b.axis, a.axis),
+          if b.hi {
+            DOne
+          } else {
+            DZero
+          },
+        )
+        let b_edge = dcube_face(
+          b.cube,
+          dcube_overlap_axis(a.axis, b.axis),
+          if a.hi {
+            DOne
+          } else {
+            DZero
+          },
+        )
+        if !dcube_cubes_conv_stratified(
+            level,
+            box.ambient_dlevel,
+            box.ty,
+            a_edge,
+            b_edge,
+          ) {
+          failed = failed + 1
+        }
+      }
+    }
+  }
+  { complete, overlaps_ok: complete && failed == 0, failed_overlaps: failed, }
+}
+
+///|
+pub fn dcube_filler_faces_ok_stratified(
+  box : DCubeOpenBox,
+  filler : DCubeFunction,
+  level : Int32,
+) -> Bool {
+  if filler.arity != box.arity {
+    return false
+  }
+  for i in 0..<box.faces.length() {
+    let f = box.faces[i]
+    let restricted = dcube_face(filler, f.axis, if f.hi { DOne } else { DZero })
+    if !dcube_cubes_conv_stratified(
+        level,
+        box.ambient_dlevel,
+        box.ty,
+        restricted,
+        f.cube,
+      ) {
+      return false
+    }
+  }
+  true
+}
+
+///|
+/// Fill and verify with stratified extensionality throughout.
+pub fn dcube_box_fill_verified_stratified(
+  box : DCubeOpenBox,
+  level : Int32,
+) -> DCubeFunction? {
+  let report = dcube_box_validate_stratified(box, level)
+  if !report.overlaps_ok {
+    return None
+  }
+  match dcube_box_fill(box) {
+    Some(filler) =>
+      if dcube_filler_faces_ok_stratified(box, filler, level) {
+        Some(filler)
+      } else {
+        None
+      }
+    None => None
+  }
+}

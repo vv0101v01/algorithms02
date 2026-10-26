@@ -1116,3 +1116,114 @@ pub fn check_case_split_conversion_and_path_comp() -> Bool {
   )
   conv_at(0, 1, torus_b_ty, torus_b_cap, DVPathLam(k => torus_point(DZero, k)))
 }
+
+///|
+/// Phase 12: stratified extensionality for host cube
+/// functions.  Cubes that agree at a generic interior point
+/// but differ on an endpoint stratum, on a diagonal, or on a
+/// connection stratum are separated by the stratified probe
+/// tiers; genuinely equal cubes pass; an open box whose faces
+/// agree on generic edge interiors but disagree at an edge
+/// endpoint passes plain validation and fails stratified
+/// validation, while a constant box fills under the
+/// stratified verified path.
+pub fn check_dcube_stratified_extensionality() -> Bool {
+  let zero : DValue = DVZeroNat
+  let one : DValue = DVSucc(DVZeroNat)
+  let const0 = dcube_constant(2, zero)
+  let endpoint_sneaky = dcube_function(2, dims => {
+    match dims[0] {
+      DZero => one
+      _ => zero
+    }
+  })
+  if !dcube_cubes_conv(0, 0, DVNatTy, const0, endpoint_sneaky) {
+    return false
+  }
+  let report = dcube_cubes_conv_stratified_report(
+    0,
+    0,
+    DVNatTy,
+    const0,
+    endpoint_sneaky,
+  )
+  if report.equal || !report.complete || report.probes < 1 {
+    return false
+  }
+  let diagonal_sneaky = dcube_function(2, dims => {
+    if dims[0] == dims[1] {
+      one
+    } else {
+      zero
+    }
+  })
+  if !dcube_cubes_conv(0, 0, DVNatTy, const0, diagonal_sneaky) ||
+    dcube_cubes_conv_stratified(0, 0, DVNatTy, const0, diagonal_sneaky) {
+    return false
+  }
+  let connection_sneaky = dcube_function(2, dims => {
+    match dims[0] {
+      DAnd(_, _) => one
+      _ => zero
+    }
+  })
+  if !dcube_cubes_conv(0, 0, DVNatTy, const0, connection_sneaky) ||
+    dcube_cubes_conv_stratified(0, 0, DVNatTy, const0, connection_sneaky) {
+    return false
+  }
+  // Positive control: commutativity of the connection is
+  // invisible to no tier.
+  let meet_a = dcube_function(2, dims => {
+    circle_point(dim_simplify(DAnd(dims[0], dims[1])))
+  })
+  let meet_b = dcube_function(2, dims => {
+    circle_point(dim_simplify(DAnd(dims[1], dims[0])))
+  })
+  let meet_report = dcube_cubes_conv_stratified_report(
+    0,
+    0,
+    DVCircleTy,
+    meet_a,
+    meet_b,
+  )
+  // All three tiers run to completion on an equal pair:
+  // 3^2 + 4^2 + 4^2 probes.
+  if !meet_report.equal || meet_report.probes != 41 {
+    return false
+  }
+  // Box level: in arity 3, one face disagrees with its
+  // neighbours only at a corner of the shared edge.
+  let face_const = dcube_constant(2, zero)
+  let corner_sneaky = dcube_function(2, dims => {
+    match (dims[0], dims[1]) {
+      (DZero, DZero) => one
+      _ => zero
+    }
+  })
+  let mk_box = (axis1_lo : DCubeFunction) => {
+    dcube_open_box(DVNatTy, 3, 0, [
+      dcube_box_face(0, false, face_const),
+      dcube_box_face(0, true, face_const),
+      dcube_box_face(1, false, axis1_lo),
+      dcube_box_face(1, true, face_const),
+      dcube_box_face(2, false, face_const),
+    ])
+  }
+  let bad_box = mk_box(corner_sneaky)
+  if !dcube_box_validate(bad_box, 0).overlaps_ok {
+    return false
+  }
+  let bad_report = dcube_box_validate_stratified(bad_box, 0)
+  if bad_report.overlaps_ok || bad_report.failed_overlaps < 1 {
+    return false
+  }
+  match dcube_box_fill_verified_stratified(bad_box, 0) {
+    Some(_) => return false
+    None => ()
+  }
+  let good_box = mk_box(face_const)
+  match dcube_box_fill_verified_stratified(good_box, 0) {
+    Some(filler) => dcube_filler_faces_ok_stratified(good_box, filler, 0)
+    None => false
+  }
+}
