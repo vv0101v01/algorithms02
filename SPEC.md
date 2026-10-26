@@ -8,7 +8,7 @@
 - **範疇化（categorification）**：該物件所屬／所生成的範疇結構（物件、態射、函子、自然變換、萬有性或相干律）；
 - **判定（decision）**：其主導等式或謂詞的演算法。
 
-程式碼中的 `spec.mbt:spec_registry` 是本文件的條目級登記（67 條）。逐符號
+程式碼中的 `spec.mbt:spec_registry` 是本文件的條目級登記（75 條）。逐符號
 **附錄已拆成生成檔** [SPEC-APPENDIX.md](SPEC-APPENDIX.md)／[SPEC-APPENDIX.en.md](SPEC-APPENDIX.en.md)：
 `tools/audit_spec.py` 依 `architecture.json` 讀取每個套件的 `pkg.generated.mbti`
 （`moon info`），逐一列出公共宣告、列舉構造子與結構欄位、其規格族與所屬
@@ -20,7 +20,7 @@ MoonBit 套件；審計以集合相等保證附錄與介面**無遺漏、無重�
 moon info && python3 tools/audit_spec.py --write   # 重新生成附錄並審計
 python3 tools/audit_spec.py --check                # 只審計，不改檔
 python3 tools/arch_check.py                        # 套件/元件依賴層級與檔案唯一歸位
-moon check --deny-warn && moon test && moon run cmd/main   # 期望 63 個 tests 全過、定理 56/56
+moon check --deny-warn && moon test && moon run cmd/main   # 期望 81 個 tests 全過、定理 64/64
 ```
 
 ---
@@ -889,6 +889,188 @@ PHP(3,3) 有經驗證見證；最壞搜尋時間仍可指數。
 驗收：`check_bdd_cost_optimizations`、
 `check_qpoly_fast_arithmetic`。
 
+### 1.14 第十一期：跨家族宣告、精確修復、一般點收縮、位元組持久化、雙二次去巢、子句學習、圓的覆疊與交錯模組
+
+第十一期處理第十期 §4 的八項邊界。完成程度逐項分開陳述：每項的
+語義／判定內容皆有真實實作與登記檢查；不可逾越的數學或內涵界限
+（不可判定性、最壞指數、組成在宇宙中的內涵性等）在各節與新 §4
+中明示。
+
+#### 1.14.1 跨家族巢狀函子與同時 IR 編譯（`schema.mbt`, `schema_functor.mbt`, `schema_positivity.mbt`, `schema_phase9.mbt`）
+
+`DPositiveFunctor` 新增第九個變體
+`DFunctorFamily(spec, params, indices)`：巢狀引數可實例化**另一**
+已註冊歸納家族，參數槽由 `DFunctorParamArg` 區分
+`DFunctorParamTerm`（外部項，經 `schema_eval_under` 在當前脈絡求值）
+與 `DFunctorParamSelf`（宿主家族自身，於給定索引實例化）。型別、
+IH 型別與 IH map 三臂經 `family_instantiate` 共用機械：頂層 Self
+連回宿主 motive／消去、內層 Self 連回當前迭代的 T／map、Term 以
+整變數穿透；IH 是每構造子引數一槽的巢狀 `DVPair…DVUnit` 束。
+`validate` 要求目標規格的參數只出現在可 gather 的葉位置
+（`spec_param_gatherable`），並拒絕 Decoded 類引數與非葉參數出現；
+正性檔案以 `positivity_compose_param` 把目標規格的極性與參數槽
+複合。範例 `FamRoseTreeS`（以 List 家族收子樹）與 `FamVecTreeS`
+的巢狀束葉數與 IH 束型別均以轉換驗證，兩類負例 validate 為假；
+tag 8 使該節點可經 registry 與模組 v2 位元組往返、v1 寫出拒絕。
+
+同時歸納—遞迴 IR 形式新增
+`simultaneous_ir_compile_decode`：以中性項探測解碼函數的宇宙
+等級（真正依賴 code 的宇宙結果保守拒絕），把 simultaneous 側的
+函數位置映射到 decode 側（引用別的同步函數的 IH 槽以 −1 標記、
+出現即拒絕——真正互依沒有單一 decode 形），de Bruijn 索引按
+Sigma/Pi 家族綁定逐層重編號，產出改名 `Base#函數名` 且換上
+`decode_cases`/`decode_level` 的規格，並再過 decode 與
+positivity 兩項 validate。`CodeS` 的 `El` 範例編譯後在值層與項層
+都與 simultaneous 形式一致。
+
+驗收：`check_family_nested_functors`、
+`check_simultaneous_ir_compiled_decode`、
+`check_family_functor_persistence`。
+
+#### 1.14.2 原始 `DSystem` 的 Face 值合意區域與精確修復（`dsystem_compat.mbt`）
+
+兩語義值的合意區域先前只有布林 BDD 形；布林化把「在 i=0 與
+i=1 都相合、中段不合」的區域誤呈為全域或丟失端點。
+`face_agreement_face` 直接構造最大的 Face 值合意面（圓點
+`loop@i` 對基點的合意面在兩端為真、在自由 i 為非平凡面，
+其 BDD 化為 `BddOne`，而 BDD 形區域只得到
+`BddNode(0,BddOne,BddZero)`——只剩 0 端點），並附
+`face_agreement_face_sound` 封閉檢查。`dsystem_repair_to_base_exact`
+以 Face 值合意面截斷各分支（`DSystemRepairExact` 回報保留面與
+頂點層面移除區域為 `BddZero`），與舊 BDD 修復「只留 0 端點」
+對照驗證；修復仍只刪去可證不合的區域，不為缺值發明分支，
+`dsystem_of_first_match_nf` 經 `face_of_bdd` 的過度宣稱路徑仍禁用。
+
+驗收：`check_face_agreement_and_exact_repair`。
+
+#### 1.14.3 `lemIso` 一般點驗證與 Circle/Torus 點值合成（`equivalence_phase10.mbt`, `kan_ast.mbt`）
+
+`check_lemiso_generic_points` 把第十期一般 `lemIso` 構造推到
+**中性點**與**中性路徑兩端**：對恆等等價在中性纖維元素上，
+收縮路徑的端點與邊界直接轉換成立；原始 Circle 點亦入列。
+兩處內涵邊界經實驗定性後明示不修：路徑消去的中性式在端點
+不化約（需要 conversion 內的 Bool-η／case-split）；離散型別上
+中性形式 `DNComp` 僅作結構比較，數學等價但填料不同的合成
+不可轉換。另外 `comp_circle_value`／`comp_torus_value` 對
+**點值** tube 改以 De Morgan 選擇計算（`dim_of_face` 把面公式
+讀回維度式、pairwise 相容加 fold 選擇），cap 與 filler 皆落回
+點值並以 `dim_eq_sem` 判定；非點值資料仍走形式 `DNComp`。
+
+驗收：`check_lemiso_generic_points`、
+`check_circle_torus_point_comp`。
+
+#### 1.14.4 Schema registry 位元組持久化與全域 term hash-consing（`schema_registry_persist.mbt`, `dterm_intern.mbt`）
+
+`CHREGBIN` v1 把 registry snapshot 寫成
+magic＋版本＋長度＋校驗＋payload（重用模組 codec 的全
+DTerm/schema 編碼，含 functor tag 8）；載入逐一拒絕壞
+magic、截斷與校驗不符並以 `DSchemaRegistryBinaryLoad` 回報
+狀態，往返後 registry 仍可驗證新註冊。這是位元組層持久形，
+不是檔案系統層：檔案／路徑政策留待呼叫方。`dterm_intern`
+提供真正的全域 hash-consing：以子項 stamp 自底向上 intern，
+結構相等子項共享同一 id（`dterm_intern_id`），
+`dterm_rebuild` 是 `dterm_children` 的逆（含 eliminator 與
+partial 的複合形狀）；intern 前後 `dep_check_closed` 與
+`dep_nf_closed` 一致，共享率以 tree/distinct 子項計數回報。
+
+驗收：`check_schema_registry_byte_persistence`、
+`check_dterm_hash_consing`。
+
+#### 1.14.5 精確代數：自適應圖樣剪枝與雙二次去巢（`algebra/qpoly_factor.mbt`, `algebra/biquad_denest.mbt`）
+
+`Q[x]` 因式分解在 Kronecker 列舉前先行**自適應 mod-p 次數
+圖樣剪枝**：對至多 32 個小素數（≤251）記錄平方自由部分在
+F_p 的不可約次數圖樣 `QPolyDegreePattern`，凡不能由整數
+因式次數相加而得的候選次數組合整批排除；圖樣置於有理根
+測試之前。`x⁶−2M⁶`（M=1236789689135）單憑圖樣證得不可約；
+`x⁴+1` 因 Galois 群 V4 的置換型無法排除二次因式，誠實落回
+完整列舉。根式層新增雙二次域 `BiquadNum`：至多兩個無平方
+因子基底、基底 `[1,√d₁,√d₂,√(d₁d₂)]`，運算經 `Q*/Q*²` 的
+公共基底（需第三個基底的合成回 `None`），逆以全共軛積、
+符號以塔式平方比較判定；`biquad_sqrt` 對單根槽走二次去巢、
+多根槽經原元 `√d₁+√d₂` 橋到 `AlgNum`，結果一律平方重驗。
+`radical_simplify` 六個運算在原二次路徑失敗時落到雙二次路徑，
+`radical_equal_exact` 給出差值判等。完備界限明示：二次子域
+被開方數與「根仍在同一雙二次域」的情形完備；真正雙二次
+被開方數需要「另一個雙二次域或更高 multicubic 根」者不做。
+
+驗收：`check_qpoly_mod_pattern_pruning`、
+`check_biquadratic_denesting`。
+
+#### 1.14.6 宿主不透明立方、精確最佳 BDD 序與 CDCL（`dcube_filler.mbt`, `algebra/poly_cube.mbt`, `bdd_dag.mbt`, `face_sat_watched.mbt`）
+
+`DCubeFunction` 把「宿主函數給的 n 維立方」提升為可操作
+物件（面、退化、泛型維度點值），`dcube_box_validate` 逐對
+檢查開盒重疊、`dcube_box_fill_verified` 只在相容時經
+comp 給出填料並逐面重驗，帽由 `dcube_box_cap` 讀回；代數
+側 `PolyCube` 是同型物件在精確有理多項式座標下的版本，
+填充迭代為 `F += w·(S − F|face)`。BDD 方面
+`bdd_dag_of_face_optimal` 在 n≤8 時枚舉全部排列給出可證
+最優變量序（回報 `tried` 與 `exact`，超出上限明示非精確），
+與 sifting 及封閉序對照並逐點對驗 `face_holds`。SAT 方面在
+watched-literal DPLL 之上完成 CDCL：1-UIP 衝突分析給出以
+斷言文字領頭的學習子句、VSIDS 活動、標準 Luby 重啟
+（`FaceCdclStats` 回報 learned/conflicts 等）；與 brute force
+在生成面集合上差分一致，鴿洞 (6,5) 要求學習數為正。SAT 與
+BDD 的最壞指數下界不變；精確最佳序本身是 n! 工作，只在
+小 n 有用。
+
+驗收：`check_dcube_open_box_filler`、`check_poly_cubes`、
+`check_bdd_optimal_order_exact`、`check_cdcl_clause_learning`。
+
+#### 1.14.7 圓的萬有覆疊、encode/decode 與 Jacobi 特徵值簇分離（`circle_classify.mbt`, `algebra/root_isolation.mbt`）
+
+分類對象是 schema 圓 `circle_schema()`（原始 `DVCircleTy` 的
+點轉換只比對座標零點面的布林等價，`loop²` 與 `loop` 逐點
+可轉換，不能承載繞數）。`circle_cover_value` 以圓消去入宇宙
+定義 helix：base 纖維是 `IntegerS`、loop 纖維是後繼等價
+（`integer_succ_equiv_value`，succ/pred 在規範整數上互逆、
+中性值退化恆等使 refl 資料合法）的 `ua` 線；
+`circle_encode_value` 是在覆疊中對 0 的 subst，
+`circle_decode_value` 是整數消去（正負各經對 `|n|−1` 的
+Nat 消去）給出的環路冪。為此在 `comp_glue_equiv_value`
+補上了端點 Glue 結構合成：消去定義的族線在端點化約掉
+Glue 形時，以一般點分支面在端點特化還原（`face_subst`）；
+已 Glue 形的線（term 級 Glue 與 ua 線）行為不變。驗證內容：
+base 纖維與 loop 點纖維在宇宙層分別轉換等於 ℤ 與 ua 線；
+encode 在 refl/生成元/逆元直接算得 0/1/−1；decode∘encode
+在該三元以環路空間轉換為恆等，encode∘decode 在 0,±1
+直接、在 ±2,3 經 decode 自身分解以
+`circle_encode_pieces_value` 細分 transport 計算。內涵邊界
+明示：單次 subst 越過 trans 複合點時，覆疊經「在宇宙中
+comp」呈現為 `DVGlue` 型別線，其 transport 不串接兩個後繼
+等價（loop² 直算得 1、細分得 2）；任意中性環路的完整
+π₁(S¹)≃ℤ 內部等價仍需商/funext 機械，見 §4。Jacobi 側
+`jacobi_separate_clusters` 對特徵多項式取平方自由部分
+（Sturm 鏈與導數 gcd）分離互異根，再逐區間對原多項式
+Sturm 計數回多重數，區間重疊唯一匹配，給認證形
+`jacobi_cluster_separation_certified`。
+
+驗收：`check_circle_encode_decode`、
+`check_jacobi_cluster_separation`。
+
+#### 1.14.8 HOU 深搜尋、模組交錯編排、版本遷移與 artifact store（`hou_elaborator.mbt`, `module_system.mbt`, `module_binary.mbt`）
+
+有界 Huet 搜尋新增深層 imitation（一層以上的 rigid 頭
+候選）、projection 候選上限參數化與同頭 identification
+（兩方程式共享同一見證）；確定性層的 abstract/constant
+猜測會使多數單方程式平凡解出，測試因此要把確定路徑全堵
+才迫使搜尋分支。`hou_search_unify_iterative` 迭代加深並以
+`HouIterativeReport` 記錄輪次與求解深度；所得仍是 specific
+unifier，非 MGU、非完備，一般 HOU 不可判定不變。模組定義
+改以 `ModuleDef.items : Array[ModuleItem]` 交錯編排 import
+與本地宣告（舊 `decls` 形展開為 imports 前置而向後相容）；
+交錯範例中 legacy 排序必失敗而交錯成功。二進位推進到 v2
+（v1 payload 後加 `producer`）：寫出預設 v2、載入接受
+v1/v2 且 v1 遷移後逐欄相等；`compiled_module_to_binary_v1`
+以截尾重建 v1 形，遇 v2-only 節點（functor tag 8）以
+`None` 拒絕。`CompiledModuleStore` 是進程內 artifact
+快取（blobs＋命中/未命中計數），不是磁碟快取。
+
+驗收：`check_hou_search_extensions`、
+`check_module_interleaved_items`、
+`check_module_binary_versions_and_store`。
+
 ## 二、規範形式目錄（逐結構）
 
 | 結構 | 規範形式 | 相等之判定 |
@@ -949,13 +1131,25 @@ PHP(3,3) 有經驗證見證；最壞搜尋時間仍可指數。
 | 一般 adjointification／纖維收縮 | `lemIso` 三層填充給出的纖維路徑；`(center, contraction)`；新 retr 是對角收縮第一分量，三角形是其第二方塊轉角 | Bool／Circle 代表元上的端點轉換；Circle 中點加面下轉換 |
 | `IntegerS`／π 商型／球面代表元 | `zero`、`posSucc(n)`、`negSucc(n)`（`n=|z|-1`）；`QuotientS(Ωⁿ, ∥Path∥)`；代表元表達式的 integer degree | 生成 schema 依賴檢查；語義 succ/pred 轉換；典範環路外層端點轉換；只分類代表元演算 |
 | HOU 搜尋 | 可回復 `Unifier` 快照與 `HouSearchReport{status,solved,nodes,branches,depth}` | solved／no-unifier／residual／budget 四態；非 solved 回復輸入 |
-| 已編譯模組二進位 | `CHMODBIN` v1 20-byte 標頭＋固定標籤 payload；hex 為文字形 | 結構解析狀態分流；load 另跑 `compiled_module_validate` |
+| 已編譯模組二進位 | `CHMODBIN` 標頭＋固定標籤 payload；寫出 v2（v1 後加 producer），載入受 v1/v2；hex 為文字形 | 結構解析狀態分流；load 另跑 `compiled_module_validate`；v1 寫出遇 tag 8 等 v2-only 節點拒絕 |
 | 成本最佳化 BDD／CNF | sifting 後變量序與 initial/final reachable 數；Tseitin `FaceCnfStats` | reachable 嚴格改善才採納；見證由 `face_holds` 重驗 |
 | 一般代數認證立方體 | 共通 modulus 的 `AlgC` 矩陣與任意次係數路徑／方塊 | 逐係數精確相等；外 bumps 被拒 |
 | DAG BDD | manager 內 root ID；大小為 reachable count；滿足數為 BigInt | DAG apply/eval/count/restrict/quantify 或 DPLL |
 | 球面度數映射 | circle loop 冪次逐層懸掛；極交換 S³ 由 cell 順序交換表示 | 生成 meridian 的轉換與依賴消去 sect/retr |
 | Hopf 映射 | `C²` 座標 `(2Re(zw̄),2Im(zw̄),|z|²−|w|²)`；纖維為共同相位軌道 | 像範數/相位不變的代數式檢查；Gauss 連結積分 |
 | 已編譯模組 | 展平 entries＋exports＋依賴介面指紋；介面／實作雙 hash | synthetic 定義重闡釋、hash 重算與連結實例檢查 |
+| 跨家族巢狀函子 | `DFunctorFamily(spec,params,indices)`，參數槽標 `DFunctorParamArg`；IH 束為逐引數一槽的巢狀 `DVPair…DVUnit` | validate（葉出現且可 gather）＋IH 束封葉計數＋束型別轉換 |
+| 同時 IR 編譯產物 | 改名 `Base#函數名` 的 decode 規格（位置映射＋de Bruijn 重編號） | 編譯前後 validate；互依（−1 槽被用）回 `None` |
+| Face 合意面 | 最大合意 `Face`（FEq0/FEq1 析取保留雙端點）；布林形為其 BDD 化 | 逐頂點求值＋`face_agreement_face_sound` |
+| 宿主不透明立方/開盒 | `DCubeFunction{arity,at}` 與缺一面開盒；多項式版 `PolyCube` 有理座標列 | 邊界驗證報告（complete/overlaps_ok）＋填料逐面重驗 |
+| registry 位元組 | `CHREGBIN` v1：magic＋版本＋長度＋校驗＋全 schema codec payload | 載入狀態分流；往返後重驗註冊 |
+| hash-cons 項 | intern id 的有限圖；重建與原項結構相等 | 子項計數比；intern 前後 dep_check/dep_nf 一致 |
+| 雙二次數 | 基底 `[1,√d₁,√d₂,√(d₁d₂)]` 有理係數（基底遞增去重） | 係數結構相等；根經平方重驗 |
+| CDCL 結果 | `FaceCdclResult{decision,stats}`；學習子句 1-UIP 領頭 | 與 brute force 差分；鴿洞 `learned>0` |
+| BDD 精確最優序 | `BddOptimalBuild{order,size,tried,exact}` | 全排列（n≤8）可證；逐點 `face_holds` |
+| 圓的覆疊纖維 | base 處 `IntegerS` 規範整數；loop 點處 `ua(succ)` 的 GlueEquiv 型別 | 宇宙層轉換等於 ℤ／ua 線 |
+| 繞數 | 規範整數 `zero/posSucc/negSucc` | ℤ 上轉換；複合環路以細分 transport 算 |
+| 交錯模組定義 | `ModuleDef.items : Array[ModuleItem]`（import/decl 交錯） | 依序 elaboration；legacy 排序必失敗的範例對照 |
 | 規格條目 | `SpecEntry` 六元組 | `spec_registry_sound` |
 
 ## 三、範疇目錄（逐範疇）
@@ -975,71 +1169,64 @@ PHP(3,3) 有經驗證見證；最壞搜尋時間仍可指數。
 | 句法帶族範疇 (CwF) | 脈絡與脈絡中的型別 (`DTerm/DValue`) | 代入與項（範形為代表） | Π/Σ 形成與依賴代入、Typeᵢ 宇宙族 | `nbe_dep.mbt` |
 | Kan 纖維線 | `DLine` 的 `at(i)` | 立方體值與傳輸路徑 | coe/comp 對 Π/Σ/U 的遞迴；依賴族為路徑→線 | `kan_dep.mbt` |
 | 立方 CwF 與 Kan 型別構造子 | 項＋維度脈絡中的 `DTerm/DValue` | 代入、維度作用與 comp/hcomp 項 | Π/Σ/PathP/資料/HIT/Glue/Universe 逐一保存 Kan 提升；消去子與形式 comp 交換 | `nbe_dep.mbt`, `kan_ast.mbt` |
-| 生成歸納族函子 | `DInductiveSpec` 的參數化型別 | `DVIntro` 與生成消去子 | 嚴格正性函子的初始代數；comp 逐引數沿先前 filler 提升 | `schema.mbt` |
+| 生成歸納族函子 | `DInductiveSpec` 的參數化型別 | `DVIntro` 與生成消去子 | 嚴格正性函子的初始代數（含 `DFunctorFamily` 跨家族巢狀，僅葉出現可 gather）；comp 逐引數沿先前 filler 提升 | `schema.mbt`, `schema_functor.mbt` |
 | 生成 HIT 胞腔 | `DHitSpec` 的參數化型別 | 任意有限維 cells 與逐維 face 化簡 | 消去子保存 cells；多維角落相干；可判定移動維度時逐引數 comp，否則形式中性合成 | `schema.mbt`, `schema_extensions.mbt` |
 | 多項式代數 | Q 上多變量多項式與分式 | 矩陣與其多項式 `q(A)` | 譜分解是單位分解；插值給出投影 | `algebra/symalg.mbt`, `algebra/spectral_symbolic.mbt` |
 | AST 等價與 ua | AST 型別 | 一等 `Equiv` 四分量 | ua 的 coe 計算性；GlueEquiv 沿偏等價黏合；語義 `lemIso` 給出纖維收縮與 adjoint 三角形資料 | `equiv_ast.mbt`, `kan_ast.mbt`, `equivalence_phase10.mbt` |
 | 路徑運算與單值性 | AST 型別與宇宙層 | 路徑值與傳輸等價 | transitivity 由顯式 hcomp 方塊構造；ua/pathToEquiv 以 uaβ、retraction 同倫與 Glue 方塊互見證 | `cubical_algorithms.mbt`, `univalence.mbt` |
 | 代數擴張線性代數 | `AlgNum` 擴張上的向量空間 | `AlgMat` | 廣義特徵空間、primary 分解與 Jordan 型 | `algebra/algnum.mbt`, `algebra/Jordan.mbt` |
-| BDD DAG | 固定次序布林函數 | root ID 與 apply 格運算 | hash-consing 規範圖；候選序與有預算 sifting；預算把不可決定做為結果，後備為 Tseitin／watched-literal 搜尋 | `bdd_dag.mbt`, `face_sat_watched.mbt` |
+| BDD DAG | 固定次序布林函數 | root ID 與 apply 格運算 | hash-consing 規範圖；候選序、有預算 sifting 與 n≤8 全排列可證最優序；後備 Tseitin 上的 watched DPLL 與 1-UIP 子句學習 CDCL | `bdd_dag.mbt`, `face_sat_watched.mbt` |
 | 球面懸掛 | 無索引 HIT | meridian 胞腔 | Susp 是端塌縮商；S³ 為兩次迭代 | `sphere3.mbt` |
-| 模組函子 | 參數模組與 import 圖 | 引數代換與內聯宣告 | open/alias 是名字投影；opaque 是邊界抽象 | `module_system.mbt` |
+| 模組函子 | 參數模組與 import 圖 | 引數代換與內聯宣告 | telescope 為交錯的 import/宣告 items；open/alias 是名字投影；opaque 是邊界抽象 | `module_system.mbt` |
 | Q[x] 與分裂擴張 | 有限代數擴張塔 | `AlgPoly` 與根 | 唯一因式分解；多項式在分裂塔上完全線性化 | `algebra/qpoly_factor.mbt`, `algebra/splitting_field.mbt` |
 | 層級方案與同時宣告 | 層級脈絡中的宣告模板 | 層級代換、聯合消去與同步函數 | 宇宙 scheme 是層級指派函子；互歸納是向量初始代數 | `schema_phase9.mbt` |
 | 基點球面映射 | 懸掛球面（北極為基點） | 懸掛函子像與度數映射 | 單位環路 `meridian(x)∙meridian(*)⁻¹`；極交換等價資料；πₙ 商呈現與由消去方塊改基的典範生成環路（代表元層） | `sphere_homotopy.mbt`, `sphere_classification.mbt` |
+| 圓上的覆疊族 | schema 圓 `S¹` 上的點 | 纖維中的 subst 提升 | helix 族（base↦ℤ、loop↦`ua(succ)`）；encode 是提升端點、decode 是整數消去的環路冪，往返在代表元上轉換 | `circle_classify.mbt`, `equiv_ast.mbt` |
 | 已編譯模組函子 | 已檢查參數模組物件 | 介面連結與 prefix 特化 | opaque body 不入介面 hash；部分套用產生殘餘函子；版本化 byte codec 是物件的穩定外範形 | `module_compilation.mbt`, `module_binary.mbt` |
 | Retract Kan 結構 | 特徵空間／子線 | 立方體 | 剪枝函子保持填充（在邊界恆等） | `cube.mbt`, `glue_comp.mbt` |
 
-## 四、第十期後仍保留的邊界
+## 四、第十一期後仍保留的邊界
 
-- **Schema。** 一等層級宣告、原始互歸納、透明算子正性、Bush 類非均勻
-  巢狀型、同時 IR 與 HIT 移動維度 lift 已實作；但正性仍只認得能展開
-  或抽取為有限依賴 polynomial/container 的算子，不透明中性算子被拒。
-  同時 IR 的建構子型別目前不能任意直接呼叫同步函數，須經已生成的
-  decode／求值入口。這些是受限宣告語言，不是任意高階型別程序的正性判定。
-- **原始 `DSystem`。** 面下轉換以 BDD 剪枝取代先行 cube 枚舉，合意
-  區域與受限修復均有精確回報；但 BDD 與型別導向轉換在困難輸入上仍可
-  指數昂貴，判定範圍仍是給定型別線與面脈絡。修復只能刪去可證與 base
-  不合的區域，不能為缺值或實質衝突發明分支。
-- **等價與單值性。** `lemIso` 的一般語義值版本、每個纖維的
-  `(center, contraction)` 包裝與自動 adjointification 已實作；
-  但登記驗收仍是 Bool/Circle 代表元上的端點轉換，Circle 的開放
-  中點更只以面制限檢查。它不是把任意脈絡下的閉合 Π 證明項一次交給
-  依賴檢查器，也未使一般 Circle/HIT composition 在所有開放維度上
-  完備化約。計算性單值性仍以 quasi-inverse `Equiv` 為證書；
-  `DVEquiv` 轉換對證明分量采命題式處理，未宣稱為含全部高階相干的
-  HoTT 邏輯定理。primitive `DGlueEquiv` 的 quote 句法已保真，
-  語義 Glue 值的引文仍只保證轉換相等。
-- **受檢查線與 registry。** 裸 `DLine` 與受檢／語義封閉已有明確維度
-  代換操作，registry 有 bucket hash-cons 與 snapshot/merge/manifest；
-  但任意宿主閉包不會自動變成可代換句法，registry 亦是進程內快照模型，
-  不是磁碟持久化、全域 term hash-consing 或生產級增量內核。
-- **精確代數。** BigInt、完整 Q 因式分解、自動分裂域、所有實／複根
-  隔離與一般 nth-root 去巢已完成；`QPoly` 乘法／冪次另有跳零卷積、
-  整係數縮放、Karatsuba 與二進位冪。邊界仍主要是成本：Kronecker
-  候選、BigInt 位長、極接近根簇的細分與高次分裂塔最壞可非常昂貴；
-  根式化簡只在所表示的根式／擴張內搜尋可重驗見證，不宣稱任意根式塔
-  的完備範形判定。
-- **數值、BDD 與 SAT。** 精確結論已擴至一般代數擴張與任意次係數式
-  路徑；任意宿主函數 `Cube.cell` 仍是不透明函數，只能網格／抽樣
-  觀察。ROBDD 的指數下界不可消除；sifting 本身須多次重建，只找
-  局部較佳序。Watched-literal DPLL 保留正確預算語義且見證重驗，
-  但無 clause learning，最壞時間仍可指數；DAG 預算與 DNF/tree
-  展開仍會明示未決定或超限。
-- **球面與 Jacobi。** `IntegerS`、π₃ 商型、典範懸掛環路與代表元
-  degree 分類已核內化；但沒有對商型任意元素給出 encode，也未證明
-  每個 π₃ 元素都等於某個典範 `SphereLoopExpr` 的像。故仍沒有合成證明
-  `π₃(S³)≅ℤ`、`π₃(S²)≅ℤ`，也沒有把經典 Hopf 映射建成懸掛
-  HIT 間的合成同倫映射並在核內計算其 Hopf 不變量。Jacobi 端點已
-  任意精度，Hermitian 特徵值亦可由精確根隔離逐一分離，但 Jacobi
-  區間迭代本身在接近譜時仍可給出合併 Gershgorin 簇，成本隨分離度惡化。
-- **HOU 與模組。** 完整 HOU 不可判定；有界 Huet 搜尋可解的
-  rigid-spine／置換例子限於其模板、projection 引數、深度與節點
-  預算，`HouResidual` 不表示無解，求得者也不保證 MGU。模組已有
-  版本 1 的 byte-array／hex codec 與解析驗證，但沒有檔案系統
-  持久層、跨版本遷移器或增量磁碟快取；不支援的未來版本只會被拒。
-  import 仍按模組 telescope 前綴求值，未提供與本地宣告任意交錯的
-  item 序列。
+- **Schema。** `DFunctorFamily` 只做跨家族實例化：把同一個規格以
+  轉換後參數嵌回自身（Bush 形同規格非均勻遞迴）不在範圍；目標規格
+  參數必須出現在可 gather 的葉位置，其他形狀被 validate 拒絕
+  （handler 以 `DVUnitTy` 佔位 Self，後續參數型別若依賴 Self 會被
+  誤拒，已在程式中明記）。同時 IR 編譯只處理「宇宙結果僅依賴單一
+  解碼函數且不引用他人 IH 槽」的片斷；正性仍不認不透明中性算子。
+- **原始 `DSystem`。** Face 值合意與 exact repair 消除了布林化
+  丟端點的問題；但合意面構造仍在給定型別線與面脈絡內逐頂點用
+  轉換探測，困難輸入可指數昂貴；修復仍只能刪、不能補。
+- **等價與單值性。** `lemIso` 已在中性點與中性路徑兩端驗證；
+  剩餘內涵缺口定性明確：路徑消去中性式在端點不化約，需要
+  conversion 內的 case-split/η；離散型別上的中性形式合成只作
+  結構比較，數學等價的異填料不可轉換。Circle/Torus 的計算合成
+  只覆蓋點值資料。這些不是構造錯誤，而是轉換關係的現行強度。
+- **受檢查線與 registry。** `CHREGBIN` 與全域 hash-consing 已
+  落地到位元組/進程層；仍不是檔案系統持久層（路徑、原子寫入與
+  損壞回復政策未定），intern 表也不跨 registry/模組位元組共享
+  （codec 仍逐項展開）。
+- **精確代數。** 圖樣剪枝大幅削減 Kronecker 候選，但次數圖樣
+  本質上只給必要條件（x⁴+1 的 V4 型即反例），最壞成本仍由
+  Kronecker 候選與 BigInt 位長主導；雙二次去巢的完備範圍是
+  「根留在原二次子域或同一雙二次域」，真正需要另一個雙二次或
+  更高 multicubic 根的被開方數明示不做；根式相等只在
+  四次以下塔的已處理片斷完備。
+- **數值、BDD 與 SAT。** 立方宿主函數經 `DCubeFunction` 可驗證
+  地填盒，但其在任意維度的值仍由宿主給出（核外延性只在檢查的
+  面與點驗證）；精確最佳變量序是 n! 工作，只許 n≤8；CDCL 有
+  學習仍無子句刪除政策調校與證明輸出，最壞指數不變。
+- **球面與 Jacobi。** S¹ 的 helix 覆疊與 encode/decode 已內部化
+  （§1.14.7）；但複合環路的繞數只能靠細分 transport 計算
+  （單次 subst 經宇宙 comp 的 Glue 線不串接），且完整
+  π₁(S¹)≃ℤ 需對任意（中性）環路的路徑等價與 funext/商機械，
+  仍未內部化；π₃ 的一般分類、核內 Hopf 不變量照舊保留。
+  Jacobi 側簇分離是對特徵多項式的事後精確程序；區間迭代本身
+  在接近譜時仍給合併簇，成本隨分離度惡化。
+- **HOU 與模組。** 一般 HOU 不可判定；深搜尋的解是 specific
+  unifier，不是 MGU，也無完備性。模組位元組 v2 與 store 是
+  進程內模型：無磁碟 artifact 層、無跨進程版本協商；未來版本
+  仍只會被拒。`ModuleDef` 交錯後，舊式整批 imports 的快速路徑
+  不再假設 import 前綴。
 
 ---
 

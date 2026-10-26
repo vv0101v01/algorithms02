@@ -206,3 +206,27 @@ Root 的 `moon.pkg` 另加入 core `math` 供 Hopf 連結積分的三角函數�
   L7 `verify.mbt`、`spec.mbt` 與雙語附錄審計，沒有只在測試檔
   存在的孤兒結果。
 
+
+## 10. 第十一期新增檔案如何歸位
+
+第十一期同樣沒有新增實體套件或邏輯元件：
+
+- `algebra/biquad_denest.mbt`、`algebra/poly_cube.mbt` 屬 L1
+  `exact-algebra`：前者只用同套件的 `QuadNum`/`AlgNum` 機械，
+  後者是精確多項式座標的立方與開盒，不引入跨套件邊。
+- `dcube_filler.mbt` 與 `dterm_intern.mbt` 屬 L3
+  `dependent-kernel`：前者與 `dsystem_compat.mbt`、`kan_ast.mbt`
+  互呼叫（開盒的相容檢查與 comp 填充本來就屬核心 SCC），後者是
+  `DTerm` 自身的子項遍歷/重建，與 `dterm_transform.mbt` 同層。
+- `schema_registry_persist.mbt` 屬 L5 `frontend`：它重用
+  `module_binary.mbt` 的 codec 基礎設施（同一元件）編碼 L3 的
+  registry；核心不需要知道位元組層。
+- `circle_classify.mbt` 屬 L5 `cubical`，與
+  `sphere_classification.mbt`、`sphere_homotopy.mbt` 並列：它是
+  建在 kernel 之上的覆疊/分類構造。為其所做的
+  `comp_glue_equiv_value` 端點合成改動落在既有 L3
+  `equiv_ast.mbt`，且只在「端點無分支而一般點有分支」時生效。
+- `phase11_laws.mbt` 由 L6 `laws` 的 `*_laws.mbt` wildcard 收納，
+  承接原本只在白箱測試的第十一期斷言體，使 L7 registry 能直接
+  執行；root 只在既有 `algebra_imports.mbt` 邊界多匯入四支代數
+  檢查函數。實體套件圖仍是 `cmd/main → root → algebra`。

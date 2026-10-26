@@ -22,7 +22,7 @@ A set of intertwined concepts made into an **executable, testable computational 
 - Computational univalence: complete decidable wiring univalence in the finite universe, plus AST `ua`/`pathToEquiv`, `uaβ`, round-trip homotopies and a two-dimensional Glue-square certificate;
 - A general semantic `lemIso` construction giving fiber paths/contractions and automatic adjointification for quasi-inverses, plus internal `IntegerS`, π₃ quotient types and canonical spherical loop representatives (not a classification theorem for arbitrary π₃ elements);
 - Bounded Huet search, a versioned compiled-module byte codec, and BDD sifting/cache growth, watched-literal DPLL and sparse/Karatsuba `QPoly` multiplication;
-- `SPEC.md`/`SPEC.en.md` and bilingual appendices give canonical forms and categorifications for every type, operation, specification and structure (2871 symbols, 67 registry entries);
+- `SPEC.md`/`SPEC.en.md` and bilingual appendices give canonical forms and categorifications for every type, operation, specification and structure (3118 symbols, 75 registry entries);
 - A physical package graph `cmd/main → root → algebra` with 13 logical components, governed by `architecture.json` and `tools/arch_check.py`.
 
 ## Running and acceptance
@@ -30,7 +30,7 @@ A set of intertwined concepts made into an **executable, testable computational 
 ```text
 moon check --deny-warn                 # whole project, zero warnings
 moon test                              # 63 white-box tests (root+algebra)
-moon run cmd/main                      # theorem registry, expected 56/56
+moon run cmd/main                      # theorem registry, expected 64/64
 python3 tools/arch_check.py            # layers, unique file ownership, counts
 moon info && python3 tools/audit_spec.py --check
                                        # bilingual appendices = package interfaces
@@ -134,6 +134,17 @@ Semantic composition branches are packaged as `DSystem`. `dsystem_canonical` mer
 - **Module format**: `module_binary.mbt` provides the `CHMODBIN` version-1 byte-array/hex codec, with length and DJB2-xor checksum in its header and fixed-tag encodings of the whole `CompiledModule`. Structural parsing is separate from semantically validating load; tampering, truncation, version and trailing-byte failures have distinct statuses. There is still no filesystem service or version migration.
 - **Costs**: BDDs gain bucket-doubling rehash, cache statistics and budgeted sifting through every insertion position; `face_sat_decide` falls back to a two-watched-literal DPLL over Tseitin CNF. `QPoly` uses zero-skipping convolution for sparse work and one common-denominator scaling to BigInt integer polynomials (schoolbook/Karatsuba) for dense work, with binary exponentiation. Worst-case BDD/SAT/algebra costs can still be exponential, and the checks make no general benchmark claim.
 
+### Phase 11: cross-family functors, exact repair, generic points, persistence, biquadratic denesting, CDCL, the circle cover and interleaved modules
+
+- **Schemas**: `DFunctorFamily` lets a nested argument instantiate *another* registered family (slots marked Term/Self by `DFunctorParamArg`), with gathered IH bundles and leaf-occurrence validation; simultaneous IR now compiles to decode specs (`simultaneous_ir_compile_decode`, genuine mutual dependence honestly refused).
+- **DSystem**: `face_agreement_face` gives Face-valued agreement keeping both endpoints, and `dsystem_repair_to_base_exact` repairs against it; `DCubeFunction` open boxes turn host-opaque cubes into verifiably fillable objects (`algebra/poly_cube.mbt` is the exact-coordinate version).
+- **Equivalences**: `lemIso` is validated at neutral points and both ends of neutral paths; primitive Circle/Torus composition computes on point-valued tubes by De Morgan selection.
+- **Persistence**: `CHREGBIN` registry bytes with corruption rejection; genuine global `DTerm` hash-consing (shared subterms, stable ids, checking/normalization unchanged).
+- **Algebra**: adaptive mod-p degree-pattern pruning before factorization; biquadratic `BiquadNum` denesting/equality/sign complete on its fragment; exact Jacobi eigenvalue-cluster separation via the squarefree part.
+- **Costs**: provably optimal BDD variable orders by full enumeration for n≤8; SAT upgraded to CDCL (1-UIP learning, VSIDS, Luby restarts) that must actually learn on pigeonhole instances.
+- **Circle classification**: the schema circle's helix cover (base↦ℤ, loop↦`ua(succ)`); encode is substitution, decode is integer elimination into loop powers; round trips hold by conversion on representatives, composite windings by subdivided transport (the single-substitution intensional boundary is recorded in SPEC §1.14.7/§4).
+- **Front end**: deeper HOU imitation/identification with iterative deepening; `ModuleItem`-interleaved imports and declarations; binary v2 with producer, v1 migration, tag-8 refusal, and an in-process artifact store.
+
 ## Concept map (concise)
 
 | Concept | Implementation | Files |
@@ -161,8 +172,9 @@ Semantic composition branches are packaged as `DSystem`. `dsystem_canonical` mer
 | Cubical algorithms/univalence | KanBox, transport, path algebra, subst/funext, ua/pathToEquiv/uaβ, round-trips and Glue square | `cubical_algorithms.mbt`, `univalence.mbt` |
 | Phase 9 closure | Complete factorization/root isolation, level declarations, DSystem repair, AlgC, spherical representatives, non-Miller HOU and compiled module interfaces | `algebra/qpoly_factor.mbt`, `schema_phase9.mbt`, `certified_algebraic.mbt`, `sphere_homotopy.mbt`, `module_compilation.mbt` |
 | Phase 10 closure | General `lemIso`/adjointification, `IntegerS` and π₃ presentations, bounded Huet search, module byte codec, BDD/SAT/QPoly cost controls | `equivalence_phase10.mbt`, `sphere_classification.mbt`, `hou_elaborator.mbt`, `module_binary.mbt`, `face_sat_watched.mbt`, `algebra/qpoly.mbt` |
+| Phase 11 closure | Cross-family functors/simultaneous-IR compilation, Face agreement + exact repair, generic-point lemIso, CHREGBIN + hash-consing, pattern pruning/biquadratic denesting, opaque cubes/optimal orders/CDCL, circle encode/decode, interleaved modules and v2 migration | `schema_functor.mbt`, `dcube_filler.mbt`, `dterm_intern.mbt`, `schema_registry_persist.mbt`, `algebra/biquad_denest.mbt`, `algebra/poly_cube.mbt`, `circle_classify.mbt`, `phase11_laws.mbt` |
 | Package governance | `cmd/main → root → algebra`, 13 components, no upward edges | `architecture.json`, `tools/arch_check.py`, `ARCHITECTURE.md` |
-| Specification registry | 67 entries + 2871 bilingual appendix symbols + multi-package audit | `spec.mbt`, `SPEC*.md`, `SPEC-APPENDIX*.md`, `tools/audit_spec.py` |
+| Specification registry | 75 entries + 3118 bilingual appendix symbols + multi-package audit | `spec.mbt`, `SPEC*.md`, `SPEC-APPENDIX*.md`, `tools/audit_spec.py` |
 
 ## File map
 
@@ -204,8 +216,12 @@ certified_algebraic.mbt / sphere_homotopy.mbt / module_compilation.mbt
 equivalence_phase10.mbt / sphere_classification.mbt
                               general lemIso/adjointification; IntegerS, pi quotients, loop representatives
 module_binary.mbt / face_sat_watched.mbt
-                              CHMODBIN v1 codec; Tseitin CNF and watched-literal DPLL
-spec.mbt / verify.mbt         67 registry entries; 56 theorem checks
+                              CHMODBIN v1/v2 codec, migration, store; Tseitin CNF, watched DPLL, CDCL
+dcube_filler.mbt / dterm_intern.mbt / schema_registry_persist.mbt
+                              opaque-cube open boxes, DTerm hash-consing, CHREGBIN registry bytes
+algebra/{biquad_denest,poly_cube}.mbt / circle_classify.mbt / phase11_laws.mbt
+                              biquadratic denesting, exact cubes; circle helix encode/decode; phase-11 laws
+spec.mbt / verify.mbt         75 registry entries; 64 theorem checks
 *_wbtest.mbt                  white-box tests (differential oracles live here)
 architecture.json             package/component ownership and dependency manifest
 tools/arch_check.py           architecture/count gate
@@ -215,4 +231,4 @@ cmd/main/                     executable theorem-registry report
 
 ## Scope and boundaries
 
-This remains an **executable model/specification** of a theory fragment, not a complete production cubical kernel. Phase 10 adds a general semantic `lemIso`/automatic adjointification construction, internal integers and π₃-quotient representatives, bounded Huet search, a versioned module byte codec, and BDD/SAT/QPoly cost controls. The `lemIso` validation remains representative conversion, however, and π₃ classifies only the canonical representative calculus: there is still no synthetic encode/decode homotopy-group classification or internal Hopf invariant. Full HOU is undecidable, a Huet residual does not mean unsolvable, and a returned unifier need not be most general. ROBDD/DPLL and exact-algebra algorithms can be exponentially expensive, and arbitrary host `Cube`s remain observable only by sampling. The module format is a byte-array/hex codec and validating parser, not filesystem storage or version migration. The architecture checker's component edges are a conservative source approximation; the MoonBit package graph and `moon check --deny-warn` are the hard boundaries. Details are in §4 of `SPEC.en.md`.
+This remains an **executable model/specification** of a theory fragment, not a complete production cubical kernel. Phase 10 adds a general semantic `lemIso`/automatic adjointification construction, internal integers and π₃-quotient representatives, bounded Huet search, a versioned module byte codec, and BDD/SAT/QPoly cost controls. Phase 11 adds cross-family nested functors with simultaneous-IR compilation, Face-valued agreement with exact repair, generic-point `lemIso` validation, `CHREGBIN` registry bytes with global `DTerm` hash-consing, mod-p pattern pruning and biquadratic denesting (complete on its fragment), host-opaque cube filling, provably optimal BDD orders (n≤8) with CDCL clause learning, the circle's helix encode/decode (composite windings by subdivided transport; a full π₁(S¹)≃ℤ over arbitrary neutral loops is still not internalized), Jacobi cluster separation, deeper HOU search, and interleaved module items with v1→v2 migration. π₃ still classifies only the canonical representative calculus, with no general encode or internal Hopf invariant. Full HOU is undecidable, a Huet residual does not mean unsolvable, and a returned unifier need not be most general. ROBDD/CDCL and exact-algebra algorithms can be exponentially expensive. The module and registry formats are byte-level codecs with validating loaders, not filesystem storage. The architecture checker's component edges are a conservative source approximation; the MoonBit package graph and `moon check --deny-warn` are the hard boundaries. Details are in §4 of `SPEC.en.md`.

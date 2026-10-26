@@ -35,7 +35,7 @@
 - 有界 Huet 搜尋、版本化已編譯模組 byte codec，以及 BDD
   sifting/cache、watched-literal DPLL 與 sparse/Karatsuba `QPoly` 乘法；
 - `SPEC.md`/`SPEC.en.md` 與雙語附錄對全部型別、算子、規格、結構逐符號
-  （2871 個、67 條規格）給出規範形式與範疇化；
+  （3118 個、75 條規格）給出規範形式與範疇化；
 - 實體套件圖 `cmd/main → root → algebra` 與 13 個邏輯元件，
   由 `architecture.json`/`tools/arch_check.py` 管制依賴與計數。
 
@@ -44,7 +44,7 @@
 ```text
 moon check --deny-warn                 # 全專案通過且零警告
 moon test                              # 63 個白箱測試（root+algebra）
-moon run cmd/main                      # 56 項定理登記表，期望 56/56
+moon run cmd/main                      # 64 項定理登記表，期望 64/64
 python3 tools/arch_check.py            # 依賴層級、唯一檔案歸位與計數
 moon info && python3 tools/audit_spec.py --check
                                        # 雙語符號附錄與各套件介面集合相等
@@ -255,6 +255,34 @@ point、PathP 或巢狀 PathP square，端點由低維 face 的消去值給出�
   schoolbook/Karatsuba，冪次走二進位冪。最壞 BDD/SAT/代數
   成本仍可指數，檢查不作一般 benchmark 宣稱。
 
+### 第十一期：跨家族函子、精確修復、一般點、持久化、雙二次去巢、CDCL、圓覆疊與交錯模組
+
+- **Schema**：`DFunctorFamily` 讓巢狀引數實例化**另一個**已註冊
+  家族（參數槽以 `DFunctorParamArg` 分 Term／Self），IH 以巢狀
+  束 gather、validate 把關葉出現；同時 IR 可編譯出 decode
+  規格（`simultaneous_ir_compile_decode`，真互依誠實拒絕）。
+- **DSystem**：`face_agreement_face` 給 Face 值合意面（保留
+  i=0/i=1 雙端點），`dsystem_repair_to_base_exact` 據此精確
+  修復；`DCubeFunction` 開放盒把宿主不透明立方變成可驗證填充的
+  物件（`algebra/poly_cube.mbt` 是精確座標版）。
+- **等價**：`lemIso` 推到中性點與中性路徑兩端驗證；原始
+  Circle/Torus 在點值 tube 上以 De Morgan 選擇計算合成。
+- **持久化**：registry 的 `CHREGBIN` 位元組往返與損壞拒絕；
+  `dterm_intern` 真正全域 hash-consing（共享子項、同 id、
+  檢查/正規形不變）。
+- **代數**：因式分解前置自適應 mod-p 圖樣剪枝；雙二次域
+  `BiquadNum` 去巢/判等/符號完備於本域片斷；`Jacobi` 特徵值
+  簇以平方自由 Sturm 精確分離。
+- **成本**：BDD 變量序 n≤8 全排列可證最優；SAT 升格 CDCL
+  （1-UIP 學習、VSIDS、Luby 重啟），鴿洞要真學習。
+- **圓分類**：schema 圓的 helix 覆蓋（base↦ℤ、loop↦
+  `ua(succ)`），encode 是 subst、decode 是整數消去的環路冪；
+  代表元往返轉換成立，複合環路靠 transport 細分（單次 subst
+  越 trans 點的內涵邊界明記於 SPEC §1.14.7 與 §4）。
+- **前端**：HOU 搜尋加深 imitation/identification 與迭代加深；
+  模組 `ModuleItem` 交錯 import 與宣告；二進位進 v2（含
+  producer、v1 遷移、tag 8 拒絕）與進程內 artifact store。
+
 ## 概念對照（精簡表）
 
 | 概念 | 實作 | 檔案 |
@@ -282,8 +310,9 @@ point、PathP 或巢狀 PathP square，端點由低維 face 的消去值給出�
 | 立方體演算法/單值性 | KanBox、transport、路徑代數、subst/funext、ua/pathToEquiv/uaβ、往返與 Glue 方塊 | `cubical_algorithms.mbt`, `univalence.mbt` |
 | 第九期收束 | 完備因式分解/根隔離、層級宣告、DSystem 修復、AlgC、球面同倫代表元、非 Miller HOU、已編譯模組介面 | `algebra/qpoly_factor.mbt`, `schema_phase9.mbt`, `certified_algebraic.mbt`, `sphere_homotopy.mbt`, `module_compilation.mbt` |
 | 第十期收束 | 一般 `lemIso`／adjointification、`IntegerS` 與 π₃ 商呈現、有界 Huet、模組 byte codec、BDD/SAT/QPoly 成本控制 | `equivalence_phase10.mbt`, `sphere_classification.mbt`, `hou_elaborator.mbt`, `module_binary.mbt`, `face_sat_watched.mbt`, `algebra/qpoly.mbt` |
+| 第十一期收束 | 跨家族函子／同時 IR 編譯、Face 合意與精確修復、lemIso 一般點、CHREGBIN＋hash-consing、圖樣剪枝／雙二次去巢、不透明立方／最佳序／CDCL、圓 encode/decode、模組交錯與 v2 遷移 | `schema_functor.mbt`, `dcube_filler.mbt`, `dterm_intern.mbt`, `schema_registry_persist.mbt`, `algebra/biquad_denest.mbt`, `algebra/poly_cube.mbt`, `circle_classify.mbt`, `phase11_laws.mbt` |
 | 套件與依賴治理 | `cmd/main → root → algebra`、13 元件、禁止向上邊 | `architecture.json`, `tools/arch_check.py`, `ARCHITECTURE.md` |
-| 規格範形登記 | 67 條目＋2871 雙語附錄符號＋多套件審計 | `spec.mbt`, `SPEC*.md`, `SPEC-APPENDIX*.md`, `tools/audit_spec.py` |
+| 規格範形登記 | 75 條目＋3118 雙語附錄符號＋多套件審計 | `spec.mbt`, `SPEC*.md`, `SPEC-APPENDIX*.md`, `tools/audit_spec.py` |
 
 ## 檔案地圖
 
@@ -323,8 +352,12 @@ certified_algebraic.mbt / sphere_homotopy.mbt / module_compilation.mbt
 equivalence_phase10.mbt / sphere_classification.mbt
                               一般 lemIso／adjointification；IntegerS、π 商型與環路代表元
 module_binary.mbt / face_sat_watched.mbt
-                              CHMODBIN v1 codec；Tseitin CNF 與 watched-literal DPLL
-spec.mbt / verify.mbt         67 條規格登記；56 項定理登記表
+                              CHMODBIN v1/v2 codec、遷移與 store；Tseitin CNF、watched DPLL 與 CDCL
+dcube_filler.mbt / dterm_intern.mbt / schema_registry_persist.mbt
+                              不透明立方開盒、DTerm hash-consing、CHREGBIN 註冊持久化
+algebra/{biquad_denest,poly_cube}.mbt / circle_classify.mbt / phase11_laws.mbt
+                              雙二次去巢與精確立方；圓的 helix encode/decode；第十一期律束
+spec.mbt / verify.mbt         75 條規格登記；64 項定理登記表
 *_wbtest.mbt                  白箱測試（差分 oracle 只在這裡）
 cmd/main/                     打印登記表的入口
 ```
@@ -339,6 +372,12 @@ BDD/SAT/QPoly 的成本控制。但 `lemIso` 的驗收仍是代表元轉換；
 同倫群分類或核內 Hopf 不變量。完整 HOU 不可判定，Huet 搜尋的
 residual 不表示無解、求得者也不保證 MGU。ROBDD、DPLL 與精確
 代數演算法最壞成本仍可爆炸；任意宿主 `Cube` 仍只能抽樣觀察。
-模組格式是 byte-array／hex codec 及其驗證器，沒有檔案系統服務
-或跨版本遷移。架構 checker 的元件邊是保守源碼近似，MoonBit
-套件圖與 `moon check --deny-warn` 才是硬邊界。細節見 `SPEC.md` 第四節。
+模組格式在第十一期已有 v2、v1 遷移與進程內 store，但仍無檔案
+系統服務。架構 checker 的元件邊是保守源碼近似，MoonBit
+套件圖與 `moon check --deny-warn` 才是硬邊界。第十一期另補：
+跨家族巢狀函子與同時 IR 編譯、Face 值合意與精確修復、一般點
+lemIso、CHREGBIN＋全域 hash-consing、圖樣剪枝與雙二次去巢
+（完備於雙二次片斷）、宿主不透明立方、可證最佳 BDD 序（n≤8）
+與 CDCL、圓的 helix 覆疊 encode/decode（複合環路以細分
+transport 計算；任意中性環路的完整 π₁(S¹)≃ℤ 仍未內部化）、
+Jacobi 簇分離、HOU 深搜尋與模組交錯編排。細節見 `SPEC.md` 第四節。
