@@ -125,12 +125,37 @@ pub fn module_decl_abstract(
 }
 
 ///|
+/// One step of a module's elaboration program.  A module's items
+/// determine the order in which its imports and local declarations
+/// are elaborated, hence the module telescope against which the
+/// de Bruijn indices in declaration types, bodies, and import
+/// arguments are written: parameters first, then the context
+/// entries contributed by each item in item order.  Interleaving a
+/// local declaration before an import is what allows that import's
+/// functor arguments to mention the local declaration.
+pub enum ModuleItem {
+  ModuleItemImport(Int32)
+  ModuleItemDecl(Int32)
+} derive(Debug, Eq)
+
+///|
+pub extend ModuleItem with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend ModuleItem with Eq::{not_equal, equal}
+
+///|
 pub struct ModuleDef {
   path : String
   params : Array[DTelescopeEntry]
   imports : Array[ModuleImport]
   opens : Array[String]
   decls : Array[ModuleDecl]
+  /// Elaboration order of imports and declarations.  The empty
+  /// list selects the legacy order (all imports, then all
+  /// declarations); a nonempty list must mention every import and
+  /// every declaration index exactly once.
+  items : Array[ModuleItem]
 } derive(Debug, Eq)
 
 ///|
@@ -146,8 +171,9 @@ pub fn module_def(
   imports~ : Array[ModuleImport] = [],
   opens~ : Array[String] = [],
   decls~ : Array[ModuleDecl] = [],
+  items~ : Array[ModuleItem] = [],
 ) -> ModuleDef {
-  ModuleDef::{ path, params, imports, opens, decls, }
+  ModuleDef::{ path, params, imports, opens, decls, items, }
 }
 
 ///|
@@ -471,6 +497,54 @@ fn module_import_selected(import_ : ModuleImport, name : String) -> Bool {
 }
 
 ///|
+
+///|
+/// The effective elaboration program of a module: its declared
+/// item order when present (validated to be a permutation of the
+/// import and declaration lists), or the legacy imports-then-
+/// declarations order.
+fn module_effective_items(module_ : ModuleDef) -> Array[ModuleItem]? {
+  if module_.items.length() == 0 {
+    let out : Array[ModuleItem] = []
+    for i in 0..<module_.imports.length() {
+      out.push(ModuleItemImport(i))
+    }
+    for i in 0..<module_.decls.length() {
+      out.push(ModuleItemDecl(i))
+    }
+    return Some(out)
+  }
+  if module_.items.length() != module_.imports.length() + module_.decls.length() {
+    return None
+  }
+  let seen_imports : Array[Bool] = []
+  for _i in 0..<module_.imports.length() {
+    seen_imports.push(false)
+  }
+  let seen_decls : Array[Bool] = []
+  for _i in 0..<module_.decls.length() {
+    seen_decls.push(false)
+  }
+  for i in 0..<module_.items.length() {
+    match module_.items[i] {
+      ModuleItemImport(index) =>
+        if index < 0 || index >= seen_imports.length() || seen_imports[index] {
+          return None
+        } else {
+          seen_imports[index] = true
+        }
+      ModuleItemDecl(index) =>
+        if index < 0 || index >= seen_decls.length() || seen_decls[index] {
+          return None
+        } else {
+          seen_decls[index] = true
+        }
+    }
+  }
+  Some(module_.items)
+}
+
+///|
 fn module_elaborate_into(
   env : ModuleEnv,
   module_ : ModuleDef,
@@ -529,122 +603,130 @@ fn module_elaborate_into(
     local_ordinals: [],
     exports: [],
   }
-  for import_index in 0..<module_.imports.length() {
-    let import_ = module_.imports[import_index]
-    let target = match module_env_find(env, import_.module_path) {
-      Some(m) => m
-      None => return None
-    }
-    if import_.args.length() != target.params.length() {
-      return None
-    }
-    let host_len = state.entries.length()
-    let target_args : Array[ModuleSubst] = []
-    for i in 0..<import_.args.length() {
-      let mapped = module_apply_subst(
-        import_.args[i],
-        subst.length(),
-        subst,
-        host_len,
-      )
-      target_args.push(ModuleSubstTerm(mapped, host_len))
-    }
-    let target_segment = match
-      module_elaborate_into(
-        env,
-        target,
-        state,
-        Some(target_args),
-        stack2,
-        false,
-      ) {
-      Some(seg) => seg
-      None => return None
-    }
-    for i in 0..<target_segment.context_ordinals.length() {
-      let ordinal = target_segment.context_ordinals[i]
-      subst.push(ModuleSubstRef(ordinal))
-      segment.context_ordinals.push(ordinal)
-    }
-    // Cross the module boundary: opaque exports become neutral
-    // constants for all subsequent importer checking.
-    for i in 0..<target_segment.exports.length() {
-      let ex = target_segment.exports[i]
-      if !ex.transparent {
-        state.values[ex.ordinal] = DVNeutral(DNVar(13000 + ex.ordinal))
-      }
-    }
-    let opened = import_.opened ||
-      module_contains(module_.opens, import_.module_path) ||
-      (
-        import_.alias_name.length() > 0 &&
-        module_contains(module_.opens, import_.alias_name)
-      )
-    for i in 0..<target_segment.exports.length() {
-      let ex = target_segment.exports[i]
-      if module_import_selected(import_, ex.name) {
-        let canonical = import_.module_path + "." + ex.name
-        if !module_add_binding(state, canonical, ex.ordinal) {
-          return None
-        }
-        if import_.alias_name.length() > 0 &&
-          !module_add_binding(
-            state,
-            import_.alias_name + "." + ex.name,
-            ex.ordinal,
-          ) {
-          return None
-        }
-        if opened &&
-          !module_add_binding(
-            state,
-            module_renamed(import_, ex.name),
-            ex.ordinal,
-          ) {
-          return None
-        }
-      }
-    }
+  let items = match module_effective_items(module_) {
+    Some(v) => v
+    None => return None
   }
-  for decl_index in 0..<module_.decls.length() {
-    let decl = module_.decls[decl_index]
-    let host_len = state.entries.length()
-    let ty = module_apply_subst(decl.ty, subst.length(), subst, host_len)
-    let body = match decl.body {
-      Some(term) =>
-        Some(module_apply_subst(term, subst.length(), subst, host_len))
-      None => None
-    }
-    let ordinal = match
-      module_append_entry(
-        state,
-        module_.path + "." + decl.name,
-        decl.name,
-        module_.path,
-        ty,
-        body,
-        decl.exported,
-        decl.transparent,
-      ) {
-      Some(v) => v
-      None => return None
-    }
-    subst.push(ModuleSubstRef(ordinal))
-    segment.context_ordinals.push(ordinal)
-    segment.local_ordinals.push(ordinal)
-    if decl.exported {
-      segment.exports.push(ModuleExport::{
-        name: decl.name,
-        ordinal,
-        transparent: decl.transparent,
-      })
-    }
-    if bind_locals &&
-      (
-        !module_add_binding(state, decl.name, ordinal) ||
-        !module_add_binding(state, module_.path + "." + decl.name, ordinal)
-      ) {
-      return None
+  for item_index in 0..<items.length() {
+    match items[item_index] {
+      ModuleItemImport(import_index) => {
+        let import_ = module_.imports[import_index]
+        let target = match module_env_find(env, import_.module_path) {
+          Some(m) => m
+          None => return None
+        }
+        if import_.args.length() != target.params.length() {
+          return None
+        }
+        let host_len = state.entries.length()
+        let target_args : Array[ModuleSubst] = []
+        for i in 0..<import_.args.length() {
+          let mapped = module_apply_subst(
+            import_.args[i],
+            subst.length(),
+            subst,
+            host_len,
+          )
+          target_args.push(ModuleSubstTerm(mapped, host_len))
+        }
+        let target_segment = match
+          module_elaborate_into(
+            env,
+            target,
+            state,
+            Some(target_args),
+            stack2,
+            false,
+          ) {
+          Some(seg) => seg
+          None => return None
+        }
+        for i in 0..<target_segment.context_ordinals.length() {
+          let ordinal = target_segment.context_ordinals[i]
+          subst.push(ModuleSubstRef(ordinal))
+          segment.context_ordinals.push(ordinal)
+        }
+        // Cross the module boundary: opaque exports become neutral
+        // constants for all subsequent importer checking.
+        for i in 0..<target_segment.exports.length() {
+          let ex = target_segment.exports[i]
+          if !ex.transparent {
+            state.values[ex.ordinal] = DVNeutral(DNVar(13000 + ex.ordinal))
+          }
+        }
+        let opened = import_.opened ||
+          module_contains(module_.opens, import_.module_path) ||
+          (
+            import_.alias_name.length() > 0 &&
+            module_contains(module_.opens, import_.alias_name)
+          )
+        for i in 0..<target_segment.exports.length() {
+          let ex = target_segment.exports[i]
+          if module_import_selected(import_, ex.name) {
+            let canonical = import_.module_path + "." + ex.name
+            if !module_add_binding(state, canonical, ex.ordinal) {
+              return None
+            }
+            if import_.alias_name.length() > 0 &&
+              !module_add_binding(
+                state,
+                import_.alias_name + "." + ex.name,
+                ex.ordinal,
+              ) {
+              return None
+            }
+            if opened &&
+              !module_add_binding(
+                state,
+                module_renamed(import_, ex.name),
+                ex.ordinal,
+              ) {
+              return None
+            }
+          }
+        }
+      }
+      ModuleItemDecl(decl_index) => {
+        let decl = module_.decls[decl_index]
+        let host_len = state.entries.length()
+        let ty = module_apply_subst(decl.ty, subst.length(), subst, host_len)
+        let body = match decl.body {
+          Some(term) =>
+            Some(module_apply_subst(term, subst.length(), subst, host_len))
+          None => None
+        }
+        let ordinal = match
+          module_append_entry(
+            state,
+            module_.path + "." + decl.name,
+            decl.name,
+            module_.path,
+            ty,
+            body,
+            decl.exported,
+            decl.transparent,
+          ) {
+          Some(v) => v
+          None => return None
+        }
+        subst.push(ModuleSubstRef(ordinal))
+        segment.context_ordinals.push(ordinal)
+        segment.local_ordinals.push(ordinal)
+        if decl.exported {
+          segment.exports.push(ModuleExport::{
+            name: decl.name,
+            ordinal,
+            transparent: decl.transparent,
+          })
+        }
+        if bind_locals &&
+          (
+            !module_add_binding(state, decl.name, ordinal) ||
+            !module_add_binding(state, module_.path + "." + decl.name, ordinal)
+          ) {
+          return None
+        }
+      }
     }
   }
   Some(segment)
@@ -930,4 +1012,86 @@ pub fn check_module_system() -> Bool {
   module_resolve(renamed_sig, "not") != None &&
   module_resolve(renamed_sig, "other_not") != None &&
   module_resolve(renamed_sig, "not") != module_resolve(renamed_sig, "other_not")
+}
+
+///|
+/// Phase 11 verification of interleaved module items.  The
+/// client module first declares a local seed, then imports a
+/// parameterized holder *applied to that seed* -- impossible
+/// under the legacy imports-first order, whose failure is also
+/// asserted -- and finally exports the imported value.  Malformed
+/// item programs (wrong length, duplicate, out of range) are
+/// rejected.
+pub fn check_module_interleaved_items() -> Bool {
+  let holder = module_def(
+    "Generic.Holder",
+    params=[dtelescope_entry("A", DUniv(0)), dtelescope_entry("a", DTVar(0))],
+    decls=[module_decl("held", DTVar(1), DTVar(0))],
+  )
+  let two = DSucc(DSucc(DNatZero))
+  let top_decls = [
+    module_decl("seed", DNatTy, two),
+    module_decl("answer", DNatTy, DTVar(0)),
+  ]
+  let top_imports = [module_import("Generic.Holder", args=[DNatTy, DTVar(0)])]
+  let top = module_def(
+    "Demo.Interleaved",
+    imports=top_imports,
+    decls=top_decls,
+    items=[ModuleItemDecl(0), ModuleItemImport(0), ModuleItemDecl(1)],
+  )
+  let env = module_env_new()
+  if !module_env_add(env, holder) || !module_env_add(env, top) {
+    return false
+  }
+  let signature = match module_signature(env, top) {
+    Some(s) => s
+    None => return false
+  }
+  if module_resolve(signature, "answer") == None ||
+    module_resolve(signature, "Generic.Holder.held") == None {
+    return false
+  }
+  let instance = match module_instantiate(env, top, []) {
+    Some(v) => v
+    None => return false
+  }
+  let answer = match module_instance_find(instance, "answer") {
+    Some(d) => d
+    None => return false
+  }
+  if dep_nf_closed(answer.body, DNatTy) != Some(two) {
+    return false
+  }
+  // The legacy order cannot elaborate the same module: the
+  // import argument mentions `seed` before it exists.
+  let legacy = module_def(
+    "Demo.Interleaved",
+    imports=top_imports,
+    decls=top_decls,
+  )
+  match module_signature(env, legacy) {
+    Some(_) => return false
+    None => ()
+  }
+  // Malformed item programs are rejected.
+  let bad_programs = [
+    [ModuleItemDecl(0)],
+    [ModuleItemDecl(0), ModuleItemDecl(0), ModuleItemImport(0)],
+    [ModuleItemDecl(0), ModuleItemImport(3), ModuleItemDecl(1)],
+    [ModuleItemImport(0), ModuleItemDecl(1), ModuleItemDecl(1)],
+  ]
+  for program in bad_programs {
+    let bad = module_def(
+      "Demo.Interleaved",
+      imports=top_imports,
+      decls=top_decls,
+      items=program,
+    )
+    match module_signature(env, bad) {
+      Some(_) => return false
+      None => ()
+    }
+  }
+  true
 }

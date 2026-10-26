@@ -456,6 +456,8 @@ pub fn check_kan_pruning() -> Bool
 
 pub fn check_karoubi_category() -> Bool
 
+pub fn check_lemiso_generic_points() -> Bool
+
 pub fn check_level_polymorphic_declarations() -> Bool
 
 pub fn check_module_binary_format() -> Bool
@@ -660,7 +662,11 @@ pub fn compiled_module_binary_format_version() -> Int32
 
 pub fn compiled_module_binary_from_hex(String) -> Array[Int32]?
 
+pub fn compiled_module_binary_supported_versions() -> Array[Int32]
+
 pub fn compiled_module_binary_to_hex(Array[Int32]) -> String
+
+pub fn compiled_module_binary_version_of(Array[Int32]) -> Int32
 
 pub fn compiled_module_env_add(CompiledModuleEnv, CompiledModule) -> Bool
 
@@ -682,9 +688,25 @@ pub fn compiled_module_load_binary(Array[Int32]) -> CompiledModule?
 
 pub fn compiled_module_load_binary_report(Array[Int32], validate? : Bool) -> ModuleBinaryLoad
 
+pub fn compiled_module_migrate_binary(Array[Int32]) -> Array[Int32]?
+
+pub fn compiled_module_producer_default() -> String
+
 pub fn compiled_module_specialize_prefix(CompiledModule, Array[DTerm]) -> CompiledModule?
 
+pub fn compiled_module_store_contains(CompiledModuleStore, String) -> Bool
+
+pub fn compiled_module_store_get(CompiledModuleStore, String) -> CompiledModule?
+
+pub fn compiled_module_store_new() -> CompiledModuleStore
+
+pub fn compiled_module_store_put(CompiledModuleStore, CompiledModule) -> Unit
+
+pub fn compiled_module_store_stats(CompiledModuleStore) -> CompiledModuleStoreStats
+
 pub fn compiled_module_to_binary(CompiledModule) -> Array[Int32]
+
+pub fn compiled_module_to_binary_v1(CompiledModule) -> Array[Int32]?
 
 pub fn compiled_module_to_module_def(CompiledModule) -> ModuleDef
 
@@ -1334,6 +1356,8 @@ pub fn face_bound(Face, Int32) -> Face
 
 pub fn face_cnf_stats(Face, Int32) -> FaceCnfStats
 
+pub fn face_eq_cdcl(Face, Face, Int32, max_steps? : Int32) -> FaceDecision
+
 pub fn face_eq_decide(Face, Face, Int32, max_nodes? : Int32, max_steps? : Int32) -> FaceDecision
 
 pub fn face_eq_dpll(Face, Face, Int32, max_steps? : Int32) -> FaceDecision
@@ -1371,6 +1395,10 @@ pub fn face_of_bdd(Bdd) -> Face
 pub fn face_quote(Face, Int32) -> Face
 
 pub fn face_sat(Face, Int32) -> Bool
+
+pub fn face_sat_cdcl(Face, Int32, max_steps? : Int32) -> FaceSatDecision
+
+pub fn face_sat_cdcl_report(Face, Int32, max_steps? : Int32) -> FaceCdclResult
 
 pub fn face_sat_decide(Face, Int32, max_nodes? : Int32, max_steps? : Int32) -> FaceSatDecision
 
@@ -1784,7 +1812,7 @@ pub fn module_decl(String, DTerm, DTerm, exported? : Bool, transparent? : Bool) 
 
 pub fn module_decl_abstract(String, DTerm, exported? : Bool, transparent? : Bool) -> ModuleDecl
 
-pub fn module_def(String, params? : Array[DTelescopeEntry], imports? : Array[ModuleImport], opens? : Array[String], decls? : Array[ModuleDecl]) -> ModuleDef
+pub fn module_def(String, params? : Array[DTelescopeEntry], imports? : Array[ModuleImport], opens? : Array[String], decls? : Array[ModuleDecl], items? : Array[ModuleItem]) -> ModuleDef
 
 pub fn module_dependency_fingerprint(String, Int32) -> ModuleDependencyFingerprint
 
@@ -2594,6 +2622,7 @@ pub struct CompiledModule {
   interface_hash : Int32
   implementation_hash : Int32
   interface_encoding : String
+  producer : String
 } derive(Eq, @debug.Debug)
 pub fn CompiledModule::equal(Self, Self) -> Bool
 pub fn CompiledModule::not_equal(Self, Self) -> Bool
@@ -2605,6 +2634,22 @@ pub struct CompiledModuleEnv {
 pub fn CompiledModuleEnv::equal(Self, Self) -> Bool
 pub fn CompiledModuleEnv::not_equal(Self, Self) -> Bool
 pub fn CompiledModuleEnv::to_repr(Self) -> @debug.Repr
+
+pub struct CompiledModuleStore {
+  blobs : Array[(String, Array[Int32])]
+  mut hits : Int32
+  mut misses : Int32
+}
+
+pub struct CompiledModuleStoreStats {
+  entries : Int32
+  total_bytes : Int32
+  hits : Int32
+  misses : Int32
+} derive(Eq, @debug.Debug)
+pub fn CompiledModuleStoreStats::equal(Self, Self) -> Bool
+pub fn CompiledModuleStoreStats::not_equal(Self, Self) -> Bool
+pub fn CompiledModuleStoreStats::to_repr(Self) -> @debug.Repr
 
 pub struct Complex {
   re : Double
@@ -3320,6 +3365,22 @@ pub fn FaceBoolExpr::equal(Self, Self) -> Bool
 pub fn FaceBoolExpr::not_equal(Self, Self) -> Bool
 pub fn FaceBoolExpr::to_repr(Self) -> @debug.Repr
 
+pub struct FaceCdclResult {
+  decision : FaceSatDecision
+  stats : FaceCdclStats
+}
+
+pub struct FaceCdclStats {
+  decisions : Int32
+  conflicts : Int32
+  propagations : Int32
+  learned : Int32
+  restarts : Int32
+} derive(Eq, @debug.Debug)
+pub fn FaceCdclStats::equal(Self, Self) -> Bool
+pub fn FaceCdclStats::not_equal(Self, Self) -> Bool
+pub fn FaceCdclStats::to_repr(Self) -> @debug.Repr
+
 pub struct FaceCnfStats {
   variables : Int32
   auxiliary_variables : Int32
@@ -3538,6 +3599,7 @@ pub struct ModuleDef {
   imports : Array[ModuleImport]
   opens : Array[String]
   decls : Array[ModuleDecl]
+  items : Array[ModuleItem]
 } derive(Eq, @debug.Debug)
 pub fn ModuleDef::equal(Self, Self) -> Bool
 pub fn ModuleDef::not_equal(Self, Self) -> Bool
@@ -3613,6 +3675,14 @@ pub struct ModuleInstanceDecl {
 pub fn ModuleInstanceDecl::equal(Self, Self) -> Bool
 pub fn ModuleInstanceDecl::not_equal(Self, Self) -> Bool
 pub fn ModuleInstanceDecl::to_repr(Self) -> @debug.Repr
+
+pub enum ModuleItem {
+  ModuleItemImport(Int32)
+  ModuleItemDecl(Int32)
+} derive(Eq, @debug.Debug)
+pub fn ModuleItem::equal(Self, Self) -> Bool
+pub fn ModuleItem::not_equal(Self, Self) -> Bool
+pub fn ModuleItem::to_repr(Self) -> @debug.Repr
 
 pub struct ModuleRename {
   from_name : String

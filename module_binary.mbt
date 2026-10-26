@@ -49,8 +49,34 @@ pub extend ModuleBinaryLoad with @moonbitlang/core/debug.Debug::{to_repr}
 pub extend ModuleBinaryLoad with Eq::{not_equal, equal}
 
 ///|
+/// The binary layout version written by this build.  Version 2
+/// payloads extend the version 1 payload with a producer string
+/// and admit tag-8 schema functor nodes (`DFunctorFamily`); the
+/// loader accepts both versions.
 pub fn compiled_module_binary_format_version() -> Int32 {
-  1
+  2
+}
+
+///|
+/// All binary layout versions this loader can read.
+pub fn compiled_module_binary_supported_versions() -> Array[Int32] {
+  [1, 2]
+}
+
+///|
+/// The layout version recorded in a binary blob's header, or -1
+/// when the blob does not even carry a recognizable header.
+pub fn compiled_module_binary_version_of(bytes : Array[Int32]) -> Int32 {
+  if bytes.length() < 12 {
+    return -1
+  }
+  let magic = [67, 72, 77, 79, 68, 66, 73, 78]
+  for i in 0..<magic.length() {
+    if (bytes[i] & 255) != magic[i] {
+      return -1
+    }
+  }
+  module_binary_u16_at(bytes, 8)
 }
 
 ///|
@@ -63,6 +89,10 @@ priv struct ModuleBinReader {
   bytes : Array[Int32]
   mut pos : Int32
   mut status : ModuleBinaryStatus
+  /// Binary layout version being read; version-gated payload
+  /// nodes (tag-8 functors, the v2 producer extension) consult
+  /// this field.
+  version : Int32
 }
 
 ///|
@@ -72,7 +102,15 @@ fn module_bin_writer_new() -> ModuleBinWriter {
 
 ///|
 fn module_bin_reader_new(bytes : Array[Int32]) -> ModuleBinReader {
-  { bytes, pos: 0, status: ModuleBinaryOk, }
+  { bytes, pos: 0, status: ModuleBinaryOk, version: 2, }
+}
+
+///|
+fn module_bin_reader_new_versioned(
+  bytes : Array[Int32],
+  version : Int32,
+) -> ModuleBinReader {
+  { bytes, pos: 0, status: ModuleBinaryOk, version, }
 }
 
 ///|
@@ -2085,7 +2123,11 @@ fn br_dependencies(r : ModuleBinReader) -> Array[ModuleDependencyFingerprint]? {
 }
 
 ///|
-fn bw_compiled_payload(w : ModuleBinWriter, compiled : CompiledModule) -> Unit {
+fn bw_compiled_payload_versioned(
+  w : ModuleBinWriter,
+  compiled : CompiledModule,
+  version : Int32,
+) -> Unit {
   bw_i32(w, compiled.format_version)
   bw_string(w, compiled.module_path)
   bw_telescope(w, compiled.params)
@@ -2095,6 +2137,9 @@ fn bw_compiled_payload(w : ModuleBinWriter, compiled : CompiledModule) -> Unit {
   bw_i32(w, compiled.interface_hash)
   bw_i32(w, compiled.implementation_hash)
   bw_string(w, compiled.interface_encoding)
+  if version >= 2 {
+    bw_string(w, compiled.producer)
+  }
 }
 
 ///|
@@ -2132,6 +2177,14 @@ fn br_compiled_payload(r : ModuleBinReader) -> CompiledModule? {
     Some(v) => v
     None => return None
   }
+  let producer = if r.version >= 2 {
+    match br_string(r) {
+      Some(v) => v
+      None => return None
+    }
+  } else {
+    ""
+  }
   Some(CompiledModule::{
     format_version,
     module_path,
@@ -2142,6 +2195,7 @@ fn br_compiled_payload(r : ModuleBinReader) -> CompiledModule? {
     interface_hash,
     implementation_hash,
     interface_encoding,
+    producer,
   })
 }
 
@@ -2171,16 +2225,19 @@ fn module_binary_i32_at(bytes : Array[Int32], offset : Int32) -> Int32 {
 /// Serialize a compiled module in the stable binary format.  The
 /// resulting array contains one byte (0--255) per element and is
 /// suitable for writing to disk unchanged.
-pub fn compiled_module_to_binary(compiled : CompiledModule) -> Array[Int32] {
+fn compiled_module_to_binary_versioned(
+  compiled : CompiledModule,
+  version : Int32,
+) -> Array[Int32] {
   let payload_writer = module_bin_writer_new()
-  bw_compiled_payload(payload_writer, compiled)
+  bw_compiled_payload_versioned(payload_writer, compiled, version)
   let payload = payload_writer.bytes
   let writer = module_bin_writer_new()
   for byte in [67, 72, 77, 79, 68, 66, 73, 78] {
     bw_u8(writer, byte)
   }
-  bw_u8(writer, compiled_module_binary_format_version())
-  bw_u8(writer, compiled_module_binary_format_version() >> 8)
+  bw_u8(writer, version)
+  bw_u8(writer, version >> 8)
   bw_u8(writer, 0)
   bw_u8(writer, 0)
   bw_i32(writer, payload.length())
@@ -2189,6 +2246,70 @@ pub fn compiled_module_to_binary(compiled : CompiledModule) -> Array[Int32] {
     bw_u8(writer, payload[i])
   }
   writer.bytes
+}
+
+///|
+pub fn compiled_module_to_binary(compiled : CompiledModule) -> Array[Int32] {
+  compiled_module_to_binary_versioned(
+    compiled,
+    compiled_module_binary_format_version(),
+  )
+}
+
+///|
+/// Serialize in the legacy version 1 layout.  Returns `None` when
+/// the module uses v2-only payload features (for example a
+/// `DFunctorFamily` schema node): the candidate bytes are parsed
+/// back under v1 rules and must reproduce the module's interface
+/// encoding and entry encodings exactly.
+pub fn compiled_module_to_binary_v1(compiled : CompiledModule) -> Array[Int32]? {
+  let bytes = compiled_module_to_binary_versioned(compiled, 1)
+  match compiled_module_from_binary(bytes) {
+    Some(back) =>
+      if back.module_path == compiled.module_path &&
+        back.params == compiled.params &&
+        back.entries == compiled.entries &&
+        back.exports == compiled.exports &&
+        back.dependencies == compiled.dependencies &&
+        back.interface_encoding == compiled.interface_encoding &&
+        back.interface_hash == compiled.interface_hash &&
+        back.implementation_hash == compiled.implementation_hash {
+        Some(bytes)
+      } else {
+        None
+      }
+    None => None
+  }
+}
+
+///|
+/// Migrate a binary blob of any supported layout version to the
+/// current layout: the object is parsed and semantically
+/// validated, stamped with the default producer when it carries
+/// none, and re-emitted.  `None` when the input is not a valid,
+/// supported compiled module.
+pub fn compiled_module_migrate_binary(bytes : Array[Int32]) -> Array[Int32]? {
+  let compiled = match compiled_module_load_binary(bytes) {
+    Some(v) => v
+    None => return None
+  }
+  if compiled.producer.length() == 0 {
+    let stamped = CompiledModule::{
+      format_version: compiled.format_version,
+      module_path: compiled.module_path,
+      params: compiled.params,
+      entries: compiled.entries,
+      exports: compiled.exports,
+      dependencies: compiled.dependencies,
+      interface_hash: compiled.interface_hash,
+      implementation_hash: compiled.implementation_hash,
+      interface_encoding: compiled.interface_encoding,
+      producer: compiled_module_producer_default(),
+    }
+    Some(compiled_module_to_binary(stamped))
+  } else {
+    Some(compiled_module_to_binary(compiled))
+  }
 }
 
 ///|
@@ -2219,7 +2340,8 @@ pub fn compiled_module_load_binary_report(
       return module_binary_failure(ModuleBinaryBadMagic)
     }
   }
-  if module_binary_u16_at(bytes, 8) != compiled_module_binary_format_version() ||
+  let header_version = module_binary_u16_at(bytes, 8)
+  if (header_version != 1 && header_version != 2) ||
     module_binary_u16_at(bytes, 10) != 0 {
     return module_binary_failure(ModuleBinaryUnsupportedVersion)
   }
@@ -2240,7 +2362,7 @@ pub fn compiled_module_load_binary_report(
   if module_binary_checksum(payload) != module_binary_i32_at(bytes, 16) {
     return module_binary_failure(ModuleBinaryChecksumMismatch)
   }
-  let reader = module_bin_reader_new(payload)
+  let reader = module_bin_reader_new_versioned(payload, header_version)
   let compiled = match br_compiled_payload(reader) {
     Some(v) => v
     None => return module_binary_failure(reader.status)
@@ -2397,4 +2519,204 @@ pub fn check_module_binary_format() -> Bool {
     None => return false
   }
   dep_nf_closed(answer.body, DBoolTy) == Some(DBoolLit(true))
+}
+
+///|
+/// An in-memory byte-store cache of compiled modules, keyed by
+/// module path.  `put` serializes at the current layout version;
+/// `get` parses and semantically validates the stored bytes, so
+/// a corrupted or stale blob registers as a miss rather than a
+/// bad object.  Hit/miss counters make the cache policy
+/// observable to tests and diagnostics.
+pub struct CompiledModuleStore {
+  blobs : Array[(String, Array[Int32])]
+  mut hits : Int32
+  mut misses : Int32
+}
+
+///|
+pub struct CompiledModuleStoreStats {
+  entries : Int32
+  total_bytes : Int32
+  hits : Int32
+  misses : Int32
+} derive(Debug, Eq)
+
+///|
+pub extend CompiledModuleStoreStats with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
+pub extend CompiledModuleStoreStats with Eq::{not_equal, equal}
+
+///|
+pub fn compiled_module_store_new() -> CompiledModuleStore {
+  { blobs: [], hits: 0, misses: 0, }
+}
+
+///|
+pub fn compiled_module_store_put(
+  store : CompiledModuleStore,
+  compiled : CompiledModule,
+) -> Unit {
+  let kept : Array[(String, Array[Int32])] = []
+  for i in 0..<store.blobs.length() {
+    if store.blobs[i].0 != compiled.module_path {
+      kept.push(store.blobs[i])
+    }
+  }
+  while store.blobs.length() > 0 {
+    ignore(store.blobs.pop())
+  }
+  for i in 0..<kept.length() {
+    store.blobs.push(kept[i])
+  }
+  store.blobs.push((compiled.module_path, compiled_module_to_binary(compiled)))
+}
+
+///|
+pub fn compiled_module_store_get(
+  store : CompiledModuleStore,
+  module_path : String,
+) -> CompiledModule? {
+  for i in 0..<store.blobs.length() {
+    if store.blobs[i].0 == module_path {
+      match compiled_module_load_binary(store.blobs[i].1) {
+        Some(compiled) =>
+          if compiled.module_path == module_path {
+            store.hits = store.hits + 1
+            return Some(compiled)
+          }
+        None => ()
+      }
+      store.misses = store.misses + 1
+      return None
+    }
+  }
+  store.misses = store.misses + 1
+  None
+}
+
+///|
+pub fn compiled_module_store_contains(
+  store : CompiledModuleStore,
+  module_path : String,
+) -> Bool {
+  for i in 0..<store.blobs.length() {
+    if store.blobs[i].0 == module_path {
+      return true
+    }
+  }
+  false
+}
+
+///|
+pub fn compiled_module_store_stats(
+  store : CompiledModuleStore,
+) -> CompiledModuleStoreStats {
+  let mut total = 0
+  for i in 0..<store.blobs.length() {
+    total = total + store.blobs[i].1.length()
+  }
+  {
+    entries: store.blobs.length(),
+    total_bytes: total,
+    hits: store.hits,
+    misses: store.misses,
+  }
+}
+
+///|
+/// Phase 11 verification of the versioned binary format and the
+/// byte-store cache: v2 is the written layout and round-trips;
+/// legacy v1 blobs are produced for v1-expressible modules, are
+/// accepted by the loader, and migrate to v2 preserving the
+/// object (with the producer stamped); an unknown header version
+/// is rejected; the store records hits and misses and validates
+/// on read.
+pub fn check_module_binary_versions_and_store() -> Bool {
+  let compiled = match module_compile(module_env_new(), bool_ops_module(), []) {
+    Some(v) => v
+    None => return false
+  }
+  if compiled.producer != compiled_module_producer_default() ||
+    compiled_module_binary_format_version() != 2 ||
+    compiled_module_binary_supported_versions() != [1, 2] {
+    return false
+  }
+  let bytes = compiled_module_to_binary(compiled)
+  if compiled_module_binary_version_of(bytes) != 2 ||
+    compiled_module_binary_version_of([]) != -1 ||
+    compiled_module_binary_version_of([1, 2, 3]) != -1 {
+    return false
+  }
+  match compiled_module_load_binary(bytes) {
+    Some(back) => if back != compiled { return false }
+    None => return false
+  }
+  // Legacy v1: writable for this module, loadable, and migrates.
+  let v1 = match compiled_module_to_binary_v1(compiled) {
+    Some(b) => b
+    None => return false
+  }
+  if compiled_module_binary_version_of(v1) != 1 {
+    return false
+  }
+  let from_v1 = match compiled_module_load_binary(v1) {
+    Some(v) => v
+    None => return false
+  }
+  if from_v1.producer.length() != 0 ||
+    from_v1.interface_hash != compiled.interface_hash ||
+    from_v1.entries != compiled.entries {
+    return false
+  }
+  let migrated = match compiled_module_migrate_binary(v1) {
+    Some(b) => b
+    None => return false
+  }
+  if compiled_module_binary_version_of(migrated) != 2 {
+    return false
+  }
+  match compiled_module_load_binary(migrated) {
+    Some(back) => if back != compiled { return false }
+    None => return false
+  }
+  // Migration is the identity on current-version blobs.
+  match compiled_module_migrate_binary(bytes) {
+    Some(again) => if again != bytes { return false }
+    None => return false
+  }
+  // An unknown header version is rejected precisely.
+  let futuristic : Array[Int32] = []
+  for i in 0..<bytes.length() {
+    futuristic.push(bytes[i])
+  }
+  futuristic[8] = 3
+  if compiled_module_load_binary_report(futuristic).status !=
+    ModuleBinaryUnsupportedVersion ||
+    compiled_module_migrate_binary(futuristic) != None {
+    return false
+  }
+  // Byte-store cache.
+  let store = compiled_module_store_new()
+  if compiled_module_store_get(store, compiled.module_path) != None ||
+    compiled_module_store_stats(store).misses != 1 {
+    return false
+  }
+  compiled_module_store_put(store, compiled)
+  if !compiled_module_store_contains(store, compiled.module_path) ||
+    compiled_module_store_contains(store, "No.Such.Module") {
+    return false
+  }
+  match compiled_module_store_get(store, compiled.module_path) {
+    Some(back) => if back != compiled { return false }
+    None => return false
+  }
+  let stats = compiled_module_store_stats(store)
+  stats.entries == 1 &&
+  stats.hits == 1 &&
+  stats.misses == 1 &&
+  stats.total_bytes == bytes.length()
 }

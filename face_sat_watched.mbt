@@ -501,3 +501,533 @@ pub fn face_eq_watched_dpll(
     FaceSearchBudgetExceeded => FaceBudgetExceeded
   }
 }
+
+// ---------------------------------------------------------------------------
+// Phase 11: CDCL (conflict-driven clause learning) over the same CNF.
+//
+// The watched DPLL above backtracks chronologically.  This solver
+// keeps the same CNF builder and two-watched-literal propagation,
+// but records a reason clause for every propagated literal, and on
+// conflict performs first-UIP analysis: the conflicting clause is
+// resolved with reason clauses along the trail until a single
+// literal of the current decision level remains.  The resolvent is
+// learned (it is a resolution consequence of the original CNF, so
+// learning is sound), the search back*jumps* to the second-highest
+// level in the learned clause, and the learned clause immediately
+// propagates there.  Variable selection is VSIDS with phase
+// saving; restarts follow the Luby sequence.  Learned clauses are
+// kept for the whole run; the explicit step budget bounds their
+// number exactly as it bounds propagation work.
+// ---------------------------------------------------------------------------
+
+///|
+pub struct FaceCdclStats {
+  decisions : Int32
+  conflicts : Int32
+  propagations : Int32
+  learned : Int32
+  restarts : Int32
+} derive(Debug, Eq)
+
+///|
+pub extend FaceCdclStats with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend FaceCdclStats with Eq::{not_equal, equal}
+
+///|
+pub struct FaceCdclResult {
+  decision : FaceSatDecision
+  stats : FaceCdclStats
+}
+
+///|
+priv struct FaceCdclSolver {
+  clauses : Array[Array[Int32]]
+  watches : Array[Array[Int32]]
+  assignment : Array[Int32]
+  level_of : Array[Int32]
+  reason_of : Array[Int32]
+  phase : Array[Bool]
+  activity : Array[Double]
+  mut var_inc : Double
+  trail : Array[Int32]
+  trail_lim : Array[Int32]
+  mut qhead : Int32
+  variables : Int32
+  mut steps : Int32
+  max_steps : Int32
+  mut budget_exceeded : Bool
+  seen : Array[Bool]
+  mut decisions : Int32
+  mut conflicts : Int32
+  mut propagations : Int32
+  mut learned_count : Int32
+  mut restarts : Int32
+}
+
+///|
+fn cdcl_var_of(lit : Int32) -> Int32 {
+  if lit < 0 {
+    0 - lit
+  } else {
+    lit
+  }
+}
+
+///|
+fn cdcl_decision_level(solver : FaceCdclSolver) -> Int32 {
+  solver.trail_lim.length()
+}
+
+///|
+fn cdcl_enqueue(solver : FaceCdclSolver, lit : Int32, reason : Int32) -> Bool {
+  let variable = cdcl_var_of(lit)
+  let wanted = if lit > 0 { 1 } else { 0 }
+  let current = solver.assignment[variable]
+  if current >= 0 {
+    return current == wanted
+  }
+  solver.assignment[variable] = wanted
+  solver.phase[variable] = wanted == 1
+  solver.level_of[variable] = cdcl_decision_level(solver)
+  solver.reason_of[variable] = reason
+  solver.trail.push(lit)
+  true
+}
+
+///|
+fn cdcl_cancel_to(solver : FaceCdclSolver, level : Int32) -> Unit {
+  if cdcl_decision_level(solver) <= level {
+    return
+  }
+  let target = solver.trail_lim[level]
+  while solver.trail.length() > target {
+    match solver.trail.pop() {
+      Some(lit) => {
+        let variable = cdcl_var_of(lit)
+        solver.assignment[variable] = -1
+        solver.reason_of[variable] = -1
+      }
+      None => ()
+    }
+  }
+  while solver.trail_lim.length() > level {
+    ignore(solver.trail_lim.pop())
+  }
+  solver.qhead = solver.trail.length()
+}
+
+///|
+fn cdcl_lit_value(solver : FaceCdclSolver, lit : Int32) -> Int32 {
+  let value = solver.assignment[cdcl_var_of(lit)]
+  if value < 0 {
+    -1
+  } else if lit > 0 {
+    value
+  } else {
+    1 - value
+  }
+}
+
+///|
+/// Watched propagation recording reasons.  Returns a conflicting
+/// clause index, `-1` for no conflict, `-2` on budget exhaustion.
+fn cdcl_propagate(solver : FaceCdclSolver) -> Int32 {
+  while solver.qhead < solver.trail.length() {
+    solver.steps = solver.steps + 1
+    solver.propagations = solver.propagations + 1
+    if solver.max_steps > 0 && solver.steps > solver.max_steps {
+      solver.budget_exceeded = true
+      return -2
+    }
+    let true_lit = solver.trail[solver.qhead]
+    solver.qhead = solver.qhead + 1
+    let false_lit = 0 - true_lit
+    let watchers = solver.watches[face_sat_lit_index(false_lit)]
+    let mut read = 0
+    let mut write = 0
+    let mut conflict = -1
+    while read < watchers.length() {
+      let clause_index = watchers[read]
+      read = read + 1
+      solver.steps = solver.steps + 1
+      if solver.max_steps > 0 && solver.steps > solver.max_steps {
+        solver.budget_exceeded = true
+        conflict = -2
+        watchers[write] = clause_index
+        write = write + 1
+        while read < watchers.length() {
+          watchers[write] = watchers[read]
+          write = write + 1
+          read = read + 1
+        }
+        break
+      }
+      let clause = solver.clauses[clause_index]
+      if clause.length() < 2 {
+        watchers[write] = clause_index
+        write = write + 1
+        continue
+      }
+      if clause[0] == false_lit {
+        clause[0] = clause[1]
+        clause[1] = false_lit
+      }
+      if clause[1] != false_lit {
+        watchers[write] = clause_index
+        write = write + 1
+        continue
+      }
+      let other = clause[0]
+      if cdcl_lit_value(solver, other) == 1 {
+        watchers[write] = clause_index
+        write = write + 1
+        continue
+      }
+      let mut replacement = -1
+      for k in 2..<clause.length() {
+        if cdcl_lit_value(solver, clause[k]) != 0 {
+          replacement = k
+          break
+        }
+      }
+      if replacement >= 0 {
+        let moved = clause[replacement]
+        clause[replacement] = clause[1]
+        clause[1] = moved
+        solver.watches[face_sat_lit_index(moved)].push(clause_index)
+        continue
+      }
+      watchers[write] = clause_index
+      write = write + 1
+      if cdcl_lit_value(solver, other) == 0 {
+        conflict = clause_index
+        while read < watchers.length() {
+          watchers[write] = watchers[read]
+          write = write + 1
+          read = read + 1
+        }
+        break
+      }
+      if !cdcl_enqueue(solver, other, clause_index) {
+        conflict = clause_index
+        while read < watchers.length() {
+          watchers[write] = watchers[read]
+          write = write + 1
+          read = read + 1
+        }
+        break
+      }
+    }
+    while watchers.length() > write {
+      ignore(watchers.pop())
+    }
+    if conflict >= 0 || conflict == -2 {
+      return conflict
+    }
+  }
+  -1
+}
+
+///|
+fn cdcl_bump(solver : FaceCdclSolver, variable : Int32) -> Unit {
+  solver.activity[variable] = solver.activity[variable] + solver.var_inc
+  if solver.activity[variable] > 1.0e100 {
+    for v in 1..<(solver.variables + 1) {
+      solver.activity[v] = solver.activity[v] * 1.0e-100
+    }
+    solver.var_inc = solver.var_inc * 1.0e-100
+  }
+}
+
+///|
+/// First-UIP conflict analysis.  Returns the learned clause
+/// (asserting literal first, highest-level other literal second)
+/// and the backjump level.
+fn cdcl_analyze(
+  solver : FaceCdclSolver,
+  conflict_index : Int32,
+) -> (Array[Int32], Int32) {
+  let learned : Array[Int32] = [0]
+  let touched : Array[Int32] = []
+  let current_level = cdcl_decision_level(solver)
+  let mut path_count = 0
+  let mut p = 0
+  let mut index = solver.trail.length() - 1
+  let mut clause_index = conflict_index
+  while true {
+    let clause = solver.clauses[clause_index]
+    for qi in 0..<clause.length() {
+      let q = clause[qi]
+      if q == p && p != 0 {
+        continue
+      }
+      let v = cdcl_var_of(q)
+      if !solver.seen[v] && solver.level_of[v] > 0 {
+        solver.seen[v] = true
+        touched.push(v)
+        cdcl_bump(solver, v)
+        if solver.level_of[v] >= current_level {
+          path_count = path_count + 1
+        } else {
+          learned.push(q)
+        }
+      }
+    }
+    while index >= 0 && !solver.seen[cdcl_var_of(solver.trail[index])] {
+      index = index - 1
+    }
+    if index < 0 {
+      break
+    }
+    p = solver.trail[index]
+    index = index - 1
+    solver.seen[cdcl_var_of(p)] = false
+    path_count = path_count - 1
+    if path_count <= 0 {
+      break
+    }
+    clause_index = solver.reason_of[cdcl_var_of(p)]
+    if clause_index < 0 {
+      break
+    }
+  }
+  learned[0] = 0 - p
+  for i in 0..<touched.length() {
+    solver.seen[touched[i]] = false
+  }
+  // Backjump level: maximum level among the non-asserting
+  // literals; move such a literal to the second watch position.
+  let mut backtrack = 0
+  let mut max_pos = -1
+  for i in 1..<learned.length() {
+    let lv = solver.level_of[cdcl_var_of(learned[i])]
+    if lv > backtrack {
+      backtrack = lv
+      max_pos = i
+    }
+  }
+  if max_pos > 1 {
+    let tmp = learned[1]
+    learned[1] = learned[max_pos]
+    learned[max_pos] = tmp
+  }
+  (learned, backtrack)
+}
+
+///|
+fn cdcl_pick_variable(solver : FaceCdclSolver) -> Int32 {
+  let mut best = -1
+  let mut best_activity = -1.0
+  for variable in 1..<(solver.variables + 1) {
+    if solver.assignment[variable] < 0 &&
+      solver.activity[variable] > best_activity {
+      best = variable
+      best_activity = solver.activity[variable]
+    }
+  }
+  best
+}
+
+///|
+fn cdcl_Luby(x0 : Int32) -> Int32 {
+  // The Luby sequence 1,1,2,1,1,2,4,... (0-based restart index),
+  // by the standard iterative characterization.
+  let mut size = 1
+  let mut seq = 0
+  while size < x0 + 1 {
+    seq = seq + 1
+    size = 2 * size + 1
+  }
+  let mut x = x0
+  let mut sz = size
+  while sz - 1 != x {
+    sz = (sz - 1) / 2
+    seq = seq - 1
+    x = x % sz
+  }
+  1 << seq
+}
+
+///|
+/// CDCL main loop: 1 = SAT, 0 = UNSAT, -1 = budget exceeded.
+fn cdcl_search(solver : FaceCdclSolver) -> Int32 {
+  let mut restart_count = 0
+  let mut conflicts_since_restart = 0
+  while true {
+    let conflict = cdcl_propagate(solver)
+    if conflict == -2 || solver.budget_exceeded {
+      return -1
+    }
+    if conflict >= 0 {
+      solver.conflicts = solver.conflicts + 1
+      conflicts_since_restart = conflicts_since_restart + 1
+      if cdcl_decision_level(solver) == 0 {
+        return 0
+      }
+      let (learned, backtrack) = cdcl_analyze(solver, conflict)
+      cdcl_cancel_to(solver, backtrack)
+      let clause_index = solver.clauses.length()
+      solver.clauses.push(learned)
+      solver.learned_count = solver.learned_count + 1
+      if learned.length() > 1 {
+        solver.watches[face_sat_lit_index(learned[0])].push(clause_index)
+        solver.watches[face_sat_lit_index(learned[1])].push(clause_index)
+      }
+      if !cdcl_enqueue(solver, learned[0], clause_index) {
+        return 0
+      }
+      solver.var_inc = solver.var_inc * (1.0 / 0.95)
+      if conflicts_since_restart >= cdcl_Luby(restart_count) * 100 {
+        cdcl_cancel_to(solver, 0)
+        solver.restarts = solver.restarts + 1
+        restart_count = restart_count + 1
+        conflicts_since_restart = 0
+      }
+    } else {
+      let variable = cdcl_pick_variable(solver)
+      if variable < 0 {
+        return 1
+      }
+      solver.steps = solver.steps + 1
+      if solver.max_steps > 0 && solver.steps > solver.max_steps {
+        solver.budget_exceeded = true
+        return -1
+      }
+      solver.trail_lim.push(solver.trail.length())
+      solver.decisions = solver.decisions + 1
+      let lit = if solver.phase[variable] { variable } else { 0 - variable }
+      ignore(cdcl_enqueue(solver, lit, -1))
+    }
+  }
+  -1
+}
+
+///|
+/// Satisfiability by CDCL with clause learning.  `max_steps <= 0`
+/// means an unbounded search.
+pub fn face_sat_cdcl_report(
+  f : Face,
+  n : Int32,
+  max_steps~ : Int32 = 100000,
+) -> FaceCdclResult {
+  let empty_stats = FaceCdclStats::{
+    decisions: 0,
+    conflicts: 0,
+    propagations: 0,
+    learned: 0,
+    restarts: 0,
+  }
+  let builder = face_cnf_build(f, n)
+  let variables = builder.next_variable - 1
+  let watches : Array[Array[Int32]] = []
+  for _i in 0..<(2 * (variables + 2)) {
+    watches.push([])
+  }
+  let assignment : Array[Int32] = []
+  let level_of : Array[Int32] = []
+  let reason_of : Array[Int32] = []
+  let phase : Array[Bool] = []
+  let seen : Array[Bool] = []
+  let activity : Array[Double] = []
+  for _i in 0..<(variables + 1) {
+    assignment.push(-1)
+    level_of.push(0)
+    reason_of.push(-1)
+    phase.push(true)
+    seen.push(false)
+    activity.push(0.0)
+  }
+  let solver = FaceCdclSolver::{
+    clauses: builder.clauses,
+    watches,
+    assignment,
+    level_of,
+    reason_of,
+    phase,
+    activity,
+    var_inc: 1.0,
+    trail: [],
+    trail_lim: [],
+    qhead: 0,
+    variables,
+    steps: 0,
+    max_steps,
+    budget_exceeded: false,
+    seen,
+    decisions: 0,
+    conflicts: 0,
+    propagations: 0,
+    learned_count: 0,
+    restarts: 0,
+  }
+  for ci in 0..<solver.clauses.length() {
+    let clause = solver.clauses[ci]
+    if clause.length() == 0 {
+      return { decision: FaceUnsat, stats: empty_stats, }
+    }
+    for i in 0..<clause.length() {
+      let variable = cdcl_var_of(clause[i])
+      solver.activity[variable] = solver.activity[variable] + 1.0
+    }
+    if clause.length() == 1 {
+      if !cdcl_enqueue(solver, clause[0], ci) {
+        return { decision: FaceUnsat, stats: empty_stats, }
+      }
+    } else {
+      solver.watches[face_sat_lit_index(clause[0])].push(ci)
+      solver.watches[face_sat_lit_index(clause[1])].push(ci)
+    }
+  }
+  let code = cdcl_search(solver)
+  let stats = FaceCdclStats::{
+    decisions: solver.decisions,
+    conflicts: solver.conflicts,
+    propagations: solver.propagations,
+    learned: solver.learned_count,
+    restarts: solver.restarts,
+  }
+  let decision = match code {
+    1 => {
+      let env : Array[Bool] = []
+      for i in 0..<n {
+        env.push(solver.assignment[i + 1] == 1)
+      }
+      if face_holds(face_bound(f, n), env) {
+        FaceSat(env)
+      } else {
+        FaceSearchBudgetExceeded
+      }
+    }
+    0 => FaceUnsat
+    _ => FaceSearchBudgetExceeded
+  }
+  { decision, stats, }
+}
+
+///|
+pub fn face_sat_cdcl(
+  f : Face,
+  n : Int32,
+  max_steps~ : Int32 = 100000,
+) -> FaceSatDecision {
+  face_sat_cdcl_report(f, n, max_steps~).decision
+}
+
+///|
+/// Face equality through the CDCL solver applied to the symmetric
+/// difference.
+pub fn face_eq_cdcl(
+  f : Face,
+  g : Face,
+  n : Int32,
+  max_steps~ : Int32 = 100000,
+) -> FaceDecision {
+  let difference = FOr(FAnd(f, face_not(g)), FAnd(g, face_not(f)))
+  match face_sat_cdcl(difference, n, max_steps~) {
+    FaceSat(_) => FaceDecided(false)
+    FaceUnsat => FaceDecided(true)
+    FaceSearchBudgetExceeded => FaceBudgetExceeded
+  }
+}

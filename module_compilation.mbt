@@ -40,6 +40,13 @@ pub fn module_dependency_fingerprint(
 }
 
 ///|
+/// Identification string recorded in newly compiled modules and
+/// stamped by binary migration when a legacy object has none.
+pub fn compiled_module_producer_default() -> String {
+  "cubical-hermitian/phase-11"
+}
+
+///|
 pub struct CompiledModule {
   format_version : Int32
   module_path : String
@@ -50,6 +57,9 @@ pub struct CompiledModule {
   interface_hash : Int32
   implementation_hash : Int32
   interface_encoding : String
+  /// Producer identification recorded by the v2 binary format;
+  /// empty for objects parsed from legacy v1 payloads.
+  producer : String
 } derive(Debug, Eq)
 
 ///|
@@ -178,6 +188,7 @@ pub fn module_compile(
     interface_hash: registry_string_hash(interface_encoding),
     implementation_hash: registry_string_hash(implementation_encoding),
     interface_encoding,
+    producer: compiled_module_producer_default(),
   })
 }
 
