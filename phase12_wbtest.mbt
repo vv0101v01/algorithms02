@@ -43,3 +43,8 @@ test "phase12: positivity declarations for opaque operators" {
 test "phase12: simultaneous IR eliminator compilation for interdependent blocks" {
   inspect(check_simultaneous_ir_eliminator_compilation(), content="true")
 }
+
+///|
+test "phase12: case-split conversion and path-valued circle/torus comp" {
+  inspect(check_case_split_conversion_and_path_comp(), content="true")
+}

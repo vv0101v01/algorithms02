@@ -973,7 +973,24 @@ pub fn comp_circle_value(
     let cap = (br.path)(DOne)
     match (force_value(generic), force_value(cap)) {
       (DVCirclePoint(_), DVCirclePoint(_)) => {
-        let q = circle_dim_of(circle_point(circle_dim_of(cap)))
+        // The branch cap coordinate, read from the generic
+        // branch value by substituting the composition
+        // direction to 1 *in the coordinate expression*.  This
+        // preserves a coordinate of 1 (a traversed loop), which
+        // reading the evaluated cap would normalise to the
+        // base point 0 -- losing exactly the winding that
+        // path-valued composition must keep.  The substituted
+        // coordinate is used only when it denotes the same
+        // point as the evaluated cap.
+        let q_cap = circle_dim_of(circle_point(circle_dim_of(cap)))
+        let q_sub = dim_simplify(
+          dim_subst(circle_dim_of(generic), dlevel, true),
+        )
+        let q = if dim_eq_sem(circle_dim_of(circle_point(q_sub)), q_cap) {
+          q_sub
+        } else {
+          q_cap
+        }
         let delta = dim_of_face(br.face)
         coord = dim_simplify(DOr(DAnd(delta, q), DAnd(DNeg(delta), coord)))
       }
@@ -1031,7 +1048,19 @@ pub fn comp_torus_value(
     let cap = (br.path)(DOne)
     match (force_value(generic), force_value(cap)) {
       (DVTorusPoint(_, _), DVTorusPoint(_, _)) => {
-        let (qa, qb) = torus_coord_pair(cap)
+        // Generic-coordinate substitution, as in
+        // `comp_circle_value`: keep a traversed loop's
+        // coordinate 1 instead of the normalised base 0.
+        let (qa_cap, qb_cap) = torus_coord_pair(cap)
+        let (ga, gb) = torus_dims_of(generic)
+        let qa_sub = dim_simplify(dim_subst(ga, dlevel, true))
+        let qb_sub = dim_simplify(dim_subst(gb, dlevel, true))
+        let (na, nb) = torus_dims_of(torus_point(qa_sub, qb_sub))
+        let (qa, qb) = if dim_eq_sem(na, qa_cap) && dim_eq_sem(nb, qb_cap) {
+          (qa_sub, qb_sub)
+        } else {
+          (qa_cap, qb_cap)
+        }
         let delta = dim_of_face(br.face)
         coord_a = dim_simplify(DOr(DAnd(delta, qa), DAnd(DNeg(delta), coord_a)))
         coord_b = dim_simplify(DOr(DAnd(delta, qb), DAnd(DNeg(delta), coord_b)))

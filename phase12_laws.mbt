@@ -973,3 +973,146 @@ pub fn check_simultaneous_ir_eliminator_compilation() -> Bool {
   // El2(node (lambda _. leaf)) = Bool -> El(leaf) = Bool -> Nat.
   dep_nf_closed(DApp(fn_term, node_t), DUniv(0)) == Some(DPi(DBoolTy, DNatTy))
 }
+
+///|
+/// Phase 12: case-split conversion on discrete Bool variables,
+/// and path-valued composition for the circle and torus.
+/// `if x then 0 else 0` is not plainly convertible to `0` for
+/// a neutral Bool `x`, but is after splitting; a genuinely
+/// x-dependent term still refuses; nested splits and dependent
+/// motive types are substituted along; Nat variables are never
+/// split.  Composition in a Path type over S¹/T² whose right
+/// endpoint traverses the loop now computes the loop itself
+/// as cap (the branch coordinate is read generically so a
+/// traversed coordinate 1 is not normalised to the base 0).
+pub fn check_case_split_conversion_and_path_comp() -> Bool {
+  let nat_motive = DLam(DBoolTy, DNatTy)
+  let ctx = [DBoolTy]
+  let ite0 = DBoolElim(nat_motive, DNatZero, DNatZero, DTVar(0))
+  if conv_terms_plain(ctx, DNatTy, ite0, DNatZero) ||
+    !conv_terms_case_split(ctx, DNatTy, ite0, DNatZero) {
+    return false
+  }
+  let ite01 = DBoolElim(nat_motive, DNatZero, DSucc(DNatZero), DTVar(0))
+  if conv_terms_case_split(ctx, DNatTy, ite01, DNatZero) {
+    return false
+  }
+  // Two Bool variables, split recursively.
+  let ctx2 = [DBoolTy, DBoolTy]
+  let inner = DBoolElim(nat_motive, DNatZero, DNatZero, DTVar(0))
+  let nested = DBoolElim(nat_motive, inner, DNatZero, DTVar(1))
+  if conv_terms_plain(ctx2, DNatTy, nested, DNatZero) ||
+    !conv_terms_case_split(ctx2, DNatTy, nested, DNatZero) {
+    return false
+  }
+  // Dependent type: T(x) = if x then Nat else Bool, with two
+  // different fillers for the false branch that agree only
+  // after splitting.
+  let type_motive = DLam(DBoolTy, DUniv(0))
+  let dep_ty = DBoolElim(type_motive, DNatTy, DBoolTy, DTVar(0))
+  let filler_a = DBoolElim(
+    DLam(DBoolTy, DBoolElim(type_motive, DNatTy, DBoolTy, DTVar(0))),
+    DNatZero,
+    DBoolLit(true),
+    DTVar(0),
+  )
+  let bool_motive = DLam(DBoolTy, DBoolTy)
+  let filler_b = DBoolElim(
+    DLam(DBoolTy, DBoolElim(type_motive, DNatTy, DBoolTy, DTVar(0))),
+    DNatZero,
+    DBoolElim(bool_motive, DBoolLit(true), DBoolLit(true), DTVar(0)),
+    DTVar(0),
+  )
+  if conv_terms_plain(ctx, dep_ty, filler_a, filler_b) ||
+    !conv_terms_case_split(ctx, dep_ty, filler_a, filler_b) {
+    return false
+  }
+  // A Nat variable is never split.
+  let nat_ctx = [DNatTy]
+  let stuck_nat = DNatElim(
+    DLam(DNatTy, DNatTy),
+    DNatZero,
+    DLam(DNatTy, DLam(DNatTy, DNatZero)),
+    DTVar(0),
+  )
+  if conv_terms_case_split(nat_ctx, DNatTy, stuck_nat, DNatZero) {
+    return false
+  }
+  // Path-valued composition over the torus: the right
+  // endpoint of the path type traverses loopA, the tube
+  // supplies the truncated loop, and the cap is loopA.
+  let torus_base = DVTorusPoint(DZero, DZero)
+  let torus_line = (j : Dim) => {
+    DVPathTy(_ => DVTorusTy, torus_base, torus_point(j, DZero))
+  }
+  let torus_system = dsystem_of([
+    tube_branch(FEq1(DVar(0)), (j : Dim) => {
+      DVPathLam(k => torus_point(dim_simplify(DAnd(k, j)), DZero))
+    }),
+  ])
+  let torus_cap = comp_value(
+    torus_line,
+    torus_system,
+    DVPathLam(_ => torus_base),
+    1,
+  )
+  let torus_cap_ty : DValue = DVPathTy(
+    _ => DVTorusTy,
+    torus_base,
+    torus_point(DOne, DZero),
+  )
+  if !conv_at(
+      0,
+      1,
+      torus_cap_ty,
+      torus_cap,
+      DVPathLam(k => torus_point(k, DZero)),
+    ) {
+    return false
+  }
+  // The same for the circle, and in the torus' second
+  // coordinate.
+  let circle_base = DVCirclePoint(DZero)
+  let circle_line = (j : Dim) => {
+    DVPathTy(_ => DVCircleTy, circle_base, circle_point(j))
+  }
+  let circle_system = dsystem_of([
+    tube_branch(FEq1(DVar(0)), (j : Dim) => {
+      DVPathLam(k => circle_point(dim_simplify(DAnd(k, j))))
+    }),
+  ])
+  let circle_cap = comp_value(
+    circle_line,
+    circle_system,
+    DVPathLam(_ => circle_base),
+    1,
+  )
+  let circle_cap_ty : DValue = DVPathTy(
+    _ => DVCircleTy,
+    circle_base,
+    circle_point(DOne),
+  )
+  if !conv_at(0, 1, circle_cap_ty, circle_cap, DVPathLam(k => circle_point(k))) {
+    return false
+  }
+  let torus_b_line = (j : Dim) => {
+    DVPathTy(_ => DVTorusTy, torus_base, torus_point(DZero, j))
+  }
+  let torus_b_system = dsystem_of([
+    tube_branch(FEq1(DVar(0)), (j : Dim) => {
+      DVPathLam(k => torus_point(DZero, dim_simplify(DAnd(k, j))))
+    }),
+  ])
+  let torus_b_cap = comp_value(
+    torus_b_line,
+    torus_b_system,
+    DVPathLam(_ => torus_base),
+    1,
+  )
+  let torus_b_ty : DValue = DVPathTy(
+    _ => DVTorusTy,
+    torus_base,
+    torus_point(DZero, DOne),
+  )
+  conv_at(0, 1, torus_b_ty, torus_b_cap, DVPathLam(k => torus_point(DZero, k)))
+}
