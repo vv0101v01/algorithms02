@@ -723,3 +723,133 @@ pub fn check_artifact_repository_and_dag_codec() -> Bool {
   }
   artifact_repository_verify_all(repo)
 }
+
+///|
+/// Phase 12: positivity declarations for opaque neutral
+/// operators.  Without a declaration, an occurrence of the
+/// family under an opaque operator application is unknown;
+/// with a declaration for the operator it is strictly positive,
+/// including under a binder (de Bruijn shifting), while a
+/// negative (domain) position stays negative.  Parameter-use
+/// certification through an operator parameter `F` is strict
+/// only with the declaration.  Lambda operators get verified
+/// declarations, and a negative lambda is refused.
+pub fn check_positivity_declarations() -> Bool {
+  let target_spec = dinductive_spec("DeclTargetS", 0, [], [], [
+    dconstructor_spec("mk", []),
+  ])
+  let target = DInductive(target_spec, [])
+  let decl = match
+    dpositivity_declaration(DTVar(0), 1, strict_args=[0], scope=1) {
+    Some(v) => v
+    None => return false
+  }
+  let applied = DApp(DTVar(0), target)
+  let plain = dterm_family_positivity(applied, "DeclTargetS")
+  if plain.strictly_positive || !plain.unknown {
+    return false
+  }
+  if !dterm_family_strictly_positive_declared(
+      applied,
+      "DeclTargetS",
+      [decl],
+      scope=1,
+    ) {
+    return false
+  }
+  // Under one binder the operator variable is DTVar(1).
+  let under_binder = DPi(DNatTy, DApp(DTVar(1), target))
+  if !dterm_family_strictly_positive_declared(
+      under_binder,
+      "DeclTargetS",
+      [decl],
+      scope=1,
+    ) {
+    return false
+  }
+  // The same application in a domain is negative.
+  let negative = DPi(applied, DNatTy)
+  let neg_report = dterm_family_positivity_declared(
+    negative,
+    "DeclTargetS",
+    [decl],
+    scope=1,
+  )
+  if neg_report.strictly_positive || !neg_report.negative_polarity {
+    return false
+  }
+  // A position not declared does not become positive.
+  let empty_decl = match dpositivity_declaration(DTVar(0), 1, scope=1) {
+    Some(v) => v
+    None => return false
+  }
+  if dterm_family_strictly_positive_declared(
+      applied,
+      "DeclTargetS",
+      [empty_decl],
+      scope=1,
+    ) {
+    return false
+  }
+  // Shape checking: overlapping positions are refused.
+  if dpositivity_declaration(
+      DTVar(0),
+      1,
+      strict_args=[0],
+      positive_args=[0],
+      scope=1,
+    ) !=
+    None {
+    return false
+  }
+  // Parameter use through an operator parameter F : Type→Type.
+  let op_spec = dinductive_spec(
+    "OpParamS",
+    0,
+    [
+      dtelescope_entry("F", DPi(DUniv(0), DUniv(0))),
+      dtelescope_entry("A", DUniv(0)),
+    ],
+    [],
+    [dconstructor_spec("wrap", [darg_external("x", DApp(DTVar(1), DTVar(0)))])],
+  )
+  if inductive_parameter_positivity(op_spec, 1).strictly_positive {
+    return false
+  }
+  let f_decl = match
+    dpositivity_declaration(DTVar(1), 1, strict_args=[0], scope=2) {
+    Some(v) => v
+    None => return false
+  }
+  let certified = inductive_parameter_positivity_declared(op_spec, 1, [f_decl])
+  if !certified.strictly_positive || !certified.occurs || certified.unknown {
+    return false
+  }
+  // Verified declarations for literal lambda operators.
+  let list_op = DLam(DUniv(0), DListTy(DTVar(0)))
+  match dpositivity_declaration_from_lambda(list_op, 1) {
+    Some(d) => if d.strict_args != [0] || d.positive_args != [] { return false }
+    None => return false
+  }
+  let const_op = DLam(DUniv(0), DNatTy)
+  match dpositivity_declaration_from_lambda(const_op, 1) {
+    Some(d) => if d.strict_args != [0] { return false }
+    None => return false
+  }
+  let negative_op = DLam(DUniv(0), DPi(DTVar(0), DNatTy))
+  if dpositivity_declaration_from_lambda(negative_op, 1) != None {
+    return false
+  }
+  // A binary operator strict in its second argument only:
+  // λX. λY. (X → Nat) × List Y  is refused (first is negative),
+  // while λX. λY. List X × Y certifies both positions.
+  let mixed_op = DLam(
+    DUniv(0),
+    DLam(DUniv(0), DSigma(DListTy(DTVar(1)), DTVar(0))),
+  )
+  match dpositivity_declaration_from_lambda(mixed_op, 2) {
+    Some(d) => if d.strict_args != [0, 1] { return false }
+    None => return false
+  }
+  true
+}

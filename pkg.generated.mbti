@@ -1196,6 +1196,10 @@ pub fn dpath_trans_term(DTerm, DTerm, DTerm) -> DTerm
 
 pub fn dpath_trans_value(DValue, DValue, DValue, Int32) -> DValue
 
+pub fn dpositivity_declaration(DTerm, Int32, strict_args? : Array[Int32], positive_args? : Array[Int32], scope? : Int32) -> DPositivityDeclaration?
+
+pub fn dpositivity_declaration_from_lambda(DTerm, Int32, scope? : Int32) -> DPositivityDeclaration?
+
 pub fn dpositivity_report(Bool, Bool, Bool, Bool, Bool) -> DPositivityReport
 
 pub fn dsimultaneous_function(String, DTerm, Array[DTerm]) -> DSimultaneousFunction
@@ -1260,7 +1264,11 @@ pub fn dterm_family_occurs(DTerm, String) -> Bool
 
 pub fn dterm_family_positivity(DTerm, String) -> DPositivityReport
 
+pub fn dterm_family_positivity_declared(DTerm, String, Array[DPositivityDeclaration], scope? : Int32) -> DPositivityReport
+
 pub fn dterm_family_strictly_positive(DTerm, String) -> Bool
+
+pub fn dterm_family_strictly_positive_declared(DTerm, String, Array[DPositivityDeclaration], scope? : Int32) -> Bool
 
 pub fn dterm_instantiate_levels(DTerm, Array[Int32]) -> DTerm?
 
@@ -1717,6 +1725,8 @@ pub fn inductive_param_types(DInductiveSpec, Array[DValue]) -> Array[DValue]
 pub fn inductive_param_types_cached(DSchemaRegistry, DInductiveSpec, Array[DValue]) -> Array[DValue]
 
 pub fn inductive_parameter_positivity(DInductiveSpec, Int32) -> DPositivityReport
+
+pub fn inductive_parameter_positivity_declared(DInductiveSpec, Int32, Array[DPositivityDeclaration]) -> DPositivityReport
 
 pub fn inductive_plan_type_term(DInductivePlan, Array[DTerm]) -> DTerm
 
@@ -3235,6 +3245,17 @@ pub enum DPositiveFunctor {
 pub fn DPositiveFunctor::equal(Self, Self) -> Bool
 pub fn DPositiveFunctor::not_equal(Self, Self) -> Bool
 pub fn DPositiveFunctor::to_repr(Self) -> @debug.Repr
+
+pub struct DPositivityDeclaration {
+  head : DTerm
+  arity : Int32
+  strict_args : Array[Int32]
+  positive_args : Array[Int32]
+  scope : Int32
+} derive(Eq, @debug.Debug)
+pub fn DPositivityDeclaration::equal(Self, Self) -> Bool
+pub fn DPositivityDeclaration::not_equal(Self, Self) -> Bool
+pub fn DPositivityDeclaration::to_repr(Self) -> @debug.Repr
 
 pub struct DPositivityReport {
   occurs : Bool

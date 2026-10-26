@@ -33,3 +33,8 @@ test "phase12: structural agreement regions and candidate-supplemented repair" {
 test "phase12: artifact repository, DAG codec, version negotiation" {
   inspect(check_artifact_repository_and_dag_codec(), content="true")
 }
+
+///|
+test "phase12: positivity declarations for opaque operators" {
+  inspect(check_positivity_declarations(), content="true")
+}

@@ -870,3 +870,737 @@ pub fn schema_telescope_family_occurs(
   }
   false
 }
+
+// ---------------------------------------------------------------------------
+// Phase 12: positivity declarations for opaque neutral operators.
+//
+// An application whose head is a neutral operator (typically a
+// variable of operator type, such as a spec parameter
+// `F : Type -> Type`) is opaque to the structural analysis: any
+// family occurrence inside its arguments is reported unknown.
+// A `DPositivityDeclaration` lets the caller state which
+// argument positions of one such operator are strictly positive
+// or merely positive; the declared analysis then treats the
+// operator like a known type former at those positions.
+// Declarations are *trusted* at face value (shape-checked only),
+// exactly like positivity pragmas in other systems: they move
+// the proof obligation to the declaration site.  When the
+// operator is a literal lambda, `dpositivity_declaration_from_lambda`
+// discharges that obligation by running the ordinary structural
+// analysis on its body.
+//
+// The declared walk tracks term-binder depth so a head declared
+// at one scope (`scope` in the declaration) is recognised under
+// binders and at other scopes by de Bruijn shifting.
+// ---------------------------------------------------------------------------
+
+///|
+pub struct DPositivityDeclaration {
+  head : DTerm
+  arity : Int32
+  strict_args : Array[Int32]
+  positive_args : Array[Int32]
+  scope : Int32
+} derive(Debug, Eq)
+
+///|
+pub extend DPositivityDeclaration with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend DPositivityDeclaration with Eq::{not_equal, equal}
+
+///|
+fn positivity_int_contains(xs : Array[Int32], v : Int32) -> Bool {
+  for i in 0..<xs.length() {
+    if xs[i] == v {
+      return true
+    }
+  }
+  false
+}
+
+///|
+/// Shape-checked declaration constructor: positive arity,
+/// argument positions in range, no duplicates, and no position
+/// declared both strictly positive and merely positive.
+pub fn dpositivity_declaration(
+  head : DTerm,
+  arity : Int32,
+  strict_args~ : Array[Int32] = [],
+  positive_args~ : Array[Int32] = [],
+  scope~ : Int32 = 0,
+) -> DPositivityDeclaration? {
+  if arity <= 0 || scope < 0 {
+    return None
+  }
+  for i in 0..<strict_args.length() {
+    let p = strict_args[i]
+    if p < 0 || p >= arity || positivity_int_contains(positive_args, p) {
+      return None
+    }
+    for j in (i + 1)..<strict_args.length() {
+      if strict_args[j] == p {
+        return None
+      }
+    }
+  }
+  for i in 0..<positive_args.length() {
+    let p = positive_args[i]
+    if p < 0 || p >= arity {
+      return None
+    }
+    for j in (i + 1)..<positive_args.length() {
+      if positive_args[j] == p {
+        return None
+      }
+    }
+  }
+  Some(DPositivityDeclaration::{
+    head,
+    arity,
+    strict_args,
+    positive_args,
+    scope,
+  })
+}
+
+///|
+/// Discharge a declaration for a literal lambda operator by
+/// structural analysis of its body: each argument position is
+/// probed with a fresh family and classified.  `None` when the
+/// head is not an `arity`-fold lambda or some position is
+/// negative or unknown.  Unused positions are vacuously strict.
+pub fn dpositivity_declaration_from_lambda(
+  head : DTerm,
+  arity : Int32,
+  scope~ : Int32 = 0,
+) -> DPositivityDeclaration? {
+  if arity <= 0 {
+    return None
+  }
+  let mut body = head
+  for _i in 0..<arity {
+    body = match body {
+      DLam(_, b) => b
+      _ => return None
+    }
+  }
+  let strict : Array[Int32] = []
+  let positive : Array[Int32] = []
+  for j in 0..<arity {
+    let variable = arity - 1 - j
+    let probed = dterm_substitute(body, variable, positivity_probe_term())
+    let report = dterm_family_positivity(probed, positivity_probe_name())
+    if report.negative_polarity || report.unknown {
+      return None
+    }
+    if !report.occurs || report.strictly_positive {
+      strict.push(j)
+    } else if report.positive_polarity {
+      positive.push(j)
+    } else {
+      return None
+    }
+  }
+  dpositivity_declaration(
+    head,
+    arity,
+    strict_args=strict,
+    positive_args=positive,
+    scope~,
+  )
+}
+
+///|
+fn positivity_app_spine(t : DTerm) -> (DTerm, Array[DTerm]) {
+  let rev_args : Array[DTerm] = []
+  let mut cur = t
+  while true {
+    match cur {
+      DApp(f, a) => {
+        rev_args.push(a)
+        cur = f
+      }
+      _ => break
+    }
+  }
+  let args : Array[DTerm] = []
+  let mut i = rev_args.length() - 1
+  while i >= 0 {
+    args.push(rev_args[i])
+    i = i - 1
+  }
+  (cur, args)
+}
+
+///|
+fn positivity_through_parameter_decl(
+  report : DPositivityReport,
+  arg : DTerm,
+  name : String,
+  positive : Bool,
+  strict_allowed : Bool,
+  fuel : Int32,
+  decls : Array[DPositivityDeclaration],
+  scope : Int32,
+  depth : Int32,
+) -> DPositivityReport {
+  if report.strictly_positive &&
+    report.occurs &&
+    !report.unknown &&
+    !report.negative_polarity {
+    dterm_family_positivity_type_decl(
+      arg, name, positive, strict_allowed, fuel, decls, scope, depth,
+    )
+  } else if report.occurs &&
+    report.positive_polarity &&
+    !report.negative_polarity &&
+    !report.unknown {
+    positivity_non_strict(
+      dterm_family_positivity_type_decl(
+        arg, name, positive, false, fuel, decls, scope, depth,
+      ),
+    )
+  } else if report.occurs &&
+    report.negative_polarity &&
+    !report.positive_polarity &&
+    !report.unknown {
+    positivity_non_strict(
+      dterm_family_positivity_type_decl(
+        arg,
+        name,
+        !positive,
+        false,
+        fuel,
+        decls,
+        scope,
+        depth,
+      ),
+    )
+  } else {
+    dterm_family_positivity_term(arg, name, fuel)
+  }
+}
+
+///|
+fn dterm_family_positivity_type_decl(
+  t : DTerm,
+  name : String,
+  positive : Bool,
+  strict_allowed : Bool,
+  fuel : Int32,
+  decls : Array[DPositivityDeclaration],
+  scope : Int32,
+  depth : Int32,
+) -> DPositivityReport {
+  match t {
+    DPi(a, b) =>
+      positivity_combine(
+        positivity_flip(
+          dterm_family_positivity_type_decl(
+            a, name, positive, false, fuel, decls, scope, depth,
+          ),
+        ),
+        dterm_family_positivity_type_decl(
+          b,
+          name,
+          positive,
+          strict_allowed,
+          fuel,
+          decls,
+          scope,
+          depth + 1,
+        ),
+      )
+    DSigma(a, b) =>
+      positivity_combine(
+        dterm_family_positivity_type_decl(
+          a, name, positive, strict_allowed, fuel, decls, scope, depth,
+        ),
+        dterm_family_positivity_type_decl(
+          b,
+          name,
+          positive,
+          strict_allowed,
+          fuel,
+          decls,
+          scope,
+          depth + 1,
+        ),
+      )
+    DListTy(a) =>
+      dterm_family_positivity_type_decl(
+        a, name, positive, strict_allowed, fuel, decls, scope, depth,
+      )
+    DPathP(line, l, r) =>
+      positivity_combine(
+        dterm_family_positivity_type_decl(
+          line, name, positive, strict_allowed, fuel, decls, scope, depth,
+        ),
+        positivity_combine(
+          dterm_family_positivity_term(l, name, fuel),
+          dterm_family_positivity_term(r, name, fuel),
+        ),
+      )
+    DPath(a, l, r) =>
+      positivity_combine(
+        dterm_family_positivity_type_decl(
+          a, name, positive, strict_allowed, fuel, decls, scope, depth,
+        ),
+        positivity_combine(
+          dterm_family_positivity_term(l, name, fuel),
+          dterm_family_positivity_term(r, name, fuel),
+        ),
+      )
+    DInductive(spec, args) =>
+      if spec.name == name {
+        let mut out = positivity_occurrence(positive, strict_allowed)
+        for i in 0..<args.length() {
+          out = positivity_combine(
+            out,
+            dterm_family_positivity_term(args[i], name, fuel),
+          )
+        }
+        out
+      } else {
+        let (params, indices) = positivity_split_terms(
+          args,
+          spec.params.length(),
+        )
+        let mut out = positivity_absent()
+        for i in 0..<params.length() {
+          out = positivity_combine(
+            out,
+            positivity_through_parameter_decl(
+              inductive_parameter_positivity(spec, i),
+              params[i],
+              name,
+              positive,
+              strict_allowed,
+              fuel,
+              decls,
+              scope,
+              depth,
+            ),
+          )
+        }
+        for i in 0..<indices.length() {
+          out = positivity_combine(
+            out,
+            dterm_family_positivity_term(indices[i], name, fuel),
+          )
+        }
+        out
+      }
+    DHitType(spec, args) =>
+      if spec.name == name {
+        let mut out = positivity_occurrence(positive, strict_allowed)
+        for i in 0..<args.length() {
+          out = positivity_combine(
+            out,
+            dterm_family_positivity_term(args[i], name, fuel),
+          )
+        }
+        out
+      } else {
+        let (params, indices) = positivity_split_terms(
+          args,
+          spec.params.length(),
+        )
+        let mut out = positivity_absent()
+        for i in 0..<params.length() {
+          out = positivity_combine(
+            out,
+            positivity_through_parameter_decl(
+              hit_parameter_positivity(spec, i),
+              params[i],
+              name,
+              positive,
+              strict_allowed,
+              fuel,
+              decls,
+              scope,
+              depth,
+            ),
+          )
+        }
+        for i in 0..<indices.length() {
+          out = positivity_combine(
+            out,
+            dterm_family_positivity_term(indices[i], name, fuel),
+          )
+        }
+        out
+      }
+    DApp(_, _) => {
+      let (head, args) = positivity_app_spine(t)
+      let mut declared : DPositivityDeclaration? = None
+      for d in 0..<decls.length() {
+        let decl = decls[d]
+        if args.length() == decl.arity &&
+          dterm_shift(decl.head, 0, scope - decl.scope + depth) == head {
+          declared = Some(decl)
+          break
+        }
+      }
+      match declared {
+        Some(decl) => {
+          let mut out = positivity_absent()
+          for i in 0..<args.length() {
+            let part = if positivity_int_contains(decl.strict_args, i) {
+              dterm_family_positivity_type_decl(
+                args[i],
+                name,
+                positive,
+                strict_allowed,
+                fuel,
+                decls,
+                scope,
+                depth,
+              )
+            } else if positivity_int_contains(decl.positive_args, i) {
+              positivity_non_strict(
+                dterm_family_positivity_type_decl(
+                  args[i],
+                  name,
+                  positive,
+                  false,
+                  fuel,
+                  decls,
+                  scope,
+                  depth,
+                ),
+              )
+            } else {
+              dterm_family_positivity_term(args[i], name, fuel)
+            }
+            out = positivity_combine(out, part)
+          }
+          out
+        }
+        None =>
+          match t {
+            DApp(DLam(_, body), arg) =>
+              if fuel <= 0 {
+                positivity_unknown()
+              } else {
+                dterm_family_positivity_type_decl(
+                  dterm_substitute(body, 0, arg),
+                  name,
+                  positive,
+                  strict_allowed,
+                  fuel - 1,
+                  decls,
+                  scope,
+                  depth,
+                )
+              }
+            _ => dterm_family_positivity_term(t, name, fuel)
+          }
+      }
+    }
+    DLam(a, b) =>
+      positivity_combine(
+        positivity_flip(
+          dterm_family_positivity_type_decl(
+            a, name, positive, false, fuel, decls, scope, depth,
+          ),
+        ),
+        dterm_family_positivity_type_decl(
+          b,
+          name,
+          positive,
+          strict_allowed,
+          fuel,
+          decls,
+          scope,
+          depth + 1,
+        ),
+      )
+    DAnn(x, y) =>
+      positivity_combine(
+        dterm_family_positivity_type_decl(
+          x, name, positive, strict_allowed, fuel, decls, scope, depth,
+        ),
+        dterm_family_positivity_type_decl(
+          y, name, positive, strict_allowed, fuel, decls, scope, depth,
+        ),
+      )
+    DLamDim(body) =>
+      dterm_family_positivity_type_decl(
+        body, name, positive, strict_allowed, fuel, decls, scope, depth,
+      )
+    DAppDim(x, _) =>
+      dterm_family_positivity_type_decl(
+        x, name, positive, strict_allowed, fuel, decls, scope, depth,
+      )
+    DPartial(branches) => {
+      let mut out = positivity_absent()
+      for i in 0..<branches.length() {
+        out = positivity_combine(
+          out,
+          dterm_family_positivity_type_decl(
+            branches[i].body,
+            name,
+            positive,
+            strict_allowed,
+            fuel,
+            decls,
+            scope,
+            depth,
+          ),
+        )
+      }
+      out
+    }
+    DCoe(line, _, _, v) =>
+      positivity_combine(
+        dterm_family_positivity_type_decl(
+          line, name, positive, strict_allowed, fuel, decls, scope, depth,
+        ),
+        dterm_family_positivity_type_decl(
+          v, name, positive, strict_allowed, fuel, decls, scope, depth,
+        ),
+      )
+    DComp(line, tubes, base) | DHComp(line, tubes, base) => {
+      let mut out = positivity_combine(
+        dterm_family_positivity_type_decl(
+          line, name, positive, strict_allowed, fuel, decls, scope, depth,
+        ),
+        dterm_family_positivity_type_decl(
+          base, name, positive, strict_allowed, fuel, decls, scope, depth,
+        ),
+      )
+      for i in 0..<tubes.length() {
+        out = positivity_combine(
+          out,
+          dterm_family_positivity_type_decl(
+            tubes[i].body,
+            name,
+            positive,
+            strict_allowed,
+            fuel,
+            decls,
+            scope,
+            depth,
+          ),
+        )
+      }
+      out
+    }
+    DHFill(a, tubes, base, _) => {
+      let mut out = positivity_combine(
+        dterm_family_positivity_type_decl(
+          a, name, positive, strict_allowed, fuel, decls, scope, depth,
+        ),
+        dterm_family_positivity_type_decl(
+          base, name, positive, strict_allowed, fuel, decls, scope, depth,
+        ),
+      )
+      for i in 0..<tubes.length() {
+        out = positivity_combine(
+          out,
+          dterm_family_positivity_type_decl(
+            tubes[i].body,
+            name,
+            positive,
+            strict_allowed,
+            fuel,
+            decls,
+            scope,
+            depth,
+          ),
+        )
+      }
+      out
+    }
+    DDecode(spec, _, _, _) =>
+      if spec.name == name {
+        positivity_combine(
+          positivity_unknown(),
+          positivity_of_children_term(t, name, fuel),
+        )
+      } else {
+        dterm_family_positivity_term(t, name, fuel)
+      }
+    _ => dterm_family_positivity_term(t, name, fuel)
+  }
+}
+
+///|
+/// Structural positivity report under trusted declarations for
+/// opaque neutral operators.  `scope` is the de Bruijn scope at
+/// the top of `t` (the context the declaration heads are
+/// shifted from their own declared scopes into).
+pub fn dterm_family_positivity_declared(
+  t : DTerm,
+  name : String,
+  decls : Array[DPositivityDeclaration],
+  scope~ : Int32 = 0,
+) -> DPositivityReport {
+  dterm_family_positivity_type_decl(t, name, true, true, 64, decls, scope, 0)
+}
+
+///|
+pub fn dterm_family_strictly_positive_declared(
+  t : DTerm,
+  name : String,
+  decls : Array[DPositivityDeclaration],
+  scope~ : Int32 = 0,
+) -> Bool {
+  let report = dterm_family_positivity_declared(t, name, decls, scope~)
+  report.strictly_positive && !report.unknown && !report.negative_polarity
+}
+
+///|
+fn positivity_param_in_type_declared(
+  t : DTerm,
+  scope : Int32,
+  param_index : Int32,
+  strict_allowed : Bool,
+  decls : Array[DPositivityDeclaration],
+) -> DPositivityReport {
+  // Substituting the probe for the parameter variable also
+  // renumbers every later variable down by one, so declaration
+  // heads must undergo the same substitution (after shifting
+  // them into this scope) and the walk runs at `scope - 1`.
+  let variable = scope - 1 - param_index
+  let adjusted : Array[DPositivityDeclaration] = []
+  if variable >= 0 {
+    for i in 0..<decls.length() {
+      let d = decls[i]
+      adjusted.push(DPositivityDeclaration::{
+        head: positivity_substitute_param(
+          dterm_shift(d.head, 0, scope - d.scope),
+          scope,
+          param_index,
+        ),
+        arity: d.arity,
+        strict_args: d.strict_args,
+        positive_args: d.positive_args,
+        scope: scope - 1,
+      })
+    }
+  }
+  let (walk_decls, walk_scope) = if variable >= 0 {
+    (adjusted, scope - 1)
+  } else {
+    (decls, scope)
+  }
+  dterm_family_positivity_type_decl(
+    positivity_substitute_param(t, scope, param_index),
+    positivity_probe_name(),
+    true,
+    strict_allowed,
+    64,
+    walk_decls,
+    walk_scope,
+    0,
+  )
+}
+
+///|
+fn positivity_param_in_arg_declared(
+  arg : DConstructorArg,
+  scope : Int32,
+  param_index : Int32,
+  has_decode : Bool,
+  decls : Array[DPositivityDeclaration],
+) -> DPositivityReport {
+  match arg.kind {
+    DArgExternal =>
+      positivity_param_in_type_declared(arg.ty, scope, param_index, true, decls)
+    DArgFunction => {
+      // The domain enters the ordinary (undeclared) analysis
+      // through the declared walk at non-strict polarity; the
+      // result index terms stay on the plain term walk.
+      let domain = positivity_param_in_type_declared(
+        arg.ty,
+        scope,
+        param_index,
+        false,
+        decls,
+      )
+      positivity_combine(
+        positivity_non_strict(domain),
+        positivity_param_in_terms(arg.index, scope + 1, param_index),
+      )
+    }
+    _ => positivity_param_in_arg(arg, scope, param_index, has_decode)
+  }
+}
+
+///|
+/// Parameter-use certification under positivity declarations.
+/// Declaration heads are expressed in the spec's telescope
+/// scopes (each declaration carries its own `scope`); external
+/// and function-argument types are analysed with them, the
+/// remaining positions reuse the undeclared analysis.
+pub fn inductive_parameter_positivity_declared(
+  spec : DInductiveSpec,
+  param_index : Int32,
+  decls : Array[DPositivityDeclaration],
+) -> DPositivityReport {
+  if param_index < 0 || param_index >= spec.params.length() {
+    return positivity_absent()
+  }
+  let mut out = positivity_param_in_telescope(spec.params, 0, param_index)
+  out = positivity_combine(
+    out,
+    positivity_param_in_telescope(
+      spec.indices,
+      spec.params.length(),
+      param_index,
+    ),
+  )
+  let has_decode = spec.decode_cases.length() > 0
+  for c in 0..<spec.constructors.length() {
+    let ctor = spec.constructors[c]
+    for i in 0..<ctor.args.length() {
+      out = positivity_combine(
+        out,
+        positivity_param_in_arg_declared(
+          ctor.args[i],
+          spec.params.length() + i,
+          param_index,
+          has_decode,
+          decls,
+        ),
+      )
+    }
+    out = positivity_combine(
+      out,
+      positivity_param_in_terms(
+        ctor.result_index,
+        spec.params.length() + ctor.args.length(),
+        param_index,
+      ),
+    )
+    for i in 0..<ctor.constraints.length() {
+      let scope = spec.params.length() + ctor.args.length()
+      out = positivity_combine(
+        out,
+        positivity_param_in_term(ctor.constraints[i].ty, scope, param_index),
+      )
+      out = positivity_combine(
+        out,
+        positivity_param_in_term(ctor.constraints[i].lhs, scope, param_index),
+      )
+      out = positivity_combine(
+        out,
+        positivity_param_in_term(ctor.constraints[i].rhs, scope, param_index),
+      )
+    }
+    if c < spec.decode_cases.length() {
+      out = positivity_combine(
+        out,
+        positivity_param_in_term(
+          spec.decode_cases[c],
+          positivity_decode_case_scope(ctor, spec.params.length()),
+          param_index,
+        ),
+      )
+    }
+  }
+  out
+}
