@@ -128,6 +128,8 @@ pub fn bdd_dag_of_face_best(Face, Int32, max_nodes? : Int32) -> BddBestBuild
 
 pub fn bdd_dag_of_face_optimal(Face, Int32, exact_max_vars? : Int32, max_nodes? : Int32) -> BddOptimalBuild
 
+pub fn bdd_dag_of_face_optimal_dp(Face, Int32, exact_max_vars? : Int32, max_nodes? : Int32) -> BddOptimalBuild
+
 pub fn bdd_dag_of_face_optimized(Face, Int32, max_nodes? : Int32, max_attempts? : Int32) -> BddOptimizedBuild
 
 pub fn bdd_dag_or(BddManager, Int32, Int32) -> Int32
@@ -337,6 +339,8 @@ pub fn check_bdd_canonical() -> Bool
 pub fn check_bdd_cost_optimizations() -> Bool
 
 pub fn check_bdd_dag_native_operations() -> Bool
+
+pub fn check_bdd_optimal_order_dp() -> Bool
 
 pub fn check_bdd_optimal_order_exact() -> Bool
 
@@ -1400,6 +1404,8 @@ pub fn face_agreement_region(Int32, Int32, Face, DValue, DValue, DValue) -> Bdd
 
 pub fn face_bound(Face, Int32) -> Face
 
+pub fn face_cdcl_proof_check(Array[Array[Int32]], Array[Array[Int32]]) -> Bool
+
 pub fn face_cnf_stats(Face, Int32) -> FaceCnfStats
 
 pub fn face_eq_cdcl(Face, Face, Int32, max_steps? : Int32) -> FaceDecision
@@ -1443,6 +1449,8 @@ pub fn face_quote(Face, Int32) -> Face
 pub fn face_sat(Face, Int32) -> Bool
 
 pub fn face_sat_cdcl(Face, Int32, max_steps? : Int32) -> FaceSatDecision
+
+pub fn face_sat_cdcl_proof(Face, Int32, max_steps? : Int32) -> FaceCdclProofResult
 
 pub fn face_sat_cdcl_report(Face, Int32, max_steps? : Int32) -> FaceCdclResult
 
@@ -3428,6 +3436,13 @@ pub fn FaceBoolExpr::equal(Self, Self) -> Bool
 pub fn FaceBoolExpr::not_equal(Self, Self) -> Bool
 pub fn FaceBoolExpr::to_repr(Self) -> @debug.Repr
 
+pub struct FaceCdclProofResult {
+  decision : FaceSatDecision
+  stats : FaceCdclStats
+  original_clauses : Array[Array[Int32]]
+  proof_clauses : Array[Array[Int32]]
+}
+
 pub struct FaceCdclResult {
   decision : FaceSatDecision
   stats : FaceCdclStats
@@ -3438,6 +3453,7 @@ pub struct FaceCdclStats {
   conflicts : Int32
   propagations : Int32
   learned : Int32
+  deleted : Int32
   restarts : Int32
 } derive(Eq, @debug.Debug)
 pub fn FaceCdclStats::equal(Self, Self) -> Bool

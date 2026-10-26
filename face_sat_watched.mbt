@@ -515,9 +515,10 @@ pub fn face_eq_watched_dpll(
 // learning is sound), the search back*jumps* to the second-highest
 // level in the learned clause, and the learned clause immediately
 // propagates there.  Variable selection is VSIDS with phase
-// saving; restarts follow the Luby sequence.  Learned clauses are
-// kept for the whole run; the explicit step budget bounds their
-// number exactly as it bounds propagation work.
+// saving; restarts follow the Luby sequence.  At each restart a
+// clause-database reduction deletes long, high-LBD learned
+// clauses that are not reasons for the level-0 trail, while a
+// separate proof log retains every learned clause for auditing.
 // ---------------------------------------------------------------------------
 
 ///|
@@ -526,6 +527,7 @@ pub struct FaceCdclStats {
   conflicts : Int32
   propagations : Int32
   learned : Int32
+  deleted : Int32
   restarts : Int32
 } derive(Debug, Eq)
 
@@ -542,8 +544,28 @@ pub struct FaceCdclResult {
 }
 
 ///|
+/// A completed CDCL run together with the clause-level data
+/// needed to audit an UNSAT answer independently.  Clauses use
+/// the solver's signed-literal encoding (variables are positive
+/// integers; negation is arithmetic negation).  For UNSAT,
+/// `proof_clauses` is the sequence of learned clauses in the
+/// order they were derived, followed by the empty clause; every
+/// entry is checkable by reverse unit propagation
+/// (`face_cdcl_proof_check`).  Solver-side clause deletion never
+/// removes entries from this recorded proof.
+pub struct FaceCdclProofResult {
+  decision : FaceSatDecision
+  stats : FaceCdclStats
+  original_clauses : Array[Array[Int32]]
+  proof_clauses : Array[Array[Int32]]
+}
+
+///|
 priv struct FaceCdclSolver {
   clauses : Array[Array[Int32]]
+  clause_lbd : Array[Int32]
+  clause_is_learned : Array[Bool]
+  proof_clauses : Array[Array[Int32]]
   watches : Array[Array[Int32]]
   assignment : Array[Int32]
   level_of : Array[Int32]
@@ -563,6 +585,7 @@ priv struct FaceCdclSolver {
   mut conflicts : Int32
   mut propagations : Int32
   mut learned_count : Int32
+  mut deleted_count : Int32
   mut restarts : Int32
 }
 
@@ -748,7 +771,7 @@ fn cdcl_bump(solver : FaceCdclSolver, variable : Int32) -> Unit {
 fn cdcl_analyze(
   solver : FaceCdclSolver,
   conflict_index : Int32,
-) -> (Array[Int32], Int32) {
+) -> (Array[Int32], Int32, Int32) {
   let learned : Array[Int32] = [0]
   let touched : Array[Int32] = []
   let current_level = cdcl_decision_level(solver)
@@ -794,6 +817,23 @@ fn cdcl_analyze(
     }
   }
   learned[0] = 0 - p
+  // Literal block distance: the number of distinct decision
+  // levels represented in the learned clause.  Low-LBD clauses
+  // are the ones retained by database reduction.
+  let levels : Array[Int32] = []
+  for i in 0..<learned.length() {
+    let lv = solver.level_of[cdcl_var_of(learned[i])]
+    let mut present = false
+    for j in 0..<levels.length() {
+      if levels[j] == lv {
+        present = true
+      }
+    }
+    if !present {
+      levels.push(lv)
+    }
+  }
+  let lbd = levels.length()
   for i in 0..<touched.length() {
     solver.seen[touched[i]] = false
   }
@@ -813,7 +853,7 @@ fn cdcl_analyze(
     learned[1] = learned[max_pos]
     learned[max_pos] = tmp
   }
-  (learned, backtrack)
+  (learned, backtrack, lbd)
 }
 
 ///|
@@ -851,6 +891,87 @@ fn cdcl_Luby(x0 : Int32) -> Int32 {
 }
 
 ///|
+fn cdcl_clone_clause(clause : Array[Int32]) -> Array[Int32] {
+  let out : Array[Int32] = []
+  for i in 0..<clause.length() {
+    out.push(clause[i])
+  }
+  out
+}
+
+///|
+/// Learned-clause database reduction, run only at decision level
+/// 0 (immediately after a restart).  Original clauses, unit
+/// learned clauses and clauses that are reasons for literals
+/// still on the trail are always kept.  Among the rest, clauses
+/// that are both long and of high literal block distance are
+/// deleted; deleting a learned clause is sound because it is a
+/// consequence of the original CNF, and the recorded proof copy
+/// is not touched.  Clause arrays are compacted in place and all
+/// reason indices and watch lists are rebuilt.
+fn cdcl_reduce_db(solver : FaceCdclSolver) -> Unit {
+  let total = solver.clauses.length()
+  let keep_clause : Array[Bool] = []
+  for _i in 0..<total {
+    keep_clause.push(false)
+  }
+  for variable in 1..<(solver.variables + 1) {
+    let reason = solver.reason_of[variable]
+    if reason >= 0 && reason < total {
+      keep_clause[reason] = true
+    }
+  }
+  let remap : Array[Int32] = []
+  for _i in 0..<total {
+    remap.push(-1)
+  }
+  let mut write = 0
+  for read in 0..<total {
+    let clause = solver.clauses[read]
+    let deletable = solver.clause_is_learned[read] &&
+      !keep_clause[read] &&
+      clause.length() > 1 &&
+      clause.length() > 8 &&
+      solver.clause_lbd[read] > 6
+    if !deletable {
+      remap[read] = write
+      solver.clauses[write] = clause
+      solver.clause_lbd[write] = solver.clause_lbd[read]
+      solver.clause_is_learned[write] = solver.clause_is_learned[read]
+      write = write + 1
+    }
+  }
+  let removed = total - write
+  if removed <= 0 {
+    return
+  }
+  solver.deleted_count = solver.deleted_count + removed
+  while solver.clauses.length() > write {
+    ignore(solver.clauses.pop())
+    ignore(solver.clause_lbd.pop())
+    ignore(solver.clause_is_learned.pop())
+  }
+  for variable in 1..<(solver.variables + 1) {
+    let reason = solver.reason_of[variable]
+    if reason >= 0 && reason < total {
+      solver.reason_of[variable] = remap[reason]
+    }
+  }
+  for w in 0..<solver.watches.length() {
+    while solver.watches[w].length() > 0 {
+      ignore(solver.watches[w].pop())
+    }
+  }
+  for ci in 0..<solver.clauses.length() {
+    let clause = solver.clauses[ci]
+    if clause.length() > 1 {
+      solver.watches[face_sat_lit_index(clause[0])].push(ci)
+      solver.watches[face_sat_lit_index(clause[1])].push(ci)
+    }
+  }
+}
+
+///|
 /// CDCL main loop: 1 = SAT, 0 = UNSAT, -1 = budget exceeded.
 fn cdcl_search(solver : FaceCdclSolver) -> Int32 {
   let mut restart_count = 0
@@ -866,10 +987,13 @@ fn cdcl_search(solver : FaceCdclSolver) -> Int32 {
       if cdcl_decision_level(solver) == 0 {
         return 0
       }
-      let (learned, backtrack) = cdcl_analyze(solver, conflict)
+      let (learned, backtrack, lbd) = cdcl_analyze(solver, conflict)
       cdcl_cancel_to(solver, backtrack)
       let clause_index = solver.clauses.length()
+      solver.proof_clauses.push(cdcl_clone_clause(learned))
       solver.clauses.push(learned)
+      solver.clause_lbd.push(lbd)
+      solver.clause_is_learned.push(true)
       solver.learned_count = solver.learned_count + 1
       if learned.length() > 1 {
         solver.watches[face_sat_lit_index(learned[0])].push(clause_index)
@@ -881,6 +1005,7 @@ fn cdcl_search(solver : FaceCdclSolver) -> Int32 {
       solver.var_inc = solver.var_inc * (1.0 / 0.95)
       if conflicts_since_restart >= cdcl_Luby(restart_count) * 100 {
         cdcl_cancel_to(solver, 0)
+        cdcl_reduce_db(solver)
         solver.restarts = solver.restarts + 1
         restart_count = restart_count + 1
         conflicts_since_restart = 0
@@ -905,21 +1030,56 @@ fn cdcl_search(solver : FaceCdclSolver) -> Int32 {
 }
 
 ///|
-/// Satisfiability by CDCL with clause learning.  `max_steps <= 0`
-/// means an unbounded search.
-pub fn face_sat_cdcl_report(
+fn cdcl_stats_of(solver : FaceCdclSolver) -> FaceCdclStats {
+  FaceCdclStats::{
+    decisions: solver.decisions,
+    conflicts: solver.conflicts,
+    propagations: solver.propagations,
+    learned: solver.learned_count,
+    deleted: solver.deleted_count,
+    restarts: solver.restarts,
+  }
+}
+
+///|
+fn cdcl_decision_of(
+  code : Int32,
+  solver : FaceCdclSolver,
   f : Face,
   n : Int32,
-  max_steps~ : Int32 = 100000,
-) -> FaceCdclResult {
-  let empty_stats = FaceCdclStats::{
-    decisions: 0,
-    conflicts: 0,
-    propagations: 0,
-    learned: 0,
-    restarts: 0,
+) -> FaceSatDecision {
+  match code {
+    1 => {
+      let env : Array[Bool] = []
+      for i in 0..<n {
+        env.push(solver.assignment[i + 1] == 1)
+      }
+      if face_holds(face_bound(f, n), env) {
+        FaceSat(env)
+      } else {
+        FaceSearchBudgetExceeded
+      }
+    }
+    0 => FaceUnsat
+    _ => FaceSearchBudgetExceeded
   }
+}
+
+///|
+/// Build and run a CDCL solver, returning its search code
+/// (1 = SAT, 0 = UNSAT, -1 = budget exceeded), the solver, and a
+/// pristine copy of the original CNF (the solver permutes watched
+/// literals inside its own clause arrays).
+fn cdcl_run_solver(
+  f : Face,
+  n : Int32,
+  max_steps : Int32,
+) -> (Int32, FaceCdclSolver, Array[Array[Int32]]) {
   let builder = face_cnf_build(f, n)
+  let original_clauses : Array[Array[Int32]] = []
+  for ci in 0..<builder.clauses.length() {
+    original_clauses.push(cdcl_clone_clause(builder.clauses[ci]))
+  }
   let variables = builder.next_variable - 1
   let watches : Array[Array[Int32]] = []
   for _i in 0..<(2 * (variables + 2)) {
@@ -939,8 +1099,17 @@ pub fn face_sat_cdcl_report(
     seen.push(false)
     activity.push(0.0)
   }
+  let clause_lbd : Array[Int32] = []
+  let clause_is_learned : Array[Bool] = []
+  for _i in 0..<builder.clauses.length() {
+    clause_lbd.push(0)
+    clause_is_learned.push(false)
+  }
   let solver = FaceCdclSolver::{
     clauses: builder.clauses,
+    clause_lbd,
+    clause_is_learned,
+    proof_clauses: [],
     watches,
     assignment,
     level_of,
@@ -960,12 +1129,13 @@ pub fn face_sat_cdcl_report(
     conflicts: 0,
     propagations: 0,
     learned_count: 0,
+    deleted_count: 0,
     restarts: 0,
   }
   for ci in 0..<solver.clauses.length() {
     let clause = solver.clauses[ci]
     if clause.length() == 0 {
-      return { decision: FaceUnsat, stats: empty_stats, }
+      return (0, solver, original_clauses)
     }
     for i in 0..<clause.length() {
       let variable = cdcl_var_of(clause[i])
@@ -973,7 +1143,7 @@ pub fn face_sat_cdcl_report(
     }
     if clause.length() == 1 {
       if !cdcl_enqueue(solver, clause[0], ci) {
-        return { decision: FaceUnsat, stats: empty_stats, }
+        return (0, solver, original_clauses)
       }
     } else {
       solver.watches[face_sat_lit_index(clause[0])].push(ci)
@@ -981,29 +1151,195 @@ pub fn face_sat_cdcl_report(
     }
   }
   let code = cdcl_search(solver)
-  let stats = FaceCdclStats::{
-    decisions: solver.decisions,
-    conflicts: solver.conflicts,
-    propagations: solver.propagations,
-    learned: solver.learned_count,
-    restarts: solver.restarts,
+  (code, solver, original_clauses)
+}
+
+///|
+/// Satisfiability by CDCL with clause learning.  `max_steps <= 0`
+/// means an unbounded search.
+pub fn face_sat_cdcl_report(
+  f : Face,
+  n : Int32,
+  max_steps~ : Int32 = 100000,
+) -> FaceCdclResult {
+  let (code, solver, _) = cdcl_run_solver(f, n, max_steps)
+  {
+    decision: cdcl_decision_of(code, solver, f, n),
+    stats: cdcl_stats_of(solver),
   }
-  let decision = match code {
-    1 => {
-      let env : Array[Bool] = []
-      for i in 0..<n {
-        env.push(solver.assignment[i + 1] == 1)
-      }
-      if face_holds(face_bound(f, n), env) {
-        FaceSat(env)
-      } else {
-        FaceSearchBudgetExceeded
+}
+
+///|
+/// CDCL with an independently checkable UNSAT proof.  On SAT or
+/// budget exhaustion `proof_clauses` is empty; on UNSAT it is the
+/// learned clauses in derivation order followed by the empty
+/// clause.  Audit it with `face_cdcl_proof_check` against
+/// `original_clauses` from the same result.
+pub fn face_sat_cdcl_proof(
+  f : Face,
+  n : Int32,
+  max_steps~ : Int32 = 100000,
+) -> FaceCdclProofResult {
+  let (code, solver, original_clauses) = cdcl_run_solver(f, n, max_steps)
+  let proof_clauses : Array[Array[Int32]] = []
+  if code == 0 {
+    for i in 0..<solver.proof_clauses.length() {
+      proof_clauses.push(cdcl_clone_clause(solver.proof_clauses[i]))
+    }
+    proof_clauses.push([])
+  }
+  {
+    decision: cdcl_decision_of(code, solver, f, n),
+    stats: cdcl_stats_of(solver),
+    original_clauses,
+    proof_clauses,
+  }
+}
+
+///|
+fn cdcl_proof_max_var(
+  original_clauses : Array[Array[Int32]],
+  proof_clauses : Array[Array[Int32]],
+) -> Int32 {
+  let mut best = 0
+  for ci in 0..<original_clauses.length() {
+    let clause = original_clauses[ci]
+    for i in 0..<clause.length() {
+      let v = cdcl_var_of(clause[i])
+      if v > best {
+        best = v
       }
     }
-    0 => FaceUnsat
-    _ => FaceSearchBudgetExceeded
   }
-  { decision, stats, }
+  for ci in 0..<proof_clauses.length() {
+    let clause = proof_clauses[ci]
+    for i in 0..<clause.length() {
+      let v = cdcl_var_of(clause[i])
+      if v > best {
+        best = v
+      }
+    }
+  }
+  best
+}
+
+///|
+fn cdcl_proof_lit_value(assignment : Array[Int32], lit : Int32) -> Int32 {
+  let value = assignment[cdcl_var_of(lit)]
+  if value < 0 {
+    -1
+  } else if lit > 0 {
+    value
+  } else {
+    1 - value
+  }
+}
+
+///|
+/// Whether assuming every literal of `assumptions` true makes
+/// `clauses` conflict under unit propagation.
+fn cdcl_proof_up_conflict(
+  clauses : Array[Array[Int32]],
+  assumptions : Array[Int32],
+  max_var : Int32,
+) -> Bool {
+  let assignment : Array[Int32] = []
+  for _i in 0..<(max_var + 1) {
+    assignment.push(-1)
+  }
+  for i in 0..<assumptions.length() {
+    let lit = assumptions[i]
+    if lit == 0 {
+      return false
+    }
+    let variable = cdcl_var_of(lit)
+    let wanted = if lit > 0 { 1 } else { 0 }
+    if assignment[variable] >= 0 && assignment[variable] != wanted {
+      return true
+    }
+    assignment[variable] = wanted
+  }
+  while true {
+    let mut changed = false
+    for ci in 0..<clauses.length() {
+      let clause = clauses[ci]
+      let mut satisfied = false
+      let mut open_count = 0
+      let mut open_lit = 0
+      for i in 0..<clause.length() {
+        let lit = clause[i]
+        if lit == 0 || cdcl_var_of(lit) > max_var {
+          return false
+        }
+        let value = cdcl_proof_lit_value(assignment, lit)
+        if value == 1 {
+          satisfied = true
+        } else if value < 0 {
+          open_count = open_count + 1
+          open_lit = lit
+        }
+      }
+      if satisfied {
+        continue
+      }
+      if open_count == 0 {
+        return true
+      }
+      if open_count == 1 {
+        let variable = cdcl_var_of(open_lit)
+        let wanted = if open_lit > 0 { 1 } else { 0 }
+        if assignment[variable] < 0 {
+          assignment[variable] = wanted
+          changed = true
+        } else if assignment[variable] != wanted {
+          return true
+        }
+      }
+    }
+    if !changed {
+      return false
+    }
+  }
+  false
+}
+
+///|
+/// Check a CDCL UNSAT proof by reverse unit propagation: each
+/// proof clause must become conflicting when all of its literals
+/// are assumed false, using only the original clauses and the
+/// proof clauses before it; the final proof clause must be
+/// empty.  This is the standard RUP audit and is independent of
+/// the solver's watch lists, activities and deletion policy.
+pub fn face_cdcl_proof_check(
+  original_clauses : Array[Array[Int32]],
+  proof_clauses : Array[Array[Int32]],
+) -> Bool {
+  if proof_clauses.length() == 0 {
+    return false
+  }
+  if proof_clauses[proof_clauses.length() - 1].length() != 0 {
+    return false
+  }
+  let max_var = cdcl_proof_max_var(original_clauses, proof_clauses)
+  let db : Array[Array[Int32]] = []
+  for ci in 0..<original_clauses.length() {
+    db.push(original_clauses[ci])
+  }
+  for pi in 0..<proof_clauses.length() {
+    let clause = proof_clauses[pi]
+    let assumptions : Array[Int32] = []
+    for i in 0..<clause.length() {
+      if clause[i] == 0 {
+        return false
+      }
+      assumptions.push(0 - clause[i])
+    }
+    if !cdcl_proof_up_conflict(db, assumptions, max_var) {
+      return false
+    }
+    db.push(clause)
+  }
+  true
 }
 
 ///|

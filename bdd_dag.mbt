@@ -1512,16 +1512,22 @@ pub struct BddOptimalBuild {
 /// Build a face's ROBDD under an optimal variable order.  For
 /// `n <= exact_max_vars` (default 8) every permutation is tried,
 /// so `size` is the true minimum reachable node count and
-/// `exact` is true.  Above that the budgeted sifting optimizer
-/// is used and `exact` is false: exact BDD minimization is
-/// NP-hard, and the exponential `n!` enumeration is precisely
-/// the honest cost of the exact answer at small `n`.
+/// `exact` is true.  Callers that raise `exact_max_vars` to at
+/// most 12 use the subset dynamic program in
+/// `bdd_dag_of_face_optimal_dp` instead of the factorial
+/// enumeration for `n > 8`.  Above the exact bound the budgeted
+/// sifting optimizer is used and `exact` is false: exact BDD
+/// minimization is NP-hard, so an exponential exact cost remains
+/// unavoidable in the worst case.
 pub fn bdd_dag_of_face_optimal(
   f : Face,
   n : Int32,
   exact_max_vars~ : Int32 = 8,
   max_nodes~ : Int32 = 0,
 ) -> BddOptimalBuild {
+  if n > 8 && n <= exact_max_vars {
+    return bdd_dag_of_face_optimal_dp(f, n, exact_max_vars~, max_nodes~)
+  }
   if n > exact_max_vars {
     let opt = bdd_dag_of_face_optimized(f, n, max_nodes~)
     return BddOptimalBuild::{
@@ -1581,5 +1587,243 @@ pub fn bdd_dag_of_face_optimal(
         tried,
       }
     }
+  }
+}
+
+///|
+fn bdd_dp_cofactor_rec(
+  m : BddManager,
+  id : Int32,
+  assigned_mask : Int32,
+  value_mask : Int32,
+  memo_value : Array[Int32],
+  memo_stamp : Array[Int32],
+  stamp : Int32,
+) -> Int32 {
+  if id < 2 {
+    return id
+  }
+  if memo_stamp[id] == stamp {
+    return memo_value[id]
+  }
+  let node = m.nodes[id]
+  let variable = m.order[node.rank]
+  let bit = 1 << variable
+  let assigned = assigned_mask & bit
+  let result = if assigned != 0 {
+    let value_bit = value_mask & bit
+    bdd_dp_cofactor_rec(
+      m,
+      if value_bit != 0 {
+        node.hi
+      } else {
+        node.lo
+      },
+      assigned_mask,
+      value_mask,
+      memo_value,
+      memo_stamp,
+      stamp,
+    )
+  } else {
+    let lo = bdd_dp_cofactor_rec(
+      m,
+      node.lo,
+      assigned_mask,
+      value_mask,
+      memo_value,
+      memo_stamp,
+      stamp,
+    )
+    let hi = bdd_dp_cofactor_rec(
+      m,
+      node.hi,
+      assigned_mask,
+      value_mask,
+      memo_value,
+      memo_stamp,
+      stamp,
+    )
+    bdd_dag_mk(m, node.rank, lo, hi)
+  }
+  memo_stamp[id] = stamp
+  memo_value[id] = result
+  result
+}
+
+///|
+fn bdd_dp_push_unique(values : Array[Int32], value : Int32) -> Unit {
+  for i in 0..<values.length() {
+    if values[i] == value {
+      return
+    }
+  }
+  values.push(value)
+}
+
+///|
+/// Build a face's ROBDD under an optimal variable order by dynamic
+/// programming over subsets of variables already placed.  If `S` is
+/// a set of leading variables, the distinct cofactors obtained by
+/// assigning `S` in all possible ways are exactly the subfunctions
+/// that can occur immediately below the `S` levels; among them,
+/// those depending on the next variable `v` contribute one node
+/// each at the `v` level.  Summing this contribution over an order
+/// therefore gives its exact nonterminal ROBDD size, and Held-Karp
+/// dynamic programming over subsets minimizes the sum in `O(3^n)`
+/// subset/assignment work, rather than `n!` full rebuilds.  The
+/// result is exact for `n <= exact_max_vars` (capped at 12, because
+/// masks and the `3^n` state table must remain finite); above that
+/// it falls back to the sifting optimizer with `exact=false`.
+/// `tried` counts DP transitions evaluated.
+pub fn bdd_dag_of_face_optimal_dp(
+  f : Face,
+  n : Int32,
+  exact_max_vars~ : Int32 = 12,
+  max_nodes~ : Int32 = 0,
+) -> BddOptimalBuild {
+  if n < 0 || n > exact_max_vars || n > 12 {
+    let opt = bdd_dag_of_face_optimized(f, n, max_nodes~)
+    return BddOptimalBuild::{
+      built: opt.built,
+      order: opt.order,
+      size: opt.reachable,
+      exact: false,
+      tried: opt.attempts,
+    }
+  }
+  let m = bdd_manager_new(n, max_nodes~)
+  let root = bdd_dag_build_face(m, f)
+  if m.exceeded {
+    let opt = bdd_dag_of_face_optimized(f, n, max_nodes~)
+    return BddOptimalBuild::{
+      built: opt.built,
+      order: opt.order,
+      size: opt.reachable,
+      exact: false,
+      tried: opt.attempts,
+    }
+  }
+  let initial_nodes = m.nodes.length()
+  let subset_count = 1 << n
+  let memo_value : Array[Int32] = []
+  let memo_stamp : Array[Int32] = []
+  for _i in 0..<initial_nodes {
+    memo_value.push(-1)
+    memo_stamp.push(0)
+  }
+  let cofactor_sets : Array[Array[Int32]] = []
+  let mut stamp = 0
+  for mask in 0..<subset_count {
+    let roots : Array[Int32] = []
+    let mut assignment = mask
+    while true {
+      stamp = stamp + 1
+      let cofactor = bdd_dp_cofactor_rec(
+        m, root, mask, assignment, memo_value, memo_stamp, stamp,
+      )
+      bdd_dp_push_unique(roots, cofactor)
+      if assignment == 0 {
+        break
+      }
+      assignment = (assignment - 1) & mask
+    }
+    cofactor_sets.push(roots)
+  }
+  if m.exceeded {
+    let opt = bdd_dag_of_face_optimized(f, n, max_nodes~)
+    return BddOptimalBuild::{
+      built: opt.built,
+      order: opt.order,
+      size: opt.reachable,
+      exact: false,
+      tried: opt.attempts,
+    }
+  }
+  // Node ids are allocated after their children, so supports can
+  // be computed in id order.
+  let support : Array[Int32] = [0, 0]
+  for id in 2..<m.nodes.length() {
+    let node = m.nodes[id]
+    let variable_bit = 1 << m.order[node.rank]
+    support.push(variable_bit | support[node.lo] | support[node.hi])
+  }
+  let no_cost = 1000000000
+  let cost : Array[Int32] = []
+  let parent : Array[Int32] = []
+  for _i in 0..<subset_count {
+    cost.push(no_cost)
+    parent.push(-1)
+  }
+  cost[0] = 0
+  let mut tried = 0
+  for mask in 0..<subset_count {
+    if cost[mask] == no_cost {
+      continue
+    }
+    for variable in 0..<n {
+      let bit = 1 << variable
+      let already = mask & bit
+      if already != 0 {
+        continue
+      }
+      tried = tried + 1
+      let mut active = 0
+      let roots = cofactor_sets[mask]
+      for i in 0..<roots.length() {
+        let depends = support[roots[i]] & bit
+        if depends != 0 {
+          active = active + 1
+        }
+      }
+      let next = mask | bit
+      let candidate = cost[mask] + active
+      if candidate < cost[next] {
+        cost[next] = candidate
+        parent[next] = variable
+      }
+    }
+  }
+  let full = subset_count - 1
+  let reversed : Array[Int32] = []
+  let mut cursor = full
+  while cursor != 0 {
+    let variable = parent[cursor]
+    if variable < 0 {
+      break
+    }
+    reversed.push(variable)
+    cursor = cursor - (1 << variable)
+  }
+  let order : Array[Int32] = []
+  let mut index = reversed.length() - 1
+  while index >= 0 {
+    order.push(reversed[index])
+    index = index - 1
+  }
+  // Defensive completion; the DP parent chain should already be a
+  // permutation.
+  for variable in 0..<n {
+    bdd_dp_push_unique(order, variable)
+  }
+  let manager = bdd_manager_with_order(order, n, max_nodes~)
+  let built_root = bdd_dag_build_face(manager, f)
+  if manager.exceeded {
+    let opt = bdd_dag_of_face_optimized(f, n, max_nodes~)
+    return BddOptimalBuild::{
+      built: opt.built,
+      order: opt.order,
+      size: opt.reachable,
+      exact: false,
+      tried,
+    }
+  }
+  let size = bdd_dag_reachable_count(manager, built_root)
+  BddOptimalBuild::{
+    built: BddDagFace::{ manager, root: built_root, ok: true, },
+    order,
+    size,
+    exact: size == cost[full],
+    tried,
   }
 }
