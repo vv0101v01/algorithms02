@@ -1630,6 +1630,8 @@ pub fn hou_semantic_optimize(UTerm, Unifier) -> UTerm
 
 pub fn hou_unify(UTerm, UTerm, Int32, Unifier) -> Bool
 
+pub fn hou_unify_mgu(UTerm, UTerm, Int32, Unifier) -> HouMguReport
+
 pub fn hsnd(HTm) -> HTm
 
 pub fn identity_fibers_contractible_value(DValue) -> DValue
@@ -3546,6 +3548,15 @@ pub enum HTm {
   HSnd(HTm)
 }
 
+pub struct HouConstraint {
+  lhs : UTerm
+  rhs : UTerm
+  depth : Int32
+} derive(Eq, @debug.Debug)
+pub fn HouConstraint::equal(Self, Self) -> Bool
+pub fn HouConstraint::not_equal(Self, Self) -> Bool
+pub fn HouConstraint::to_repr(Self) -> @debug.Repr
+
 pub struct HouIterativeReport {
   report : HouSearchReport
   solved_at_depth : Int32
@@ -3554,6 +3565,24 @@ pub struct HouIterativeReport {
 pub fn HouIterativeReport::equal(Self, Self) -> Bool
 pub fn HouIterativeReport::not_equal(Self, Self) -> Bool
 pub fn HouIterativeReport::to_repr(Self) -> @debug.Repr
+
+pub struct HouMguReport {
+  status : HouMguStatus
+  substitution : Array[(Int32, UTerm)]
+  residual : Array[HouConstraint]
+} derive(Eq, @debug.Debug)
+pub fn HouMguReport::equal(Self, Self) -> Bool
+pub fn HouMguReport::not_equal(Self, Self) -> Bool
+pub fn HouMguReport::to_repr(Self) -> @debug.Repr
+
+pub enum HouMguStatus {
+  HouMguPrincipal
+  HouMguNoUnifier
+  HouMguResidual
+} derive(Eq, @debug.Debug)
+pub fn HouMguStatus::equal(Self, Self) -> Bool
+pub fn HouMguStatus::not_equal(Self, Self) -> Bool
+pub fn HouMguStatus::to_repr(Self) -> @debug.Repr
 
 pub struct HouSearchReport {
   status : HouSearchStatus

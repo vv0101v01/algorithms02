@@ -15,3 +15,8 @@ test "phase12: CDCL proofs are RUP-checkable and clause DB reduction engages" {
 test "phase12: self-family Bush recursion, gather shapes and dependent Self parameters" {
   inspect(check_self_family_and_gather_shapes(), content="true")
 }
+
+///|
+test "phase12: HOU pattern MGU, flex-flex intersection, pruning and residuals" {
+  inspect(check_hou_pattern_mgu_and_residuals(), content="true")
+}

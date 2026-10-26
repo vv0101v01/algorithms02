@@ -386,3 +386,92 @@ pub fn check_self_family_and_gather_shapes() -> Bool {
   )
   dv_is_nat(dep_count, 3)
 }
+
+///|
+/// The certified Miller-pattern unifier returns principal
+/// substitutions (including flex-flex intersection and same-head
+/// pruning), explicit residuals under a principal partial
+/// substitution for non-pattern spines, and transactional
+/// no-unifier verdicts.
+pub fn check_hou_pattern_mgu_and_residuals() -> Bool {
+  let u = unifier_new()
+  let f = hou_fresh_meta(u, 2)
+  let rhs = UPair(UVar(0), UConst("c"))
+  let report = hou_unify_mgu(f, rhs, 2, u)
+  if report.status != HouMguPrincipal || report.substitution.length() != 1 {
+    return false
+  }
+  if hou_semantic_optimize(f, u) != rhs {
+    return false
+  }
+  // Flex-flex intersection over the shared spine variable.
+  let u2 = unifier_new()
+  ignore(hou_fresh_meta(u2, 0))
+  ignore(hou_fresh_meta(u2, 0))
+  let flex = hou_unify_mgu(
+    UMeta(0, [UVar(2), UVar(1)]),
+    UMeta(1, [UVar(1), UVar(0)]),
+    3,
+    u2,
+  )
+  if flex.status != HouMguPrincipal {
+    return false
+  }
+  if hou_semantic_optimize(UMeta(0, [UVar(2), UVar(1)]), u2) !=
+    hou_semantic_optimize(UMeta(1, [UVar(1), UVar(0)]), u2) {
+    return false
+  }
+  // Same-head pruning: swapped spines share no fixed position.
+  let u3 = unifier_new()
+  ignore(hou_fresh_meta(u3, 0))
+  let same = hou_unify_mgu(
+    UMeta(0, [UVar(1), UVar(0)]),
+    UMeta(0, [UVar(0), UVar(1)]),
+    2,
+    u3,
+  )
+  if same.status != HouMguPrincipal {
+    return false
+  }
+  if hou_semantic_optimize(UMeta(0, [UVar(1), UVar(0)]), u3) !=
+    hou_semantic_optimize(UMeta(0, [UVar(0), UVar(1)]), u3) {
+    return false
+  }
+  // A repeated-variable spine has no single MGU; the pattern
+  // component still solves principally and the repeated
+  // component comes back as the residual, whose subsequent
+  // (specific) solution completes the original problem.
+  let u4 = unifier_new()
+  ignore(hou_fresh_meta(u4, 0))
+  ignore(hou_fresh_meta(u4, 0))
+  let original_lhs = UPair(UMeta(0, [UVar(0)]), UMeta(1, [UVar(0), UVar(0)]))
+  let original_rhs = UPair(UConst("c"), UPair(UVar(0), UConst("c")))
+  let partial = hou_unify_mgu(original_lhs, original_rhs, 1, u4)
+  if partial.status != HouMguResidual ||
+    partial.residual.length() != 1 ||
+    partial.substitution.length() != 1 {
+    return false
+  }
+  let residual = partial.residual[0]
+  if !hou_unify(residual.lhs, residual.rhs, residual.depth, u4) {
+    return false
+  }
+  if hou_semantic_optimize(original_lhs, u4) !=
+    hou_semantic_optimize(original_rhs, u4) {
+    return false
+  }
+  // Definitive failures restore the unifier.
+  let u5 = unifier_new()
+  ignore(hou_fresh_meta(u5, 0))
+  let scope = hou_unify_mgu(UMeta(0, [UVar(1)]), UVar(0), 2, u5)
+  if scope.status != HouMguNoUnifier || u5.solved_count != 0 {
+    return false
+  }
+  let clash = hou_unify_mgu(
+    UPair(UConst("a"), UConst("b")),
+    USucc(UNatZero),
+    0,
+    u5,
+  )
+  clash.status == HouMguNoUnifier
+}

@@ -15,7 +15,10 @@
 // arguments and dependent motives.  Phase 10 adds a separate bounded,
 // transactional Huet search (`hou_search_unify`) above it; its
 // residual/budget outcomes are explicit and are not completeness
-// claims for general HOU.
+// claims for general HOU.  Phase 12 adds `hou_unify_mgu`, a
+// worklist pattern unifier whose solved outcome is a certified
+// most general unifier and whose residual outcome returns the
+// remaining constraints under a principal partial substitution.
 //
 // The bidirectional elaborator consumes a named surface syntax,
 // inserts implicit arguments as metavariables, infers/checks against
@@ -1033,6 +1036,418 @@ pub fn hou_unify(
       hou_unify(c1, c2, depth, unifier) &&
       hou_unify(d1, d2, depth, unifier)
     _ => false
+  }
+}
+
+///|
+/// Status of the certified pattern-unification API below.
+pub enum HouMguStatus {
+  /// Solved, and the returned substitution is a most general
+  /// unifier for the Miller-pattern problem.
+  HouMguPrincipal
+  /// Definitively not unifiable (rigid clash, rigid occurs
+  /// failure, or a pattern scope failure against a meta-free
+  /// right-hand side).  The unifier is restored.
+  HouMguNoUnifier
+  /// The problem left the certified pattern fragment.  The
+  /// unifier retains the (principal) partial substitution for
+  /// the solved part, and `residual` holds the remaining
+  /// normalized constraints; solving those under the partial
+  /// substitution is equivalent to solving the original problem.
+  HouMguResidual
+} derive(Debug, Eq)
+
+///|
+pub extend HouMguStatus with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend HouMguStatus with Eq::{not_equal, equal}
+
+///|
+/// One residual higher-order equation, at the displayed context
+/// depth, normalized under the current partial substitution.
+pub struct HouConstraint {
+  lhs : UTerm
+  rhs : UTerm
+  depth : Int32
+} derive(Debug, Eq)
+
+///|
+pub extend HouConstraint with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend HouConstraint with Eq::{not_equal, equal}
+
+///|
+pub struct HouMguReport {
+  status : HouMguStatus
+  /// Assignments made by this call, as `(meta id, solution)`
+  /// pairs with solutions zonked under the final unifier.
+  substitution : Array[(Int32, UTerm)]
+  residual : Array[HouConstraint]
+} derive(Debug, Eq)
+
+///|
+pub extend HouMguReport with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend HouMguReport with Eq::{not_equal, equal}
+
+///|
+fn hou_mgu_strict_levels(
+  args : Array[UTerm],
+  depth : Int32,
+  meta_depth : Int32,
+  unifier : Unifier,
+) -> Array[Int32]? {
+  let levels : Array[Int32] = []
+  for i in 0..<args.length() {
+    match uterm_whnf(args[i], unifier) {
+      UVar(index) => {
+        let level = depth - 1 - index
+        if level < meta_depth ||
+          level >= depth ||
+          pattern_level_position(levels, level) >= 0 {
+          return None
+        }
+        levels.push(level)
+      }
+      _ => return None
+    }
+  }
+  Some(levels)
+}
+
+///|
+/// Occurrence of `id` on a rigid path: occurrences inside the
+/// arguments of a different unsolved metavariable do not count,
+/// because that metavariable could still ignore them.
+fn hou_mgu_occurs_rigid(t : UTerm, id : Int32, unifier : Unifier) -> Bool {
+  match t {
+    UMeta(other, args) => {
+      if other == id {
+        return true
+      }
+      let solved = if other >= 0 && other < unifier.metas.length() {
+        unifier.metas[other].solution
+      } else {
+        None
+      }
+      match solved {
+        Some(solution) =>
+          hou_mgu_occurs_rigid(uterm_apply_many(solution, args), id, unifier)
+        None => false
+      }
+    }
+    UVar(_) | UConst(_) | UType(_) | UBoolLit(_) | UNatZero => false
+    ULam(a, b)
+    | UApp(a, b)
+    | UPi(a, b)
+    | UImplicitPi(a, b)
+    | USigma(a, b)
+    | UPair(a, b) =>
+      hou_mgu_occurs_rigid(a, id, unifier) ||
+      hou_mgu_occurs_rigid(b, id, unifier)
+    UFst(x) | USnd(x) | USucc(x) => hou_mgu_occurs_rigid(x, id, unifier)
+    UNatElim(a, b, c, d) =>
+      hou_mgu_occurs_rigid(a, id, unifier) ||
+      hou_mgu_occurs_rigid(b, id, unifier) ||
+      hou_mgu_occurs_rigid(c, id, unifier) ||
+      hou_mgu_occurs_rigid(d, id, unifier)
+  }
+}
+
+///|
+/// Strict pattern assignment: 1 = assigned, 0 = residual,
+/// -1 = definitive failure.
+fn hou_mgu_assign_pattern(
+  unifier : Unifier,
+  id : Int32,
+  args : Array[UTerm],
+  rhs_in : UTerm,
+  depth : Int32,
+) -> Int32 {
+  if id < 0 || id >= unifier.metas.length() {
+    return -1
+  }
+  let meta_depth = unifier.metas[id].context_depth
+  let levels = match hou_mgu_strict_levels(args, depth, meta_depth, unifier) {
+    Some(v) => v
+    None => return 0
+  }
+  let rhs = hou_semantic_optimize(rhs_in, unifier)
+  if hou_mgu_occurs_rigid(rhs, id, unifier) {
+    return -1
+  }
+  if uterm_occurs_meta(rhs, id, unifier) {
+    return 0
+  }
+  match abstract_pattern_go(rhs, depth, 0, meta_depth, levels) {
+    Some(body) => {
+      assign_meta_solution(
+        unifier,
+        id,
+        wrap_pattern_lambdas(body, levels.length()),
+      )
+      1
+    }
+    None => if uterm_contains_unsolved_meta(rhs, unifier) { 0 } else { -1 }
+  }
+}
+
+///|
+/// Same-head pattern pruning: `?F s = ?F t` forces `?F` to
+/// depend only on the spine variables occupying the same
+/// position on both sides.
+fn hou_mgu_same_head_prune(
+  unifier : Unifier,
+  id : Int32,
+  args_a : Array[UTerm],
+  args_b : Array[UTerm],
+  depth : Int32,
+) -> Bool {
+  if args_a.length() != args_b.length() {
+    return false
+  }
+  let meta_depth = unifier.metas[id].context_depth
+  let levels_a = match
+    hou_mgu_strict_levels(args_a, depth, meta_depth, unifier) {
+    Some(v) => v
+    None => return false
+  }
+  let levels_b = match
+    hou_mgu_strict_levels(args_b, depth, meta_depth, unifier) {
+    Some(v) => v
+    None => return false
+  }
+  let common : Array[Int32] = []
+  for i in 0..<levels_a.length() {
+    if levels_a[i] == levels_b[i] {
+      common.push(levels_a[i])
+    }
+  }
+  let common_id = unifier.metas.length()
+  let solution = match
+    common_meta_solution(args_a, common, common_id, depth, unifier) {
+    Some(v) => v
+    None => return false
+  }
+  unifier.metas.push(UMetaInfo::{ context_depth: 0, solution: None, })
+  assign_meta_solution(unifier, id, solution)
+  true
+}
+
+///|
+fn hou_mgu_push(
+  queue : Array[HouConstraint],
+  lhs : UTerm,
+  rhs : UTerm,
+  depth : Int32,
+) -> Unit {
+  queue.push(HouConstraint::{ lhs, rhs, depth, })
+}
+
+///|
+/// Process one constraint: 1 = handled (possibly decomposed
+/// into `queue`), 0 = residual, -1 = definitive clash.
+fn hou_mgu_process(
+  constraint : HouConstraint,
+  unifier : Unifier,
+  queue : Array[HouConstraint],
+) -> Int32 {
+  let depth = constraint.depth
+  let a = uterm_whnf(constraint.lhs, unifier)
+  let b = uterm_whnf(constraint.rhs, unifier)
+  if a == b {
+    return 1
+  }
+  let a_head = meta_head_spine(a, unifier)
+  let b_head = meta_head_spine(b, unifier)
+  match (a_head, b_head) {
+    (Some((id_a, args_a)), Some((id_b, args_b))) => {
+      if id_a == id_b {
+        if args_a == args_b {
+          return 1
+        }
+        return if hou_mgu_same_head_prune(unifier, id_a, args_a, args_b, depth) {
+          1
+        } else {
+          0
+        }
+      }
+      let a_strict = hou_mgu_strict_levels(
+        args_a,
+        depth,
+        unifier.metas[id_a].context_depth,
+        unifier,
+      )
+      let b_strict = hou_mgu_strict_levels(
+        args_b,
+        depth,
+        unifier.metas[id_b].context_depth,
+        unifier,
+      )
+      match (a_strict, b_strict) {
+        (Some(_), Some(_)) =>
+          return if flex_flex_intersection(
+              unifier, id_a, args_a, id_b, args_b, depth,
+            ) {
+            1
+          } else {
+            0
+          }
+        _ => return 0
+      }
+    }
+    (Some((id, args)), None) =>
+      return hou_mgu_assign_pattern(unifier, id, args, b, depth)
+    (None, Some((id, args))) =>
+      return hou_mgu_assign_pattern(unifier, id, args, a, depth)
+    (None, None) => ()
+  }
+  match (a, b) {
+    (ULam(ad, ab), ULam(bd, bb)) => {
+      hou_mgu_push(queue, ad, bd, depth)
+      hou_mgu_push(queue, ab, bb, depth + 1)
+      1
+    }
+    (ULam(_, body), other) => {
+      hou_mgu_push(
+        queue,
+        body,
+        UApp(uterm_shift(other, 1, 0), UVar(0)),
+        depth + 1,
+      )
+      1
+    }
+    (other, ULam(_, body)) => {
+      hou_mgu_push(
+        queue,
+        UApp(uterm_shift(other, 1, 0), UVar(0)),
+        body,
+        depth + 1,
+      )
+      1
+    }
+    (UPi(x1, y1), UPi(x2, y2))
+    | (UImplicitPi(x1, y1), UImplicitPi(x2, y2))
+    | (USigma(x1, y1), USigma(x2, y2)) => {
+      hou_mgu_push(queue, x1, x2, depth)
+      hou_mgu_push(queue, y1, y2, depth + 1)
+      1
+    }
+    (UPair(x1, y1), UPair(x2, y2)) | (UApp(x1, y1), UApp(x2, y2)) => {
+      hou_mgu_push(queue, x1, x2, depth)
+      hou_mgu_push(queue, y1, y2, depth)
+      1
+    }
+    (UFst(x), UFst(y)) | (USnd(x), USnd(y)) | (USucc(x), USucc(y)) => {
+      hou_mgu_push(queue, x, y, depth)
+      1
+    }
+    (UNatElim(a1, b1, c1, d1), UNatElim(a2, b2, c2, d2)) => {
+      hou_mgu_push(queue, a1, a2, depth)
+      hou_mgu_push(queue, b1, b2, depth)
+      hou_mgu_push(queue, c1, c2, depth)
+      hou_mgu_push(queue, d1, d2, depth)
+      1
+    }
+    _ =>
+      // A root mismatch is only certified as a clash when no
+      // unsolved metavariable could still change either side's
+      // head through further assignment and reduction.
+      if uterm_contains_unsolved_meta(a, unifier) ||
+        uterm_contains_unsolved_meta(b, unifier) {
+        0
+      } else {
+        -1
+      }
+  }
+}
+
+///|
+/// Pattern unification with a certified outcome.  Unlike
+/// `hou_unify` (which additionally uses repeated-variable,
+/// constructor-pattern and constant fallbacks that produce
+/// *specific* unifiers) and `hou_search_unify` (bounded Huet
+/// guesses), this entry point either returns a most general
+/// unifier for the Miller-pattern fragment, a definitive
+/// non-unifiability verdict, or an explicit residual constraint
+/// set under a principal partial substitution.
+pub fn hou_unify_mgu(
+  a : UTerm,
+  b : UTerm,
+  depth : Int32,
+  unifier : Unifier,
+) -> HouMguReport {
+  let snapshot = hou_clone_unifier(unifier)
+  let queue : Array[HouConstraint] = [HouConstraint::{ lhs: a, rhs: b, depth, }]
+  let residual : Array[HouConstraint] = []
+  let mut progress_mark = unifier.solved_count + unifier.metas.length()
+  while true {
+    match queue.pop() {
+      Some(constraint) =>
+        match hou_mgu_process(constraint, unifier, queue) {
+          1 => ()
+          0 =>
+            residual.push(HouConstraint::{
+              lhs: hou_semantic_optimize(constraint.lhs, unifier),
+              rhs: hou_semantic_optimize(constraint.rhs, unifier),
+              depth: constraint.depth,
+            })
+          _ => {
+            hou_restore_unifier(unifier, snapshot)
+            return HouMguReport::{
+              status: HouMguNoUnifier,
+              substitution: [],
+              residual: [],
+            }
+          }
+        }
+      None => {
+        let progress = unifier.solved_count + unifier.metas.length()
+        if residual.length() > 0 && progress != progress_mark {
+          progress_mark = progress
+          while residual.length() > 0 {
+            match residual.pop() {
+              Some(c) => queue.push(c)
+              None => ()
+            }
+          }
+        } else {
+          break
+        }
+      }
+    }
+  }
+  let substitution : Array[(Int32, UTerm)] = []
+  for id in 0..<unifier.metas.length() {
+    let was_solved = id < snapshot.metas.length() &&
+      snapshot.metas[id].solution != None
+    match unifier.metas[id].solution {
+      Some(solution) =>
+        if !was_solved {
+          substitution.push((id, hou_semantic_optimize(solution, unifier)))
+        }
+      None => ()
+    }
+  }
+  if residual.length() == 0 {
+    HouMguReport::{ status: HouMguPrincipal, substitution, residual: [], }
+  } else {
+    let normalized : Array[HouConstraint] = []
+    for i in 0..<residual.length() {
+      normalized.push(HouConstraint::{
+        lhs: hou_semantic_optimize(residual[i].lhs, unifier),
+        rhs: hou_semantic_optimize(residual[i].rhs, unifier),
+        depth: residual[i].depth,
+      })
+    }
+    HouMguReport::{
+      status: HouMguResidual,
+      substitution,
+      residual: normalized,
+    }
   }
 }
 
