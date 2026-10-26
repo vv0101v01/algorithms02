@@ -93,6 +93,35 @@ fn positive_sum_family(a : DValue, b : DValue) -> (DValue) -> DValue {
 }
 
 ///|
+/// Recover the host inductive spec from the ambient `family`
+/// callback, which by convention returns the host type at the
+/// ambient parameters and the given indices.  `None` in
+/// non-inductive (HIT or dummy) contexts, where the self-family
+/// node is not supported.
+fn self_family_spec_of(
+  family : (Array[DValue]) -> DValue,
+  index_values : Array[DValue],
+) -> DInductiveSpec? {
+  match force_value(family(index_values)) {
+    DVInductive(spec, _, _) => Some(spec)
+    _ => None
+  }
+}
+
+///|
+/// The host family type at a changed parameter instantiation.
+fn self_family_type_at(
+  family : (Array[DValue]) -> DValue,
+  param_values : Array[DValue],
+  index_values : Array[DValue],
+) -> DValue {
+  match self_family_spec_of(family, index_values) {
+    Some(spec) => DVInductive(spec, param_values, index_values)
+    None => family(index_values)
+  }
+}
+
+///|
 /// The semantic type obtained by applying a positive functor to an
 /// indexed family.
 pub fn positive_functor_type(
@@ -175,6 +204,18 @@ pub fn positive_functor_type(
         [],
       )
       DVInductive(spec, param_values, index_values)
+    }
+    DFunctorSelfFamily(pargs, index) => {
+      let (param_values, _, index_values) = family_instantiate(
+        pargs,
+        index,
+        params,
+        prior,
+        js => family(js),
+        _ => family_dummy_handler(),
+        [],
+      )
+      self_family_type_at(family, param_values, index_values)
     }
   }
 }
@@ -328,6 +369,22 @@ pub fn positive_functor_ih_type(
         [],
       )
       family_gather_type(spec, param_values, handlers, index_values, value)
+    }
+    DFunctorSelfFamily(pargs, index) => {
+      let (param_values, handlers, index_values) = family_instantiate(
+        pargs,
+        index,
+        params,
+        prior,
+        js => family(js),
+        js => { type_of: y => motive(js, y), map_of: _ => DVUnit, },
+        [],
+      )
+      match self_family_spec_of(family, index_values) {
+        Some(spec) =>
+          family_gather_type(spec, param_values, handlers, index_values, value)
+        None => DVUnitTy
+      }
     }
   }
 }
@@ -517,6 +574,22 @@ pub fn positive_functor_map(
       )
       family_gather_map(spec, param_values, handlers, index_values, value)
     }
+    DFunctorSelfFamily(pargs, index) => {
+      let (param_values, handlers, index_values) = family_instantiate(
+        pargs,
+        index,
+        params,
+        prior,
+        js => family(js),
+        js => { type_of: y => motive(js, y), map_of: y => elim(js, y), },
+        [],
+      )
+      match self_family_spec_of(family, index_values) {
+        Some(spec) =>
+          family_gather_map(spec, param_values, handlers, index_values, value)
+        None => DVUnit
+      }
+    }
   }
 }
 
@@ -563,6 +636,195 @@ fn family_self_leaf(
 }
 
 ///|
+/// Whether `t` mentions any parameter with a gather handler, in
+/// a context of length `ctx_len` whose first entries are the
+/// handled parameters.
+fn family_term_mentions_handled(
+  handlers : Array[DFamilyParamHandler?],
+  ctx_len : Int32,
+  t : DTerm,
+) -> Bool {
+  for pos in 0..<handlers.length() {
+    match handlers[pos] {
+      Some(_) => if dterm_free_var_occurs(t, ctx_len - 1 - pos) { return true }
+      None => ()
+    }
+  }
+  false
+}
+
+///|
+/// Gather induction hypotheses through an ordinary *type term*
+/// shape, not just through a whole parameter variable.  The
+/// supported shapes are parameter leaves, lists, dependent
+/// pairs, functions (handled parameters in the codomain; domain
+/// occurrences are rejected by the gatherability scan), and
+/// applications of declared inductive families whose parameter
+/// arguments are themselves supported shapes.  `values` is the
+/// semantic context in which `ty` is read.  A shape mentioning
+/// no handled parameter contributes Unit.
+fn family_gather_term_shape(
+  handlers : Array[DFamilyParamHandler?],
+  values : Array[DValue],
+  ty : DTerm,
+  value : DValue,
+  want_type : Bool,
+) -> DValue {
+  if !family_term_mentions_handled(handlers, values.length(), ty) {
+    return if want_type { DVUnitTy } else { DVUnit }
+  }
+  match ty {
+    DTVar(_) =>
+      match family_self_leaf(handlers, values.length(), ty) {
+        Some(h) =>
+          if want_type {
+            (h.type_of)(value)
+          } else {
+            (h.map_of)(value)
+          }
+        None => if want_type { DVUnitTy } else { DVUnit }
+      }
+    DListTy(inner) => {
+      let elem_ty = schema_eval_under(inner, values, [])
+      if want_type {
+        let step : DValue = DVLam(x => {
+          DVLam(_xs => {
+            DVLam(ih => {
+              DVSigma(
+                family_gather_term_shape(handlers, values, inner, x, true),
+                _ => ih,
+              )
+            })
+          })
+        })
+        eval_list_elim(elem_ty, _ => DVUniv(0), DVUnitTy, step, value, 0)
+      } else {
+        let step : DValue = DVLam(x => {
+          DVLam(_xs => {
+            DVLam(ih => {
+              DVPair(
+                family_gather_term_shape(handlers, values, inner, x, false),
+                ih,
+              )
+            })
+          })
+        })
+        eval_list_elim(
+          elem_ty,
+          xs => family_gather_term_shape(handlers, values, ty, xs, true),
+          DVUnit,
+          step,
+          value,
+          0,
+        )
+      }
+    }
+    DSigma(a, b) => {
+      let ta = schema_eval_under(a, values, [])
+      let fam : (DValue) -> DValue = v => {
+        schema_eval_under(b, schema_concat_values(values, [v]), [])
+      }
+      let x = dfst_typed(value, fam)
+      let y = dsnd_typed(value, ta, fam)
+      let gx = family_gather_term_shape(handlers, values, a, x, want_type)
+      let gy = family_gather_term_shape(
+        handlers,
+        schema_concat_values(values, [x]),
+        b,
+        y,
+        want_type,
+      )
+      if want_type {
+        DVSigma(gx, _ => gy)
+      } else {
+        DVPair(gx, gy)
+      }
+    }
+    DPi(dom, cod) => {
+      let dv = schema_eval_under(dom, values, [])
+      if want_type {
+        DVPi(dv, a => {
+          family_gather_term_shape(
+            handlers,
+            schema_concat_values(values, [a]),
+            cod,
+            dapp_typed(value, a, dv),
+            true,
+          )
+        })
+      } else {
+        DVLam(a => {
+          family_gather_term_shape(
+            handlers,
+            schema_concat_values(values, [a]),
+            cod,
+            dapp_typed(value, a, dv),
+            false,
+          )
+        })
+      }
+    }
+    DInductive(spec2, args) => {
+      if args.length() < spec2.params.length() + spec2.indices.length() {
+        return if want_type { DVUnitTy } else { DVUnit }
+      }
+      let mut relevant = false
+      for k in 0..<spec2.params.length() {
+        if family_term_mentions_handled(handlers, values.length(), args[k]) {
+          relevant = true
+        }
+      }
+      if !relevant {
+        return if want_type { DVUnitTy } else { DVUnit }
+      }
+      let param_values2 : Array[DValue] = []
+      let handlers2 : Array[DFamilyParamHandler?] = []
+      for k in 0..<spec2.params.length() {
+        param_values2.push(schema_eval_under(args[k], values, []))
+        handlers2.push(family_shape_handler(handlers, values, args[k]))
+      }
+      let index_values2 : Array[DValue] = []
+      for k in spec2.params.length()..<args.length() {
+        index_values2.push(schema_eval_under(args[k], values, []))
+      }
+      if want_type {
+        family_gather_type(
+          spec2, param_values2, handlers2, index_values2, value,
+        )
+      } else {
+        family_gather_map(spec2, param_values2, handlers2, index_values2, value)
+      }
+    }
+    _ => if want_type { DVUnitTy } else { DVUnit }
+  }
+}
+
+///|
+/// The handler for elements stored at a parameter instantiated
+/// by the type term `t`: the leaf handler when `t` is exactly a
+/// handled parameter, a synthesized shape handler when `t`
+/// mentions handled parameters in a supported shape, and `None`
+/// when it mentions none.
+fn family_shape_handler(
+  handlers : Array[DFamilyParamHandler?],
+  values : Array[DValue],
+  t : DTerm,
+) -> DFamilyParamHandler? {
+  match family_self_leaf(handlers, values.length(), t) {
+    Some(h) => Some(h)
+    None =>
+      if family_term_mentions_handled(handlers, values.length(), t) {
+        Some({
+          type_of: y => family_gather_term_shape(handlers, values, t, y, true),
+          map_of: y => family_gather_term_shape(handlers, values, t, y, false),
+        })
+      } else {
+        None
+      }
+  }
+}
+
+///|
 /// Instantiate a `DFunctorFamily` node's parameter arguments in
 /// the context `params ++ prior`.  `self_type` builds the type
 /// denoted by a `Self` argument from its evaluated indices and
@@ -589,12 +851,9 @@ fn family_instantiate(
         handlers.push(Some(self_handler(jsv)))
       }
       DFunctorParamTerm(t) => {
-        param_values.push(
-          schema_eval_under(t, schema_concat_values(params, prior), []),
-        )
-        handlers.push(
-          family_self_leaf(outer_handlers, params.length() + prior.length(), t),
-        )
+        let values = schema_concat_values(params, prior)
+        param_values.push(schema_eval_under(t, values, []))
+        handlers.push(family_shape_handler(outer_handlers, values, t))
       }
     }
   }
@@ -757,20 +1016,13 @@ fn family_gather_arg_contribution(
   let arg = ctor.args[arg_index]
   match arg.kind {
     DArgExternal =>
-      match
-        family_self_leaf(
-          handlers,
-          param_values.length() + prior.length(),
-          arg.ty,
-        ) {
-        Some(h) =>
-          if want_type {
-            (h.type_of)(value)
-          } else {
-            (h.map_of)(value)
-          }
-        None => if want_type { DVUnitTy } else { DVUnit }
-      }
+      family_gather_term_shape(
+        handlers,
+        schema_concat_values(param_values, prior),
+        arg.ty,
+        value,
+        want_type,
+      )
     DArgRecursive => ih
     DArgFunction =>
       if want_type {
@@ -865,16 +1117,13 @@ fn family_gather_functor(
       }
     }
     DFunctorConst(ty) =>
-      match
-        family_self_leaf(handlers, param_values.length() + prior.length(), ty) {
-        Some(h) =>
-          if want_type {
-            (h.type_of)(value)
-          } else {
-            (h.map_of)(value)
-          }
-        None => if want_type { DVUnitTy } else { DVUnit }
-      }
+      family_gather_term_shape(
+        handlers,
+        schema_concat_values(param_values, prior),
+        ty,
+        value,
+        want_type,
+      )
     DFunctorProduct(a, b) => {
       let ta = positive_functor_type(a, param_values, prior, inner_family)
       let tb = positive_functor_type(b, param_values, prior, inner_family)
@@ -1138,6 +1387,28 @@ fn family_gather_functor(
         family_gather_map(spec3, param_values3, handlers3, index_values3, value)
       }
     }
+    DFunctorSelfFamily(pargs3, index3) => {
+      // The applied family is `spec` itself at a new parameter
+      // instantiation; gather handlers compose exactly as for an
+      // explicit family application.
+      let (param_values3, handlers3, index_values3) = family_instantiate(
+        pargs3,
+        index3,
+        param_values,
+        prior,
+        js => inner_family(js),
+        js => {
+          type_of: y => family_gather_type(spec, param_values, handlers, js, y),
+          map_of: y => family_gather_map(spec, param_values, handlers, js, y),
+        },
+        handlers,
+      )
+      if want_type {
+        family_gather_type(spec, param_values3, handlers3, index_values3, value)
+      } else {
+        family_gather_map(spec, param_values3, handlers3, index_values3, value)
+      }
+    }
   }
 }
 
@@ -1156,14 +1427,43 @@ fn dterm_free_var_occurs(t : DTerm, var_index : Int32) -> Bool {
 }
 
 ///|
-fn term_is_family_param_var(
-  t : DTerm,
+/// Whether every occurrence of parameter `param_pos` in the
+/// type term `ty` (read in a context of length `ctx_len`,
+/// parameters first) is in a shape the gatherer can traverse:
+/// a whole leaf, under lists or dependent pairs, in a function
+/// codomain, or inside parameter arguments of an applied
+/// declared family whose corresponding parameters are
+/// themselves gatherable.  Occurrences in function domains and
+/// opaque applications are not traversable.
+fn term_param_shape_gatherable(
+  ty : DTerm,
   ctx_len : Int32,
   param_pos : Int32,
 ) -> Bool {
-  match t {
-    DTVar(v) => ctx_len - 1 - v == param_pos
-    _ => false
+  let var_index = ctx_len - 1 - param_pos
+  match ty {
+    DTVar(_) => true
+    DListTy(inner) => term_param_shape_gatherable(inner, ctx_len, param_pos)
+    DSigma(a, b) =>
+      term_param_shape_gatherable(a, ctx_len, param_pos) &&
+      term_param_shape_gatherable(b, ctx_len + 1, param_pos)
+    DPi(dom, cod) =>
+      !dterm_free_var_occurs(dom, var_index) &&
+      term_param_shape_gatherable(cod, ctx_len + 1, param_pos)
+    DInductive(spec2, args) => {
+      if args.length() < spec2.params.length() {
+        return !dterm_free_var_occurs(ty, var_index)
+      }
+      for k in 0..<spec2.params.length() {
+        if dterm_free_var_occurs(args[k], var_index) &&
+          !(term_param_shape_gatherable(args[k], ctx_len, param_pos) &&
+          spec_param_gatherable(spec2, k)) {
+          return false
+        }
+      }
+      true
+    }
+    _ => !dterm_free_var_occurs(ty, var_index)
   }
 }
 
@@ -1171,85 +1471,148 @@ fn term_is_family_param_var(
 /// Whether induction hypotheses can be gathered for elements
 /// stored at parameter `param_pos` of `spec` when that parameter
 /// is instantiated by the family being declared: every stored
-/// occurrence of the parameter must be a whole external argument
-/// type or a whole constant functor leaf (so the gatherer
-/// reaches it), never a function/container domain, and decoded
+/// occurrence of the parameter must lie in a traversable type
+/// shape (`term_param_shape_gatherable`: leaves, lists, pairs,
+/// function codomains, applied-family arguments), never a
+/// function/container domain, and decoded
 /// argument kinds are excluded outright.  Occurrences in index
 /// terms are unrestricted (indices are not stored data), and a
 /// pass-through into a further applied family requires that
-/// family's parameter to be gatherable as well.
+/// family's parameter to be gatherable as well.  Self-family
+/// pass-throughs are read coinductively: re-entering a parameter
+/// already under examination succeeds, because gathering over a
+/// finite value descends structurally smaller subvalues before
+/// ever re-reaching that parameter.
 fn spec_param_gatherable(spec : DInductiveSpec, param_pos : Int32) -> Bool {
+  let active : Array[Bool] = []
+  for _i in 0..<spec.params.length() {
+    active.push(false)
+  }
+  spec_param_gatherable_go(spec, param_pos, active)
+}
+
+///|
+fn spec_param_gatherable_go(
+  spec : DInductiveSpec,
+  param_pos : Int32,
+  active : Array[Bool],
+) -> Bool {
   let nparams = spec.params.length()
   if param_pos < 0 || param_pos >= nparams {
     return false
   }
+  if active[param_pos] {
+    return true
+  }
+  active[param_pos] = true
+  let mut ok = true
   for c in 0..<spec.constructors.length() {
     let ctor = spec.constructors[c]
     for i in 0..<ctor.args.length() {
       let arg = ctor.args[i]
       let ctx_len = nparams + i
       let var_index = ctx_len - 1 - param_pos
-      let ok = match arg.kind {
-        DArgExternal =>
-          term_is_family_param_var(arg.ty, ctx_len, param_pos) ||
-          !dterm_free_var_occurs(arg.ty, var_index)
+      let arg_ok = match arg.kind {
+        DArgExternal => term_param_shape_gatherable(arg.ty, ctx_len, param_pos)
         DArgRecursive => true
         DArgFunction => !dterm_free_var_occurs(arg.ty, var_index)
         DArgNested =>
-          functor_param_gatherable(arg.nested, nparams, i, param_pos)
+          functor_param_gatherable(spec, arg.nested, i, param_pos, active)
         DArgDecoded | DArgDecodedFunction => false
       }
-      if !ok {
-        return false
+      if !arg_ok {
+        ok = false
       }
     }
   }
-  true
+  active[param_pos] = false
+  ok
 }
 
 ///|
 fn functor_param_gatherable(
+  spec : DInductiveSpec,
   functor : DPositiveFunctor,
-  nparams : Int32,
   prior_len : Int32,
   param_pos : Int32,
+  active : Array[Bool],
 ) -> Bool {
+  let nparams = spec.params.length()
   let ctx_len = nparams + prior_len
   let var_index = ctx_len - 1 - param_pos
   match functor {
     DFunctorIdentity(_) => true
-    DFunctorConst(ty) =>
-      term_is_family_param_var(ty, ctx_len, param_pos) ||
-      !dterm_free_var_occurs(ty, var_index)
+    DFunctorConst(ty) => term_param_shape_gatherable(ty, ctx_len, param_pos)
     DFunctorProduct(a, b) | DFunctorSum(a, b) =>
-      functor_param_gatherable(a, nparams, prior_len, param_pos) &&
-      functor_param_gatherable(b, nparams, prior_len, param_pos)
+      functor_param_gatherable(spec, a, prior_len, param_pos, active) &&
+      functor_param_gatherable(spec, b, prior_len, param_pos, active)
     DFunctorList(inner) =>
-      functor_param_gatherable(inner, nparams, prior_len, param_pos)
+      functor_param_gatherable(spec, inner, prior_len, param_pos, active)
     DFunctorPi(dom, inner) =>
       !dterm_free_var_occurs(dom, var_index) &&
-      functor_param_gatherable(inner, nparams, prior_len + 1, param_pos)
+      functor_param_gatherable(spec, inner, prior_len + 1, param_pos, active)
     DFunctorContainer(shape, positions, _) =>
       !dterm_free_var_occurs(shape, var_index) &&
       !dterm_free_var_occurs(positions, var_index + 1)
     DFunctorSigma(a, b) =>
-      functor_param_gatherable(a, nparams, prior_len, param_pos) &&
-      functor_param_gatherable(b, nparams, prior_len + 1, param_pos)
+      functor_param_gatherable(spec, a, prior_len, param_pos, active) &&
+      functor_param_gatherable(spec, b, prior_len + 1, param_pos, active)
     DFunctorFamily(spec3, pargs3, _) => {
       let mut ok = pargs3.length() == spec3.params.length()
       for k in 0..<pargs3.length() {
         match pargs3[k] {
           DFunctorParamTerm(t) =>
-            if term_is_family_param_var(t, ctx_len, param_pos) {
-              ok = ok && spec_param_gatherable(spec3, k)
-            } else {
-              ok = ok && !dterm_free_var_occurs(t, var_index)
+            if dterm_free_var_occurs(t, var_index) {
+              ok = ok &&
+                term_param_shape_gatherable(t, ctx_len, param_pos) &&
+                spec_param_gatherable(spec3, k)
             }
           DFunctorParamSelf(_) => ()
         }
       }
       ok
     }
+    DFunctorSelfFamily(pargs3, _) => {
+      let mut ok = pargs3.length() == nparams
+      for k in 0..<pargs3.length() {
+        match pargs3[k] {
+          DFunctorParamTerm(t) =>
+            if dterm_free_var_occurs(t, var_index) {
+              ok = ok &&
+                term_param_shape_gatherable(t, ctx_len, param_pos) &&
+                spec_param_gatherable_go(spec, k, active)
+            }
+          DFunctorParamSelf(_) => ()
+        }
+      }
+      ok
+    }
+  }
+}
+
+///|
+/// Recover the inductive spec under declaration from the
+/// validation `self_type` oracle.  `None` for HIT declarations,
+/// whose cells do not support the self-family node.
+fn validation_self_spec(
+  self_type : (Array[DValue], Array[DValue]) -> DValue,
+  params : Array[DTelescopeEntry],
+  indices : Array[DTelescopeEntry],
+  prefix_values : Array[DValue],
+) -> DInductiveSpec? {
+  let host_params : Array[DValue] = []
+  for h in 0..<params.length() {
+    if h < prefix_values.length() {
+      host_params.push(prefix_values[h])
+    }
+  }
+  let probe_indices : Array[DValue] = []
+  for h in 0..<indices.length() {
+    probe_indices.push(DVNeutral(DNVar(9600 + h)))
+  }
+  match force_value(self_type(host_params, probe_indices)) {
+    DVInductive(spec, _, _) => Some(spec)
+    _ => None
   }
 }
 
@@ -1261,6 +1624,7 @@ fn positive_functor_validate(
   indices : Array[DTelescopeEntry],
   prefix_types : Array[DValue],
   prefix_values : Array[DValue],
+  self_type : (Array[DValue], Array[DValue]) -> DValue,
 ) -> DValue? {
   match functor {
     DFunctorIdentity(index) =>
@@ -1290,10 +1654,10 @@ fn positive_functor_validate(
       match
         (
           positive_functor_validate(
-            a, family_name, params, indices, prefix_types, prefix_values,
+            a, family_name, params, indices, prefix_types, prefix_values, self_type,
           ),
           positive_functor_validate(
-            b, family_name, params, indices, prefix_types, prefix_values,
+            b, family_name, params, indices, prefix_types, prefix_values, self_type,
           ),
         ) {
         (Some(ta), Some(tb)) => Some(DVSigma(ta, _ => tb))
@@ -1303,10 +1667,10 @@ fn positive_functor_validate(
       match
         (
           positive_functor_validate(
-            a, family_name, params, indices, prefix_types, prefix_values,
+            a, family_name, params, indices, prefix_types, prefix_values, self_type,
           ),
           positive_functor_validate(
-            b, family_name, params, indices, prefix_types, prefix_values,
+            b, family_name, params, indices, prefix_types, prefix_values, self_type,
           ),
         ) {
         (Some(ta), Some(tb)) =>
@@ -1316,7 +1680,7 @@ fn positive_functor_validate(
     DFunctorList(inner) =>
       match
         positive_functor_validate(
-          inner, family_name, params, indices, prefix_types, prefix_values,
+          inner, family_name, params, indices, prefix_types, prefix_values, self_type,
         ) {
         Some(t) => Some(DVListTy(t))
         None => None
@@ -1378,7 +1742,7 @@ fn positive_functor_validate(
     DFunctorSigma(a, b) =>
       match
         positive_functor_validate(
-          a, family_name, params, indices, prefix_types, prefix_values,
+          a, family_name, params, indices, prefix_types, prefix_values, self_type,
         ) {
         Some(ta) => {
           let inner_types = schema_concat_values(prefix_types, [ta])
@@ -1387,7 +1751,7 @@ fn positive_functor_validate(
           ])
           match
             positive_functor_validate(
-              b, family_name, params, indices, inner_types, inner_values,
+              b, family_name, params, indices, inner_types, inner_values, self_type,
             ) {
             Some(_) =>
               Some(
@@ -1400,6 +1764,7 @@ fn positive_functor_validate(
                       indices,
                       schema_concat_values(prefix_types, [ta]),
                       schema_concat_values(prefix_values, [v]),
+                      self_type,
                     ) {
                     Some(t) => t
                     None => DVUnitTy
@@ -1429,7 +1794,7 @@ fn positive_functor_validate(
           ])
           match
             positive_functor_validate(
-              inner, family_name, params, indices, inner_types, inner_values,
+              inner, family_name, params, indices, inner_types, inner_values, self_type,
             ) {
             Some(_) =>
               Some(
@@ -1442,6 +1807,7 @@ fn positive_functor_validate(
                       indices,
                       schema_concat_values(prefix_types, [tv.value]),
                       schema_concat_values(prefix_values, [a]),
+                      self_type,
                     ) {
                     Some(t) => t
                     None => DVUnitTy
@@ -1460,13 +1826,13 @@ fn positive_functor_validate(
         return None
       }
       // Instantiate the inner parameter telescope stepwise.
-      // `Self` entries take a placeholder small type here: the
-      // host family is under declaration, so later *Term*
+      // `Self` entries are instantiated with the *actual* host
+      // family type (threaded in as `self_type` from the
+      // declaration being validated), so later *Term*
       // parameters whose types depend on a `Self` type parameter
-      // cannot be checked precisely at this stage (the semantic
-      // type function uses the real family).  The `Self` indices
-      // themselves are checked against the host telescope, and
-      // the inner parameter must be gatherable.
+      // are checked at their real expected types.  The `Self`
+      // indices themselves are checked against the host
+      // telescope, and the inner parameter must be gatherable.
       let inst_types : Array[DValue] = []
       let inst_values : Array[DValue] = []
       for k in 0..<spec2.params.length() {
@@ -1509,7 +1875,9 @@ fn positive_functor_validate(
               !spec_param_gatherable(spec2, k) {
               return None
             }
-            inst_values.push(DVUnitTy)
+            inst_values.push(
+              schema_validation_self_type(self_type, params, prefix_values, js),
+            )
           }
         }
       }
@@ -1552,6 +1920,25 @@ fn positive_functor_validate(
       }
       Some(DVInductive(spec2, inst_values, index_values))
     }
+    DFunctorSelfFamily(pargs, index) =>
+      // Resolve the implicit target to the declaration under
+      // validation and reuse the explicit-family checks.  This
+      // includes gatherability of every `Self` parameter slot of
+      // the host itself (read coinductively by
+      // `spec_param_gatherable_go`).
+      match validation_self_spec(self_type, params, indices, prefix_values) {
+        Some(host) =>
+          positive_functor_validate(
+            DFunctorFamily(host, pargs, index),
+            family_name,
+            params,
+            indices,
+            prefix_types,
+            prefix_values,
+            self_type,
+          )
+        None => None
+      }
   }
 }
 

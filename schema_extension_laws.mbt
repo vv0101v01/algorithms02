@@ -591,14 +591,16 @@ pub fn check_family_nested_functors() -> Bool {
   if inductive_schema_validate(bad_host) {
     return false
   }
-  // A parameter stored at a non-leaf constant type (here under a
-  // Pi codomain inside a constant term) cannot take `Self`.
+  // A parameter stored in a function *domain* inside a constant
+  // term cannot take `Self`.  (A codomain occurrence became
+  // gatherable in Phase 12; the domain position remains
+  // negative and untraversable.)
   let bad_inner2 = dinductive_spec(
     "FamBadInner2S",
     0,
     [dtelescope_entry("A", DUniv(0))],
     [],
-    [dconstructor_spec("mk", [darg_external("wrapped", DPi(DNatTy, DTVar(1)))])],
+    [dconstructor_spec("mk", [darg_external("wrapped", DPi(DTVar(0), DNatTy))])],
   )
   let bad_host2 = dinductive_spec("FamBadHost2S", 0, [], [], [
     dconstructor_spec("mk", [

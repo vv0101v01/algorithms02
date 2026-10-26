@@ -348,6 +348,8 @@ pub fn check_categories_all() -> Bool
 
 pub fn check_cdcl_clause_learning() -> Bool
 
+pub fn check_cdcl_proof_and_reduction() -> Bool
+
 pub fn check_certified_algebraic_numeric() -> Bool
 
 pub fn check_circle_encode_decode() -> Bool
@@ -543,6 +545,8 @@ pub fn check_schema_validation() -> Bool
 pub fn check_schema_vec_comp() -> Bool
 
 pub fn check_schema_w() -> Bool
+
+pub fn check_self_family_and_gather_shapes() -> Bool
 
 pub fn check_semantic_dimension_substitution() -> Bool
 
@@ -999,6 +1003,8 @@ pub fn dfunctor_param_term(DTerm) -> DFunctorParamArg
 pub fn dfunctor_pi(DTerm, DPositiveFunctor) -> DPositiveFunctor
 
 pub fn dfunctor_product(DPositiveFunctor, DPositiveFunctor) -> DPositiveFunctor
+
+pub fn dfunctor_self_family(params? : Array[DFunctorParamArg], index? : Array[DTerm]) -> DPositiveFunctor
 
 pub fn dfunctor_sigma(DPositiveFunctor, DPositiveFunctor) -> DPositiveFunctor
 
@@ -3110,6 +3116,7 @@ pub enum DPositiveFunctor {
   DFunctorContainer(DTerm, DTerm, Array[DTerm])
   DFunctorSigma(DPositiveFunctor, DPositiveFunctor)
   DFunctorFamily(DInductiveSpec, Array[DFunctorParamArg], Array[DTerm])
+  DFunctorSelfFamily(Array[DFunctorParamArg], Array[DTerm])
 } derive(Eq, @debug.Debug)
 pub fn DPositiveFunctor::equal(Self, Self) -> Bool
 pub fn DPositiveFunctor::not_equal(Self, Self) -> Bool

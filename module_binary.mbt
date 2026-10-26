@@ -1579,6 +1579,26 @@ fn bw_positive_functor(w : ModuleBinWriter, value : DPositiveFunctor) -> Unit {
       }
       bw_terms(w, index)
     }
+    DFunctorSelfFamily(pargs, index) => {
+      // Tag 9, layout version 2 and above: parameter arguments
+      // and indices, with no target spec (the enclosing
+      // declaration is the target).
+      bw_u8(w, 9)
+      bw_i32(w, pargs.length())
+      for i in 0..<pargs.length() {
+        match pargs[i] {
+          DFunctorParamTerm(t) => {
+            bw_u8(w, 0)
+            bw_term(w, t)
+          }
+          DFunctorParamSelf(js) => {
+            bw_u8(w, 1)
+            bw_terms(w, js)
+          }
+        }
+      }
+      bw_terms(w, index)
+    }
   }
 }
 
@@ -1702,6 +1722,43 @@ fn br_positive_functor(r : ModuleBinReader, depth : Int32) -> DPositiveFunctor? 
         None => return None
       }
       Some(DFunctorFamily(spec, pargs, index))
+    }
+    9 => {
+      if r.version < 2 {
+        if r.status == ModuleBinaryOk {
+          r.status = ModuleBinaryUnsupportedVersion
+        }
+        return None
+      }
+      let count = br_i32(r)
+      if !br_require_ok(r) || count < 0 || count > 4096 {
+        return None
+      }
+      let pargs : Array[DFunctorParamArg] = []
+      for _i in 0..<count {
+        match br_u8(r) {
+          0 => {
+            let t = match br_term(r, depth + 1) {
+              Some(v) => v
+              None => return None
+            }
+            pargs.push(DFunctorParamTerm(t))
+          }
+          1 => {
+            let js = match br_terms(r, depth + 1) {
+              Some(v) => v
+              None => return None
+            }
+            pargs.push(DFunctorParamSelf(js))
+          }
+          _ => return None
+        }
+      }
+      let index = match br_terms(r, depth + 1) {
+        Some(v) => v
+        None => return None
+      }
+      Some(DFunctorSelfFamily(pargs, index))
     }
     _ => {
       if r.status == ModuleBinaryOk {

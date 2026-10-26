@@ -602,6 +602,34 @@ fn positivity_param_in_functor(
       }
       out
     }
+    DFunctorSelfFamily(pargs, index) => {
+      // Parameter use through a self-application is a recursive
+      // equation in the host's own reports; this analysis does
+      // not solve that fixpoint, so any parameter flow through
+      // the node is certified only as unknown.  Declaration
+      // acceptance does not rely on this report (it uses the
+      // gatherability scan), but indirect occurrences through a
+      // self-nested family are therefore not certified positive.
+      let mut out = positivity_param_in_terms(index, scope, param_index)
+      for k in 0..<pargs.length() {
+        out = positivity_combine(
+          out,
+          match pargs[k] {
+            DFunctorParamTerm(t) =>
+              positivity_compose_param(
+                positivity_param_in_type(t, scope, param_index, true),
+                positivity_unknown(),
+              )
+            DFunctorParamSelf(js) =>
+              positivity_combine(
+                positivity_param_in_terms(js, scope, param_index),
+                positivity_unknown(),
+              )
+          },
+        )
+      }
+      out
+    }
   }
 }
 

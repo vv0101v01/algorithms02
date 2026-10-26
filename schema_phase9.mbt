@@ -105,6 +105,20 @@ fn functor_instantiate_levels(
         dterm_instantiate_levels_list(index, levels, ok),
       )
     }
+    DFunctorSelfFamily(pargs, index) => {
+      let out : Array[DFunctorParamArg] = []
+      for i in 0..<pargs.length() {
+        out.push(
+          match pargs[i] {
+            DFunctorParamTerm(t) =>
+              DFunctorParamTerm(dterm_instantiate_levels_go(t, levels, ok))
+            DFunctorParamSelf(js) =>
+              DFunctorParamSelf(dterm_instantiate_levels_list(js, levels, ok))
+          },
+        )
+      }
+      DFunctorSelfFamily(out, dterm_instantiate_levels_list(index, levels, ok))
+    }
   }
 }
 
@@ -574,6 +588,24 @@ fn functor_levels_in_scope(f : DPositiveFunctor, arity : Int32) -> Bool {
     DFunctorFamily(spec, pargs, index) => {
       if !inductive_spec_levels_in_scope(spec, arity) ||
         !dterm_list_levels_in_scope(index, arity) {
+        return false
+      }
+      for i in 0..<pargs.length() {
+        match pargs[i] {
+          DFunctorParamTerm(t) =>
+            if !dterm_levels_in_scope(t, arity) {
+              return false
+            }
+          DFunctorParamSelf(js) =>
+            if !dterm_list_levels_in_scope(js, arity) {
+              return false
+            }
+        }
+      }
+      true
+    }
+    DFunctorSelfFamily(pargs, index) => {
+      if !dterm_list_levels_in_scope(index, arity) {
         return false
       }
       for i in 0..<pargs.length() {
@@ -1655,12 +1687,16 @@ fn mutual_external_functor_ok(
       }
       true
     }
+    DFunctorSelfFamily(_, _) => false
     DFunctorFamily(spec, pargs, _) => {
       // The applied family must be external to the mutual block,
       // and no explicit parameter term may mention a component.
       // (`Self` arguments and index terms are positions the
       // joint checker accounts for separately, as with the
-      // container node's indices.)
+      // container node's indices.)  A self-family node is by
+      // definition internal to its component, and the joint
+      // compilation does not support it, hence the rejection
+      // above.
       for i in 0..<names.length() {
         if spec.name == names[i] {
           return false

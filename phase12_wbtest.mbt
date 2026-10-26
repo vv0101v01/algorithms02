@@ -10,3 +10,8 @@ test "phase12: subset DP gives exact optimal BDD order beyond factorial range" {
 test "phase12: CDCL proofs are RUP-checkable and clause DB reduction engages" {
   inspect(check_cdcl_proof_and_reduction(), content="true")
 }
+
+///|
+test "phase12: self-family Bush recursion, gather shapes and dependent Self parameters" {
+  inspect(check_self_family_and_gather_shapes(), content="true")
+}

@@ -106,6 +106,24 @@ fn mutual_transform_functor(
       }
       DFunctorFamily(spec, out, index)
     }
+    DFunctorSelfFamily(pargs, index) => {
+      // Components using self-family recursion are rejected by
+      // the mutual positivity check before compilation; the
+      // transform is still defined structurally (the node and
+      // its `Self` arguments take the joint tag) so this
+      // function stays total.
+      let out : Array[DFunctorParamArg] = []
+      for i in 0..<pargs.length() {
+        out.push(
+          match pargs[i] {
+            DFunctorParamTerm(t) => DFunctorParamTerm(t)
+            DFunctorParamSelf(js) =>
+              DFunctorParamSelf(mutual_prepend_tag(tag, js))
+          },
+        )
+      }
+      DFunctorSelfFamily(out, mutual_prepend_tag(tag, index))
+    }
   }
 }
 

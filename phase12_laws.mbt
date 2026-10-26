@@ -137,3 +137,252 @@ pub fn check_cdcl_proof_and_reduction() -> Bool {
   }
   report.stats.deleted > 0
 }
+
+///|
+fn phase12_shape_host(name : String, inner : DInductiveSpec) -> DInductiveSpec {
+  dinductive_spec(name, 0, [], [], [
+    dconstructor_spec("base", []),
+    dconstructor_spec("node", [
+      darg_nested(
+        "stored",
+        dfunctor_family(inner, params=[dfunctor_param_self()]),
+      ),
+    ]),
+  ])
+}
+
+///|
+/// Same-spec self-family recursion (Bush), parameter shapes
+/// traversable by the IH gatherer (lists and dependent pairs of
+/// stored elements), and precise validation of parameter terms
+/// depending on a `Self` parameter.
+pub fn check_self_family_and_gather_shapes() -> Bool {
+  // --- Bush: `Bush A` storing a `Bush (Bush A)` tail.
+  let bush = dinductive_spec(
+    "BushS",
+    0,
+    [dtelescope_entry("A", DUniv(0))],
+    [],
+    [
+      dconstructor_spec("nil", []),
+      dconstructor_spec("cons", [
+        darg_external("head", DTVar(0)),
+        darg_nested(
+          "tail",
+          dfunctor_self_family(params=[dfunctor_param_self()]),
+        ),
+      ]),
+    ],
+  )
+  if !inductive_schema_validate(bush) {
+    return false
+  }
+  let registry = schema_registry_new()
+  ignore(schema_registry_register_inductive(registry, bush))
+  if !schema_registry_binary_roundtrip_ok(registry) {
+    return false
+  }
+  let b0 : DValue = DVInductive(bush, [DVBoolTy], [])
+  let b1 : DValue = DVInductive(bush, [b0], [])
+  if !conv_ty(
+      0,
+      0,
+      inductive_arg_type(bush, bush.constructors[1].args[1], [DVBoolTy], [
+        DVBool(true),
+      ]),
+      b1,
+    ) {
+    return false
+  }
+  let nil1 : DValue = DVIntro(bush, 0, [b0], [])
+  let nil2 : DValue = DVIntro(bush, 0, [b1], [])
+  let headbush : DValue = DVIntro(bush, 1, [DVBoolTy], [DVBool(false), nil1])
+  let tail : DValue = DVIntro(bush, 1, [b0], [headbush, nil2])
+  let tree : DValue = DVIntro(bush, 1, [DVBoolTy], [DVBool(true), tail])
+  let leaf_count = eval_inductive_elim(
+    bush,
+    (_, _) => DVNatTy,
+    [
+      dv_nat_lit(0),
+      DVLam(_ => {
+        DVLam(_ => {
+          DVLam(bundle => {
+            dv_nat_plus(dv_nat_lit(1), dv_sum_bundle_leaves(bundle))
+          })
+        })
+      }),
+    ],
+    [DVBoolTy],
+    [],
+    tree,
+    0,
+  )
+  if !dv_is_nat(leaf_count, 2) {
+    return false
+  }
+  // A parameter used in a function domain cannot be the target
+  // of a `Self` self-family argument.
+  let bad_self = dinductive_spec(
+    "BadSelfBushS",
+    0,
+    [dtelescope_entry("A", DUniv(0))],
+    [],
+    [
+      dconstructor_spec("mk", [
+        darg_nested("fnarg", dfunctor_pi(DTVar(0), dfunctor_identity([]))),
+        darg_nested(
+          "tail",
+          dfunctor_self_family(params=[dfunctor_param_self()]),
+        ),
+      ]),
+    ],
+  )
+  if inductive_schema_validate(bad_self) {
+    return false
+  }
+  // --- Gather through List and Sigma parameter shapes.
+  let many = dinductive_spec(
+    "ManyStoreS",
+    0,
+    [dtelescope_entry("A", DUniv(0))],
+    [],
+    [dconstructor_spec("wrap", [darg_external("items", DListTy(DTVar(0)))])],
+  )
+  let many_host = phase12_shape_host("ManyHostS", many)
+  if !inductive_schema_validate(many_host) {
+    return false
+  }
+  let count_cases : Array[DValue] = [
+    dv_nat_lit(1),
+    DVLam(_ => {
+      DVLam(bundle => dv_nat_plus(dv_nat_lit(1), dv_sum_bundle_leaves(bundle)))
+    }),
+  ]
+  let many_ty : DValue = DVInductive(many_host, [], [])
+  let many_base : DValue = DVIntro(many_host, 0, [], [])
+  let many_node : DValue = DVIntro(many_host, 1, [], [
+    DVIntro(many, 0, [many_ty], [DVCons(many_base, DVCons(many_base, DVNil))]),
+  ])
+  if !dv_is_nat(
+      eval_inductive_elim(
+        many_host,
+        (_, _) => DVNatTy,
+        count_cases,
+        [],
+        [],
+        many_node,
+        0,
+      ),
+      3,
+    ) {
+    return false
+  }
+  let pair_inner = dinductive_spec(
+    "PairStoreS",
+    0,
+    [dtelescope_entry("A", DUniv(0))],
+    [],
+    [
+      dconstructor_spec("wrap", [
+        darg_external("pair", DSigma(DTVar(0), DTVar(1))),
+      ]),
+    ],
+  )
+  let pair_host = phase12_shape_host("PairHostS", pair_inner)
+  if !inductive_schema_validate(pair_host) {
+    return false
+  }
+  let pair_ty : DValue = DVInductive(pair_host, [], [])
+  let pair_base : DValue = DVIntro(pair_host, 0, [], [])
+  let pair_node : DValue = DVIntro(pair_host, 1, [], [
+    DVIntro(pair_inner, 0, [pair_ty], [DVPair(pair_base, pair_base)]),
+  ])
+  if !dv_is_nat(
+      eval_inductive_elim(
+        pair_host,
+        (_, _) => DVNatTy,
+        count_cases,
+        [],
+        [],
+        pair_node,
+        0,
+      ),
+      3,
+    ) {
+    return false
+  }
+  // --- A later family parameter whose type is an earlier
+  // `Self` parameter is checked at the real host type.
+  let dep_inner = dinductive_spec(
+    "DepStoreS",
+    0,
+    [dtelescope_entry("A", DUniv(0)), dtelescope_entry("x", DTVar(0))],
+    [],
+    [
+      dconstructor_spec("empty", []),
+      dconstructor_spec("stored", [darg_external("elt", DTVar(1))]),
+    ],
+  )
+  let dep_host = dinductive_spec("DepHostS", 0, [], [], [
+    dconstructor_spec("base", []),
+    dconstructor_spec("node", [
+      darg_recursive("seed"),
+      darg_nested(
+        "stored",
+        dfunctor_family(dep_inner, params=[
+          dfunctor_param_self(),
+          dfunctor_param_term(DTVar(0)),
+        ]),
+      ),
+    ]),
+  ])
+  if !inductive_schema_validate(dep_host) {
+    return false
+  }
+  let dep_host_wrong = dinductive_spec("DepHostWrongS", 0, [], [], [
+    dconstructor_spec("base", []),
+    dconstructor_spec("node", [
+      darg_recursive("seed"),
+      darg_nested(
+        "stored",
+        dfunctor_family(dep_inner, params=[
+          dfunctor_param_self(),
+          dfunctor_param_term(DUnitLit),
+        ]),
+      ),
+    ]),
+  ])
+  if inductive_schema_validate(dep_host_wrong) {
+    return false
+  }
+  let dep_ty : DValue = DVInductive(dep_host, [], [])
+  let dep_base : DValue = DVIntro(dep_host, 0, [], [])
+  let dep_node : DValue = DVIntro(dep_host, 1, [], [
+    dep_base,
+    DVIntro(dep_inner, 1, [dep_ty, dep_base], [dep_base]),
+  ])
+  let dep_count = eval_inductive_elim(
+    dep_host,
+    (_, _) => DVNatTy,
+    [
+      dv_nat_lit(1),
+      DVLam(_ => {
+        DVLam(seed_ih => {
+          DVLam(_ => {
+            DVLam(bundle => {
+              dv_nat_plus(
+                dv_nat_lit(1),
+                dv_nat_plus(seed_ih, dv_sum_bundle_leaves(bundle)),
+              )
+            })
+          })
+        })
+      }),
+    ],
+    [],
+    [],
+    dep_node,
+    0,
+  )
+  dv_is_nat(dep_count, 3)
+}

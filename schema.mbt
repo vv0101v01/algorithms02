@@ -92,6 +92,16 @@ pub enum DPositiveFunctor {
   // by eliminating the inner value with the inner family's own
   // eliminator; see `family_gather_type` in schema_functor.mbt.
   DFunctorFamily(DInductiveSpec, Array[DFunctorParamArg], Array[DTerm])
+  // Application of the very family being declared, at a possibly
+  // different parameter instantiation.  The target spec cannot
+  // be carried by value (a finite immutable declaration cannot
+  // contain itself), so it is named implicitly: the generator
+  // resolves it to the enclosing declaration.  This is the node
+  // for non-uniform recursion such as Bush (`Bush (Bush A)`
+  // inside `Bush A`, written with a `Self` parameter argument).
+  // Parameter and index arguments have the same meaning as in
+  // `DFunctorFamily`.
+  DFunctorSelfFamily(Array[DFunctorParamArg], Array[DTerm])
 } derive(Debug, Eq)
 
 ///|
@@ -176,6 +186,17 @@ pub fn dfunctor_family(
   index~ : Array[DTerm] = [],
 ) -> DPositiveFunctor {
   DFunctorFamily(spec, params, index)
+}
+
+///|
+/// The positive functor denoting the family being declared
+/// itself at the given parameter instantiation and indices
+/// (non-uniform / Bush-style recursion).
+pub fn dfunctor_self_family(
+  params~ : Array[DFunctorParamArg] = [],
+  index~ : Array[DTerm] = [],
+) -> DPositiveFunctor {
+  DFunctorSelfFamily(params, index)
 }
 
 ///|
@@ -783,6 +804,29 @@ fn schema_check_index_terms(
 }
 
 ///|
+/// The host family type at evaluated `Self` indices, for use
+/// during declaration validation: host parameter values are the
+/// first `params.length()` entries of the validation prefix.
+fn schema_validation_self_type(
+  self_type : (Array[DValue], Array[DValue]) -> DValue,
+  params : Array[DTelescopeEntry],
+  prefix_values : Array[DValue],
+  js : Array[DTerm],
+) -> DValue {
+  let host_params : Array[DValue] = []
+  for h in 0..<params.length() {
+    if h < prefix_values.length() {
+      host_params.push(prefix_values[h])
+    }
+  }
+  let self_indices : Array[DValue] = []
+  for h in 0..<js.length() {
+    self_indices.push(schema_eval_under(js[h], prefix_values, []))
+  }
+  self_type(host_params, self_indices)
+}
+
+///|
 fn schema_arg_type_for_validation(
   arg : DConstructorArg,
   prior_specs : Array[DConstructorArg],
@@ -792,6 +836,7 @@ fn schema_arg_type_for_validation(
   indices : Array[DTelescopeEntry],
   prefix_types : Array[DValue],
   prefix_values : Array[DValue],
+  self_type : (Array[DValue], Array[DValue]) -> DValue,
 ) -> DValue? {
   match arg.kind {
     DArgExternal => {
@@ -818,7 +863,18 @@ fn schema_arg_type_for_validation(
           prefix_values,
           arg.index,
         ) {
-        Some(DVUnitTy) // placeholder type for later result-index checking
+        // The real host type, not a placeholder: later argument,
+        // result-index and constraint types may depend on this
+        // recursive element (notably a `DFunctorFamily` parameter
+        // whose type is an earlier `Self` parameter).
+        Some(
+          schema_validation_self_type(
+            self_type,
+            params,
+            prefix_values,
+            arg.index,
+          ),
+        )
       } else {
         None
       }
@@ -845,7 +901,17 @@ fn schema_arg_type_for_validation(
               dom_values,
               arg.index,
             ) {
-            Some(DVPi(tv.value, _ => DVUnitTy))
+            let saved_values = schema_concat_values([], prefix_values)
+            Some(
+              DVPi(tv.value, a => {
+                schema_validation_self_type(
+                  self_type,
+                  params,
+                  schema_concat_values(saved_values, [a]),
+                  arg.index,
+                )
+              }),
+            )
           } else {
             None
           }
@@ -862,6 +928,7 @@ fn schema_arg_type_for_validation(
           indices,
           prefix_types,
           prefix_values,
+          self_type,
         )
       } else {
         None
@@ -915,6 +982,7 @@ fn schema_validate_args(
   result_index : Array[DTerm],
   constraints : Array[DConstructorConstraint],
   decode_available : Bool,
+  self_type : (Array[DValue], Array[DValue]) -> DValue,
 ) -> Bool {
   let param_values = schema_fresh_values(params.length(), 8000)
   if !telescope_elaborates(params, [], [], param_values) {
@@ -938,6 +1006,7 @@ fn schema_validate_args(
         indices,
         prefix_types,
         prefix_values,
+        self_type,
       ) {
       Some(ty) => {
         prefix_types.push(ty)
@@ -1036,6 +1105,7 @@ fn inductive_schema_validate_uncached(spec : DInductiveSpec) -> Bool {
         c.constraints,
         spec.decode_cases.length() == spec.constructors.length() &&
         spec.decode_cases.length() > 0,
+        (ps, js) => DVInductive(spec, ps, js),
       ) {
       return false
     }
@@ -4127,6 +4197,7 @@ fn hit_schema_validate_uncached(spec : DHitSpec) -> Bool {
         cell.result_index,
         cell.constraints,
         false,
+        (ps, js) => DVHitType(spec, ps, js),
       ) {
       return false
     }
